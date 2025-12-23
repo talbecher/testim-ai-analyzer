@@ -33,8 +33,8 @@ const Index = () => {
     if (file?.name.endsWith('.csv')) handleFileUpload(file);
   };
 
-  const classColors = {
-    'Real Bug': 'bg-bug text-bug-foreground',
+  const classColors: Record<string, string> = {
+    'Potential bug': 'bg-bug text-bug-foreground',
     'Likely Flaky': 'bg-flaky text-flaky-foreground',
     'Environment / Infra Issue': 'bg-environment text-environment-foreground',
     'Expected Change': 'bg-expected text-expected-foreground',
@@ -175,8 +175,8 @@ const Index = () => {
               <Card className="border-bug/30 bg-bug/5">
                 <CardContent className="pt-4 text-center">
                   <Bug className="h-5 w-5 mx-auto text-bug mb-1" />
-                  <div className="text-3xl font-bold text-bug">{stats.realBugs}</div>
-                  <div className="text-sm text-muted-foreground mt-1">Real Bugs</div>
+                  <div className="text-3xl font-bold text-bug">{stats.potentialBugs}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Potential Bugs</div>
                 </CardContent>
               </Card>
               <Card className="border-flaky/30 bg-flaky/5">

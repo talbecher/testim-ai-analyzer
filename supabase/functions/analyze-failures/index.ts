@@ -18,14 +18,14 @@ serve(async (req) => {
     const systemPrompt = `You are an expert QA engineer analyzing test failures from Testim. Classify each failure accurately.
 
 ## Classification Rules:
-- "Real Bug": Assertion failures, unexpected behavior, logic errors. Low flakiness.
+- "Potential bug": Assertion failures, unexpected behavior, logic errors. Low flakiness.
 - "Likely Flaky": Element not found, timing issues, intermittent failures. High flakiness.
 - "Environment / Infra Issue": Network errors, server 5xx, connection refused. Infrastructure problems.
 - "Expected Change": Feature changed, UI updated, intentional changes.
 
 ## Priority Rules:
-- P0: High confidence Real Bug in critical flow, or repeated assertion failures
-- P1: Medium confidence Real Bug, or shared-step changes
+- P0: High confidence Potential bug in critical flow, or repeated assertion failures
+- P1: Medium confidence Potential bug, or shared-step changes
 - P2: High confidence Flaky, or Environment Issues
 - P3: Low confidence Flaky, or one-time issues
 
@@ -38,7 +38,7 @@ If a test matches Flaky KB (even fuzzy match), note it in your response.
 ${JSON.stringify(failures, null, 2)}
 
 For EACH failure, respond with JSON array containing objects with:
-- classification: "Real Bug" | "Likely Flaky" | "Environment / Infra Issue" | "Expected Change"
+- classification: "Potential bug" | "Likely Flaky" | "Environment / Infra Issue" | "Expected Change"
 - confidence: 0-100
 - suggestedAction: "Open bug" | "Update shared step" | "Rerun only" | "Ignore today / monitor"
 - priority: "P0" | "P1" | "P2" | "P3"

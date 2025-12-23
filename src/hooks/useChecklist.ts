@@ -108,9 +108,9 @@ export function useChecklist() {
           } else if (analysis.classification === 'Likely Flaky' && analysis.confidence < 70) {
             analysis.requiresRerun = true;
             analysis.rerunReason = 'Lower confidence - verify with rerun';
-          } else if (analysis.classification === 'Real Bug') {
+          } else if (analysis.classification === 'Potential bug') {
             analysis.requiresRerun = false;
-            analysis.rerunReason = 'Real bug - needs code fix, not rerun';
+            analysis.rerunReason = 'Potential bug - needs code fix, not rerun';
           } else if (analysis.classification === 'Environment / Infra Issue') {
             analysis.requiresRerun = true;
             analysis.rerunReason = 'Environment issue - rerun when stable';
@@ -162,7 +162,7 @@ export function useChecklist() {
     return {
       total: failures.length,
       analyzed: analyzed.length,
-      realBugs: analyzed.filter(f => f.analysis?.classification === 'Real Bug').length,
+      potentialBugs: analyzed.filter(f => f.analysis?.classification === 'Potential bug').length,
       flaky: analyzed.filter(f => f.analysis?.classification === 'Likely Flaky').length,
       environment: analyzed.filter(f => f.analysis?.classification === 'Environment / Infra Issue').length,
       expectedChange: analyzed.filter(f => f.analysis?.classification === 'Expected Change').length,
