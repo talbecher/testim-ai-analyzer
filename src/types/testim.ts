@@ -10,7 +10,7 @@ export type ErrorPattern =
   | 'Unknown';
 
 export type Classification = 
-  | 'Real Bug' 
+  | 'Potential bug' 
   | 'Likely Flaky' 
   | 'Environment / Infra Issue' 
   | 'Expected Change';
