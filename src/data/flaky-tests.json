@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "testName": "Login Button Click",
+      "reason": "Element timing issue",
+      "notes": "Wait for animation to complete",
+      "lastReviewed": "2024-01-15"
+    },
+    {
+      "testName": "Dashboard Load Time",
+      "reason": "Network latency variance",
+      "notes": "Depends on API response time",
+      "lastReviewed": "2024-01-10"
+    },
+    {
+      "testName": "Checkout Form Submit",
+      "reason": "Race condition with payment API",
+      "notes": "Sometimes times out on slow connections",
+      "lastReviewed": "2024-01-12"
+    }
+  ],
+  "lastUpdated": "2024-01-15T10:00:00Z"
+}
