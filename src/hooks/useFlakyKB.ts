@@ -6,37 +6,34 @@ import staticFlakyData from '@/data/flaky-tests.json';
 
 const MATCH_THRESHOLD = 85; // Minimum confidence for fuzzy match
 
-// Load static flaky tests from JSON file
-function loadStaticFlakyTests(): FlakyKBData {
-  try {
-    const tests: FlakyTest[] = staticFlakyData.tests.map((test) => ({
-      id: generateId(),
-      testName: test.testName,
-      testNameNormalized: normalizeTestName(test.testName),
-      reason: test.reason,
-      notes: test.notes,
-      lastReviewed: test.lastReviewed,
-      createdAt: staticFlakyData.lastUpdated || new Date().toISOString(),
-    }));
-    
-    return {
-      tests,
-      lastUpdated: staticFlakyData.lastUpdated || null,
-    };
-  } catch (e) {
-    console.error('Failed to load static Flaky KB:', e);
-    return { tests: [], lastUpdated: null };
-  }
-}
-
 export function useFlakyKB() {
-  const [data, setData] = useState<FlakyKBData>(() => loadStaticFlakyTests());
-  const [isLoading, setIsLoading] = useState(false);
+  const [data, setData] = useState<FlakyKBData>({ tests: [], lastUpdated: null });
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Reload from static file (useful if you want to reset)
-  const reloadFromStatic = useCallback(() => {
-    setData(loadStaticFlakyTests());
+  // Load static flaky tests on mount
+  useEffect(() => {
+    try {
+      const tests: FlakyTest[] = staticFlakyData.tests.map((test) => ({
+        id: generateId(),
+        testName: test.testName,
+        testNameNormalized: normalizeTestName(test.testName),
+        reason: test.reason,
+        notes: test.notes,
+        lastReviewed: test.lastReviewed,
+        createdAt: staticFlakyData.lastUpdated || new Date().toISOString(),
+      }));
+      
+      setData({
+        tests,
+        lastUpdated: staticFlakyData.lastUpdated || null,
+      });
+    } catch (e) {
+      console.error('Failed to load static Flaky KB:', e);
+      setError('Failed to load Flaky KB');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   // Check if a test is in Flaky KB (exact match)
@@ -88,7 +85,6 @@ export function useFlakyKB() {
     findFlakyTestMatch,
     getFlakyTestInfo,
     exportToCSV,
-    reloadFromStatic,
     // Count
     count: data.tests.length,
   };
