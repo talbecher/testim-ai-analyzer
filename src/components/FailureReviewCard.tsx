@@ -1,0 +1,218 @@
+import { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Database, Clock, CheckCircle, Check, X, Edit2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
+import { Classification, Priority, SuggestedAction } from '@/types/testim';
+
+interface FailureReviewCardProps {
+  failure: AnalyzedFailureWithFeedback;
+  onFeedback: (failureId: string, feedback: UserFeedback) => void;
+  classColors: Record<string, string>;
+  priorityColors: Record<string, string>;
+}
+
+const classifications: Classification[] = [
+  'Potential bug',
+  'Likely Flaky',
+  'Environment / Infra Issue',
+  'Expected Change'
+];
+
+const priorities: Priority[] = ['P0', 'P1', 'P2', 'P3'];
+
+const actions: SuggestedAction[] = [
+  'Open bug',
+  'Update shared step',
+  'Rerun only',
+  'Ignore today / monitor'
+];
+
+export function FailureReviewCard({ failure, onFeedback, classColors, priorityColors }: FailureReviewCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValues, setEditValues] = useState({
+    classification: failure.analysis?.classification,
+    priority: failure.analysis?.priority,
+    action: failure.analysis?.suggestedAction
+  });
+
+  const handleAgree = () => {
+    onFeedback(failure.id, {
+      wasCorrect: true,
+      userClassification: failure.analysis?.classification,
+      userPriority: failure.analysis?.priority,
+      userAction: failure.analysis?.suggestedAction
+    });
+    setIsEditing(false);
+  };
+
+  const handleDisagree = () => {
+    setIsEditing(true);
+  };
+
+  const handleSaveCorrection = () => {
+    onFeedback(failure.id, {
+      wasCorrect: false,
+      userClassification: editValues.classification,
+      userPriority: editValues.priority,
+      userAction: editValues.action
+    });
+    setIsEditing(false);
+  };
+
+  const isReviewed = failure.isReviewed;
+
+  return (
+    <Card className={cn(
+      "animate-fade-in border-border/50 transition-all duration-200",
+      isReviewed && failure.feedback?.wasCorrect && "border-l-4 border-l-confidence-high bg-confidence-high/5",
+      isReviewed && !failure.feedback?.wasCorrect && "border-l-4 border-l-bug bg-bug/5",
+      !isReviewed && "hover:border-border"
+    )}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          {/* Test Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              {isReviewed && (
+                <div className={cn(
+                  "w-5 h-5 rounded-full flex items-center justify-center",
+                  failure.feedback?.wasCorrect ? "bg-confidence-high" : "bg-bug"
+                )}>
+                  {failure.feedback?.wasCorrect ? (
+                    <Check className="h-3 w-3 text-white" />
+                  ) : (
+                    <X className="h-3 w-3 text-white" />
+                  )}
+                </div>
+              )}
+              <h3 className="font-mono text-sm font-medium truncate text-foreground">{failure.testName}</h3>
+            </div>
+            {failure.errorMessage && (
+              <p className="text-xs text-muted-foreground mt-1 truncate">{failure.errorMessage}</p>
+            )}
+          </div>
+
+          {/* Analysis Badges */}
+          {failure.analysis && !isEditing && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className={cn("px-2 py-1 rounded text-xs font-medium text-white", priorityColors[failure.analysis.priority])}>
+                {failure.analysis.priority}
+              </span>
+              <span className={cn("px-2 py-1 rounded text-xs font-medium", classColors[failure.analysis.classification])}>
+                {failure.analysis.classification}
+              </span>
+              <span className="text-xs text-muted-foreground">{failure.analysis.confidence}%</span>
+              {failure.analysis.flakyKBMatch && <Database className="h-4 w-4 text-primary" />}
+              {failure.analysis.requiresRerun ? (
+                <Clock className="h-4 w-4 text-environment" />
+              ) : (
+                <CheckCircle className="h-4 w-4 text-confidence-high" />
+              )}
+            </div>
+          )}
+
+          {failure.isAnalyzing && (
+            <div className="animate-pulse text-muted-foreground text-sm">Analyzing...</div>
+          )}
+        </div>
+
+        {/* Priority Reason */}
+        {failure.analysis?.priorityReason && !isEditing && (
+          <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">{failure.analysis.priorityReason}</p>
+        )}
+
+        {/* Review Actions */}
+        {failure.analysis && !isReviewed && !isEditing && (
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
+            <span className="text-xs text-muted-foreground mr-2">AI correct?</span>
+            <Button size="sm" variant="outline" className="h-7 text-xs bg-confidence-high/10 hover:bg-confidence-high/20 text-confidence-high border-confidence-high/30" onClick={handleAgree}>
+              <Check className="h-3 w-3 mr-1" />
+              Agree
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 text-xs bg-bug/10 hover:bg-bug/20 text-bug border-bug/30" onClick={handleDisagree}>
+              <Edit2 className="h-3 w-3 mr-1" />
+              Correct
+            </Button>
+          </div>
+        )}
+
+        {/* Correction Form */}
+        {isEditing && (
+          <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+            <div className="text-xs text-muted-foreground font-medium">Correct the AI analysis:</div>
+            <div className="grid grid-cols-3 gap-2">
+              <Select
+                value={editValues.classification}
+                onValueChange={(v) => setEditValues(prev => ({ ...prev, classification: v as Classification }))}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Classification" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classifications.map(c => (
+                    <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select
+                value={editValues.priority}
+                onValueChange={(v) => setEditValues(prev => ({ ...prev, priority: v as Priority }))}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {priorities.map(p => (
+                    <SelectItem key={p} value={p} className="text-xs">{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={editValues.action}
+                onValueChange={(v) => setEditValues(prev => ({ ...prev, action: v as SuggestedAction }))}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Action" />
+                </SelectTrigger>
+                <SelectContent>
+                  {actions.map(a => (
+                    <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" className="h-7 text-xs" onClick={handleSaveCorrection}>
+                Save Correction
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Show correction if reviewed */}
+        {isReviewed && !failure.feedback?.wasCorrect && failure.feedback?.userClassification && (
+          <div className="mt-2 text-xs">
+            <span className="text-muted-foreground">Corrected to: </span>
+            <span className={cn("px-1.5 py-0.5 rounded font-medium", classColors[failure.feedback.userClassification])}>
+              {failure.feedback.userClassification}
+            </span>
+            {failure.feedback.userPriority && (
+              <span className={cn("ml-1 px-1.5 py-0.5 rounded font-medium text-white", priorityColors[failure.feedback.userPriority])}>
+                {failure.feedback.userPriority}
+              </span>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

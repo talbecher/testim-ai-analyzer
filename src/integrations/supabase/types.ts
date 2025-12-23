@@ -14,7 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analysis_reports: {
+        Row: {
+          accuracy_percentage: number | null
+          common_mistakes: Json | null
+          correct_count: number
+          created_at: string
+          id: string
+          notes: string | null
+          run_date: string
+          run_name: string
+          total_analyzed: number
+        }
+        Insert: {
+          accuracy_percentage?: number | null
+          common_mistakes?: Json | null
+          correct_count?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          run_date: string
+          run_name: string
+          total_analyzed?: number
+        }
+        Update: {
+          accuracy_percentage?: number | null
+          common_mistakes?: Json | null
+          correct_count?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          run_date?: string
+          run_name?: string
+          total_analyzed?: number
+        }
+        Relationships: []
+      }
+      analysis_results: {
+        Row: {
+          ai_action: string | null
+          ai_classification: string
+          ai_confidence: number
+          ai_priority: string
+          created_at: string
+          error_message: string | null
+          error_pattern: string | null
+          flaky_kb_matched: boolean | null
+          id: string
+          report_id: string
+          test_name: string
+          test_name_normalized: string
+          user_action: string | null
+          user_classification: string | null
+          user_notes: string | null
+          user_priority: string | null
+          was_correct: boolean | null
+        }
+        Insert: {
+          ai_action?: string | null
+          ai_classification: string
+          ai_confidence: number
+          ai_priority: string
+          created_at?: string
+          error_message?: string | null
+          error_pattern?: string | null
+          flaky_kb_matched?: boolean | null
+          id?: string
+          report_id: string
+          test_name: string
+          test_name_normalized: string
+          user_action?: string | null
+          user_classification?: string | null
+          user_notes?: string | null
+          user_priority?: string | null
+          was_correct?: boolean | null
+        }
+        Update: {
+          ai_action?: string | null
+          ai_classification?: string
+          ai_confidence?: number
+          ai_priority?: string
+          created_at?: string
+          error_message?: string | null
+          error_pattern?: string | null
+          flaky_kb_matched?: boolean | null
+          id?: string
+          report_id?: string
+          test_name?: string
+          test_name_normalized?: string
+          user_action?: string | null
+          user_classification?: string | null
+          user_notes?: string | null
+          user_priority?: string | null
+          was_correct?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_results_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

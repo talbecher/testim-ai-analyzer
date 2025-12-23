@@ -1,24 +1,51 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useChecklist } from '@/hooks/useChecklist';
+import { useFeedback } from '@/hooks/useFeedback';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Upload, Zap, Trash2, Database, AlertTriangle, Bug, Clock, CheckCircle, CalendarIcon, FileText, ClipboardList } from 'lucide-react';
+import { Upload, Zap, Trash2, AlertTriangle, Bug, Clock, CalendarIcon, FileText, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { FailureReviewCard } from '@/components/FailureReviewCard';
+import { ReviewProgress } from '@/components/ReviewProgress';
+import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
+import { toast } from 'sonner';
+import { RunDetails } from '@/types/feedback';
 
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { failures, sortedFailures, stats, isLoading, isAnalyzing, error, uploadFailures, analyzeFailures, clearFailures } = useChecklist();
+  const { 
+    failuresWithFeedback, 
+    summary, 
+    isReviewComplete, 
+    isSaving, 
+    saveError, 
+    initializeFeedback, 
+    handleFeedback, 
+    saveReport, 
+    resetFeedback 
+  } = useFeedback(failures);
+  
   const [dragOver, setDragOver] = useState(false);
-  const [runDetails, setRunDetails] = useState({
+  const [showSummaryDialog, setShowSummaryDialog] = useState(false);
+  const [runDetails, setRunDetails] = useState<RunDetails>({
     name: '',
     date: new Date(),
     notes: ''
   });
+
+  // Initialize feedback when analysis completes
+  useEffect(() => {
+    const analyzedFailures = sortedFailures.filter(f => f.analysis);
+    if (analyzedFailures.length > 0 && failuresWithFeedback.length === 0) {
+      initializeFeedback(analyzedFailures);
+    }
+  }, [sortedFailures, initializeFeedback, failuresWithFeedback.length]);
 
   const handleFileUpload = (file: File) => {
     const reader = new FileReader();
@@ -33,6 +60,31 @@ const Index = () => {
     if (file?.name.endsWith('.csv')) handleFileUpload(file);
   };
 
+  const handleClearAll = () => {
+    clearFailures();
+    resetFeedback();
+  };
+
+  const handleCompleteReview = () => {
+    setShowSummaryDialog(true);
+  };
+
+  const handleSaveReport = async () => {
+    const success = await saveReport(runDetails);
+    if (success) {
+      toast.success('Report saved! AI will learn from your feedback.');
+      setShowSummaryDialog(false);
+      handleClearAll();
+    } else {
+      toast.error(saveError || 'Failed to save report');
+    }
+  };
+
+  const handleDiscardReport = () => {
+    setShowSummaryDialog(false);
+    toast.info('Report discarded');
+  };
+
   const classColors: Record<string, string> = {
     'Potential bug': 'bg-bug text-bug-foreground',
     'Likely Flaky': 'bg-flaky text-flaky-foreground',
@@ -40,7 +92,10 @@ const Index = () => {
     'Expected Change': 'bg-expected text-expected-foreground',
   };
 
-  const priorityColors = { P0: 'bg-p0', P1: 'bg-p1', P2: 'bg-p2', P3: 'bg-p3' };
+  const priorityColors: Record<string, string> = { P0: 'bg-p0', P1: 'bg-p1', P2: 'bg-p2', P3: 'bg-p3' };
+
+  const hasAnalyzedResults = failuresWithFeedback.length > 0;
+  const reviewedCount = failuresWithFeedback.filter(f => f.isReviewed).length;
 
   return (
     <div className="min-h-screen bg-background dark p-6">
@@ -201,43 +256,62 @@ const Index = () => {
                 <Zap className="mr-2 h-5 w-5" />
                 {isAnalyzing ? 'Analyzing...' : 'Analyze with AI'}
               </Button>
-              <Button variant="outline" onClick={clearFailures} size="lg">
+              <Button variant="outline" onClick={handleClearAll} size="lg">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Clear All
               </Button>
             </div>
 
-            {/* Results */}
+            {/* Review Progress Bar */}
+            {hasAnalyzedResults && (
+              <ReviewProgress 
+                reviewed={reviewedCount} 
+                total={failuresWithFeedback.length} 
+                onComplete={handleCompleteReview}
+              />
+            )}
+
+            {/* Results - Use review cards if analyzed */}
             <div className="space-y-3">
-              {sortedFailures.map((f) => (
-                <Card key={f.id} className="animate-fade-in border-border/50 hover:border-border transition-colors">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-mono text-sm font-medium truncate text-foreground">{f.testName}</h3>
-                        {f.errorMessage && <p className="text-xs text-muted-foreground mt-1 truncate">{f.errorMessage}</p>}
-                      </div>
-                      {f.analysis && (
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className={cn("px-2 py-1 rounded text-xs font-medium", priorityColors[f.analysis.priority], "text-white")}>{f.analysis.priority}</span>
-                          <span className={cn("px-2 py-1 rounded text-xs font-medium", classColors[f.analysis.classification])}>{f.analysis.classification}</span>
-                          <span className="text-xs text-muted-foreground">{f.analysis.confidence}%</span>
-                          {f.analysis.flakyKBMatch && <Database className="h-4 w-4 text-primary" />}
-                          {f.analysis.requiresRerun ? <Clock className="h-4 w-4 text-environment" /> : <CheckCircle className="h-4 w-4 text-confidence-high" />}
+              {hasAnalyzedResults ? (
+                failuresWithFeedback.map((f) => (
+                  <FailureReviewCard
+                    key={f.id}
+                    failure={f}
+                    onFeedback={handleFeedback}
+                    classColors={classColors}
+                    priorityColors={priorityColors}
+                  />
+                ))
+              ) : (
+                sortedFailures.map((f) => (
+                  <Card key={f.id} className="animate-fade-in border-border/50 hover:border-border transition-colors">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-mono text-sm font-medium truncate text-foreground">{f.testName}</h3>
+                          {f.errorMessage && <p className="text-xs text-muted-foreground mt-1 truncate">{f.errorMessage}</p>}
                         </div>
-                      )}
-                      {f.isAnalyzing && <div className="animate-pulse text-muted-foreground text-sm">Analyzing...</div>}
-                    </div>
-                    {f.analysis?.priorityReason && (
-                      <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">{f.analysis.priorityReason}</p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                        {f.isAnalyzing && <div className="animate-pulse text-muted-foreground text-sm">Analyzing...</div>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </>
         )}
       </div>
+
+      {/* Feedback Summary Dialog */}
+      <FeedbackSummaryDialog
+        open={showSummaryDialog}
+        onOpenChange={setShowSummaryDialog}
+        summary={summary}
+        onSave={handleSaveReport}
+        onDiscard={handleDiscardReport}
+        isSaving={isSaving}
+      />
     </div>
   );
 };

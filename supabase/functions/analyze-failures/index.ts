@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,58 @@ serve(async (req) => {
     const { failures, flakyTests } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
+
+    // Fetch historical corrections from database
+    let historicalCorrections = '';
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      
+      const { data: corrections, error: dbError } = await supabase
+        .from('analysis_results')
+        .select('test_name_normalized, error_pattern, ai_classification, user_classification')
+        .eq('was_correct', false)
+        .not('user_classification', 'is', null)
+        .limit(100);
+
+      if (!dbError && corrections && corrections.length > 0) {
+        // Aggregate corrections
+        const correctionMap = new Map<string, { from: string; to: string; pattern: string | null; count: number }>();
+        corrections.forEach(row => {
+          const key = `${row.error_pattern}|${row.ai_classification}|${row.user_classification}`;
+          const existing = correctionMap.get(key);
+          if (existing) {
+            existing.count++;
+          } else {
+            correctionMap.set(key, {
+              from: row.ai_classification,
+              to: row.user_classification,
+              pattern: row.error_pattern,
+              count: 1
+            });
+          }
+        });
+
+        const topCorrections = Array.from(correctionMap.values())
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 20);
+
+        if (topCorrections.length > 0) {
+          historicalCorrections = `
+
+## Historical Corrections (IMPORTANT - Learn from past mistakes):
+Users have corrected the following patterns. Use these to improve your accuracy:
+${topCorrections.map(c => 
+  `- Error pattern "${c.pattern || 'general'}": AI said "${c.from}" but users corrected to "${c.to}" (${c.count}x)`
+).join('\n')}
+
+Pay special attention to these patterns and adjust your classifications accordingly.`;
+        }
+      }
+    } catch (dbErr) {
+      console.log("Could not fetch corrections, continuing without:", dbErr);
+    }
 
     const systemPrompt = `You are an expert QA engineer analyzing test failures from Testim. Classify each failure accurately.
 
@@ -33,6 +86,7 @@ serve(async (req) => {
 ${JSON.stringify(flakyTests, null, 2)}
 
 If a test matches Flaky KB (even fuzzy match), note it in your response.
+${historicalCorrections}
 
 ## Failures to Analyze:
 ${JSON.stringify(failures, null, 2)}
@@ -49,6 +103,8 @@ For EACH failure, respond with JSON array containing objects with:
 - flakyKBMatch: true/false if matched in Flaky KB
 
 Return ONLY valid JSON array, no markdown.`;
+
+    console.log("Sending to AI with historical corrections:", historicalCorrections ? "Yes" : "No");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -87,6 +143,8 @@ Return ONLY valid JSON array, no markdown.`;
       failureId: idx,
       analysis,
     }));
+
+    console.log("Analysis complete, returning", results.length, "results");
 
     return new Response(JSON.stringify({ results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
