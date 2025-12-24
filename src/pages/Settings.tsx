@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Settings as SettingsIcon, ArrowLeft, Plus, Trash2, GripVertical, Tag } from 'lucide-react';
 import { useBugCategories } from '@/hooks/useBugCategories';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { toast } from 'sonner';
 
 const Settings = () => {
@@ -80,7 +81,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background dark p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <header className="flex items-center justify-between">
@@ -97,6 +98,7 @@ const Settings = () => {
               <h1 className="text-2xl font-bold text-foreground">Settings</h1>
             </div>
           </div>
+          <ThemeToggle />
         </header>
 
         {/* Bug Categories Management */}
