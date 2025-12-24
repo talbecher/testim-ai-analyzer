@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -24,9 +24,9 @@ const Settings = () => {
   const [editingName, setEditingName] = useState('');
 
   // Fetch all categories (including inactive) on mount
-  useState(() => {
+  useEffect(() => {
     fetchAllCategories();
-  });
+  }, [fetchAllCategories]);
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
