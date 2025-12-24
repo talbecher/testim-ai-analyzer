@@ -64,6 +64,8 @@ export type Database = {
           flaky_kb_matched: boolean | null
           id: string
           passed_locally: boolean | null
+          passed_locally_notes: string | null
+          passed_locally_reason: string | null
           report_id: string
           test_name: string
           test_name_normalized: string
@@ -86,6 +88,8 @@ export type Database = {
           flaky_kb_matched?: boolean | null
           id?: string
           passed_locally?: boolean | null
+          passed_locally_notes?: string | null
+          passed_locally_reason?: string | null
           report_id: string
           test_name: string
           test_name_normalized: string
@@ -108,6 +112,8 @@ export type Database = {
           flaky_kb_matched?: boolean | null
           id?: string
           passed_locally?: boolean | null
+          passed_locally_notes?: string | null
+          passed_locally_reason?: string | null
           report_id?: string
           test_name?: string
           test_name_normalized?: string

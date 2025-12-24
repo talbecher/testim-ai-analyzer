@@ -130,7 +130,9 @@ export function useFeedback(failures: AnalyzedFailure[]) {
         user_notes: f.feedback?.userNotes || null,
         bug_category: f.feedback?.bugCategory || null,
         bug_link: f.feedback?.bugLink || null,
-        passed_locally: f.feedback?.passedLocally || false
+        passed_locally: f.feedback?.passedLocally || false,
+        passed_locally_reason: f.feedback?.passedLocallyReason || null,
+        passed_locally_notes: f.feedback?.passedLocallyNotes || null
       }));
 
       // Insert results

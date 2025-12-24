@@ -11,6 +11,8 @@ export interface UserFeedback {
   bugCategory?: string;
   bugLink?: string;
   passedLocally?: boolean;
+  passedLocallyReason?: string;
+  passedLocallyNotes?: string;
 }
 
 // Extended failure with review state
@@ -74,6 +76,8 @@ export interface ResultToSave {
   bug_category: string | null;
   bug_link: string | null;
   passed_locally: boolean;
+  passed_locally_reason: string | null;
+  passed_locally_notes: string | null;
 }
 
 // Historical correction for AI learning

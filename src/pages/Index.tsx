@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useChecklist } from '@/hooks/useChecklist';
 import { useFeedback } from '@/hooks/useFeedback';
@@ -8,7 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Upload, Zap, Trash2, AlertTriangle, Bug, Clock, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Upload, Zap, Trash2, AlertTriangle, Bug, Clock, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -17,6 +19,7 @@ import { ReviewProgress } from '@/components/ReviewProgress';
 import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
 import { toast } from 'sonner';
 import { RunDetails } from '@/types/feedback';
+import { Classification } from '@/types/testim';
 
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +43,18 @@ const Index = () => {
     date: new Date(),
     notes: ''
   });
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterClassification, setFilterClassification] = useState<string>('all');
+  const [filterReviewStatus, setFilterReviewStatus] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
+
+  const classifications: Classification[] = [
+    'Potential bug',
+    'Likely Flaky',
+    'Environment / Infra Issue',
+    'Expected Change'
+  ];
 
   // Initialize feedback when analysis completes
   useEffect(() => {
@@ -98,6 +113,21 @@ const Index = () => {
 
   const hasAnalyzedResults = failuresWithFeedback.length > 0;
   const reviewedCount = failuresWithFeedback.filter(f => f.isReviewed).length;
+
+  // Filter failures based on search and filters
+  const filteredFailures = useMemo(() => {
+    return failuresWithFeedback.filter(f => {
+      const matchesSearch = !searchQuery || 
+        f.testName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        f.errorMessage?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesClassification = filterClassification === 'all' || 
+        f.analysis?.classification === filterClassification;
+      const matchesStatus = filterReviewStatus === 'all' || 
+        (filterReviewStatus === 'reviewed' && f.isReviewed) ||
+        (filterReviewStatus === 'unreviewed' && !f.isReviewed);
+      return matchesSearch && matchesClassification && matchesStatus;
+    });
+  }, [failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus]);
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -288,10 +318,63 @@ const Index = () => {
               />
             )}
 
+            {/* Search and Filters */}
+            {hasAnalyzedResults && (
+              <Card className="border-border/50 bg-card/50">
+                <CardContent className="p-4">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    {/* Search Input */}
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by test name or error message..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 bg-background/50"
+                      />
+                    </div>
+                    
+                    {/* Classification Filter */}
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-muted-foreground" />
+                      <Select value={filterClassification} onValueChange={setFilterClassification}>
+                        <SelectTrigger className="w-[180px] bg-background/50">
+                          <SelectValue placeholder="All Classifications" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Classifications</SelectItem>
+                          {classifications.map(c => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Review Status Toggle */}
+                    <ToggleGroup 
+                      type="single" 
+                      value={filterReviewStatus} 
+                      onValueChange={(v) => v && setFilterReviewStatus(v as 'all' | 'reviewed' | 'unreviewed')}
+                      className="bg-background/50 rounded-md p-1"
+                    >
+                      <ToggleGroupItem value="all" className="text-xs px-3">All</ToggleGroupItem>
+                      <ToggleGroupItem value="reviewed" className="text-xs px-3">Reviewed</ToggleGroupItem>
+                      <ToggleGroupItem value="unreviewed" className="text-xs px-3">Unreviewed</ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+                  
+                  {/* Results count */}
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    Showing {filteredFailures.length} of {failuresWithFeedback.length} results
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Results - Use review cards if analyzed */}
             <div className="space-y-3">
               {hasAnalyzedResults ? (
-                failuresWithFeedback.map((f) => (
+                filteredFailures.map((f) => (
                   <FailureReviewCard
                     key={f.id}
                     failure={f}
