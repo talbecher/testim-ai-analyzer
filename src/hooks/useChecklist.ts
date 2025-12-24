@@ -1,25 +1,51 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult } from '@/types/testim';
-import { parseFailuresCSV } from '@/lib/csvParsers';
+import { parseFailuresCSV, hasPreClassifiedColumns, getPreClassifiedStats } from '@/lib/csvParsers';
 import { detectErrorPattern, getPatternFlakiness } from '@/lib/errorPatternDetection';
+import { convertPreClassifiedToFeedback } from '@/lib/testimClassificationMapper';
 import { useFlakyKB } from './useFlakyKB';
+
+export interface PreClassifiedUploadStats {
+  total: number;
+  classified: number;
+  unclassified: number;
+  withBugLink: number;
+}
 
 export function useChecklist() {
   const [failures, setFailures] = useState<AnalyzedFailure[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPreClassifiedMode, setIsPreClassifiedMode] = useState(false);
+  const [preClassifiedStats, setPreClassifiedStats] = useState<PreClassifiedUploadStats | null>(null);
   
   const flakyKB = useFlakyKB();
 
+  // Check if CSV has pre-classified columns
+  const detectPreClassified = useCallback((content: string): boolean => {
+    return hasPreClassifiedColumns(content);
+  }, []);
+
   // Upload and parse failures CSV
-  const uploadFailures = useCallback((content: string) => {
+  const uploadFailures = useCallback((content: string, forcePreClassified?: boolean) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const parsed = parseFailuresCSV(content);
+      const isPreClassified = forcePreClassified ?? hasPreClassifiedColumns(content);
+      setIsPreClassifiedMode(isPreClassified);
+      
+      const parsed = parseFailuresCSV(content, isPreClassified);
+      
+      if (isPreClassified) {
+        const stats = getPreClassifiedStats(parsed);
+        setPreClassifiedStats(stats);
+      } else {
+        setPreClassifiedStats(null);
+      }
+      
       setFailures(parsed.map(f => ({ ...f, isAnalyzing: false })));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to parse CSV');
@@ -136,6 +162,8 @@ export function useChecklist() {
   const clearFailures = useCallback(() => {
     setFailures([]);
     setError(null);
+    setIsPreClassifiedMode(false);
+    setPreClassifiedStats(null);
   }, []);
 
   // Get sorted failures (by priority, then confidence)
@@ -180,9 +208,13 @@ export function useChecklist() {
     isLoading,
     isAnalyzing,
     error,
+    isPreClassifiedMode,
+    preClassifiedStats,
+    detectPreClassified,
     uploadFailures,
     analyzeFailures,
     clearFailures,
     flakyKB,
+    convertPreClassifiedToFeedback,
   };
 }
