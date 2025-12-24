@@ -74,6 +74,7 @@ export interface AIAnalysisResult {
   flakyKBMatch: boolean;
   matchedFlakyTestName?: string;
   matchedFlakyReason?: string;
+  isFromTestim?: boolean; // True if classification came from Testim export
 }
 
 // Combined Failure with Analysis
