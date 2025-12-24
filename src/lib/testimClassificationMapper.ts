@@ -1,4 +1,4 @@
-import { Classification, SuggestedAction, Priority, PreClassifiedData } from '@/types/testim';
+import { Classification, SuggestedAction, Priority, PreClassifiedData, AIAnalysisResult } from '@/types/testim';
 
 /**
  * Map Testim Failure Type to our Classification system
@@ -128,5 +128,29 @@ export function convertPreClassifiedToFeedback(preClassified: PreClassifiedData)
     passedLocallyReason: passedLocallyData.reason,
     passedLocallyNotes: passedLocallyData.notes,
     bugLink: preClassified.bugLink,
+  };
+}
+
+/**
+ * Convert pre-classified data to AIAnalysisResult format
+ * Used for failures that are already classified in Testim
+ */
+export function convertPreClassifiedToAnalysis(preClassified: PreClassifiedData): AIAnalysisResult | null {
+  const classification = mapFailureTypeToClassification(preClassified.failureType);
+  if (!classification) return null;
+  
+  return {
+    classification,
+    confidence: 100, // User-classified = 100% confidence
+    suggestedAction: mapClassificationToAction(classification),
+    priority: mapClassificationToPriority(classification),
+    priorityReason: `Classified in Testim as "${preClassified.failureType}"`,
+    errorPattern: 'Unknown',
+    requiresRerun: classification === 'Likely Flaky' || classification === 'Environment / Infra Issue',
+    rerunReason: classification === 'Likely Flaky' ? 'Flaky test - rerun to verify' : 
+                 classification === 'Environment / Infra Issue' ? 'Environment issue - rerun when stable' :
+                 'Already classified',
+    flakyKBMatch: false,
+    isFromTestim: true, // Mark as coming from Testim
   };
 }

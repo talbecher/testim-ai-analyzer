@@ -127,13 +127,25 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
           {/* Analysis Badges */}
           {failure.analysis && !isEditing && (
             <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Source badge */}
+              {failure.analysis.isFromTestim ? (
+                <span className="px-2 py-1 rounded text-xs font-medium bg-confidence-high/20 text-confidence-high border border-confidence-high/30">
+                  מסווג ב-Testim
+                </span>
+              ) : (
+                <span className="px-2 py-1 rounded text-xs font-medium bg-primary/20 text-primary border border-primary/30">
+                  🤖 AI
+                </span>
+              )}
               <span className={cn("px-2 py-1 rounded text-xs font-medium text-white", priorityColors[failure.analysis.priority])}>
                 {failure.analysis.priority}
               </span>
               <span className={cn("px-2 py-1 rounded text-xs font-medium", classColors[failure.analysis.classification])}>
                 {failure.analysis.classification}
               </span>
-              <span className="text-xs text-muted-foreground">{failure.analysis.confidence}%</span>
+              {!failure.analysis.isFromTestim && (
+                <span className="text-xs text-muted-foreground">{failure.analysis.confidence}%</span>
+              )}
               {failure.analysis.flakyKBMatch && <Database className="h-4 w-4 text-primary" />}
               {failure.analysis.requiresRerun ? (
                 <Clock className="h-4 w-4 text-environment" />

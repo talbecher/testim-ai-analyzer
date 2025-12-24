@@ -10,7 +10,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Upload, Zap, Trash2, AlertTriangle, Bug, Clock, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter } from 'lucide-react';
+import { Upload, Zap, Trash2, AlertTriangle, Bug, Clock, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -253,22 +253,24 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        {/* Pre-classified info banner */}
+        {/* Already-classified info banner */}
         {preClassifiedStats && (
-          <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+          <div className="bg-confidence-high/10 border border-confidence-high/30 rounded-lg p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-primary/20">
-                <FileText className="h-5 w-5 text-primary" />
+              <div className="p-2 rounded-full bg-confidence-high/20">
+                <CheckCircle className="h-5 w-5 text-confidence-high" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-foreground">Pre-classified Testim CSV detected</p>
+                <p className="font-medium text-foreground">📋 קובץ מסווג מ-Testim.io</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  <span className="text-primary font-medium">{preClassifiedStats.classified}</span> tests already classified
+                  <span className="text-confidence-high font-medium">{preClassifiedStats.classified}</span> כשלונות כבר מסווגים 
+                  <span className="text-muted-foreground"> ← יסומנו כ-reviewed</span>
                   {preClassifiedStats.unclassified > 0 && (
-                    <span> • <span className="text-flaky font-medium">{preClassifiedStats.unclassified}</span> need AI analysis</span>
+                    <span> • <span className="text-flaky font-medium">{preClassifiedStats.unclassified}</span> ללא סיווג 
+                    <span className="text-muted-foreground"> ← ינותחו ע"י AI</span></span>
                   )}
                   {preClassifiedStats.withBugLink > 0 && (
-                    <span> • <span className="text-bug font-medium">{preClassifiedStats.withBugLink}</span> with bug links</span>
+                    <span> • <span className="text-bug font-medium">{preClassifiedStats.withBugLink}</span> עם לינק לבאג</span>
                   )}
                 </p>
               </div>

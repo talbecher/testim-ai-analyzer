@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult } from '@/types/testim';
 import { parseFailuresCSV, hasPreClassifiedColumns, getPreClassifiedStats } from '@/lib/csvParsers';
 import { detectErrorPattern, getPatternFlakiness } from '@/lib/errorPatternDetection';
-import { convertPreClassifiedToFeedback } from '@/lib/testimClassificationMapper';
+import { convertPreClassifiedToFeedback, convertPreClassifiedToAnalysis } from '@/lib/testimClassificationMapper';
 import { useFlakyKB } from './useFlakyKB';
 
 export interface PreClassifiedUploadStats {
@@ -61,12 +61,33 @@ export function useChecklist() {
     setIsAnalyzing(true);
     setError(null);
     
-    // Mark all as analyzing
-    setFailures(prev => prev.map(f => ({ ...f, isAnalyzing: true })));
+    // Separate already-classified from needs-analysis
+    const alreadyClassified = failures.filter(f => f.preClassified?.failureType);
+    const needsAnalysis = failures.filter(f => !f.preClassified?.failureType);
+    
+    // Process already-classified failures immediately (no AI needed)
+    const classifiedResults: AnalyzedFailure[] = alreadyClassified.map(f => ({
+      ...f,
+      analysis: convertPreClassifiedToAnalysis(f.preClassified!) || undefined,
+      isAnalyzing: false,
+    }));
+    
+    // If nothing needs AI analysis, we're done
+    if (needsAnalysis.length === 0) {
+      setFailures(classifiedResults);
+      setIsAnalyzing(false);
+      return;
+    }
+    
+    // Mark only the ones needing analysis as analyzing
+    setFailures(prev => prev.map(f => ({ 
+      ...f, 
+      isAnalyzing: !f.preClassified?.failureType 
+    })));
     
     try {
-      // Prepare failures for AI with pre-processing
-      const failuresForAI: FailureForAI[] = failures.map(f => {
+      // Prepare only unclassified failures for AI
+      const failuresForAI: FailureForAI[] = needsAnalysis.map(f => {
         const patternResult = detectErrorPattern(f.errorMessage);
         return {
           testName: f.testName,
@@ -101,8 +122,8 @@ export function useChecklist() {
       
       const results = data.results as Array<{ failureId: number; analysis: AIAnalysisResult }>;
       
-      // Apply results
-      setFailures(prev => prev.map((f, idx) => {
+      // Process AI results for unclassified failures
+      const aiAnalyzedResults: AnalyzedFailure[] = needsAnalysis.map((f, idx) => {
         const result = results.find(r => r.failureId === idx);
         
         // Post-processing: check Flaky KB match
@@ -148,11 +169,20 @@ export function useChecklist() {
           analysis,
           isAnalyzing: false,
         };
-      }));
+      });
+      
+      // Merge both classified and AI-analyzed results
+      setFailures([...classifiedResults, ...aiAnalyzedResults]);
     } catch (e) {
       console.error('Analysis failed:', e);
       setError(e instanceof Error ? e.message : 'Analysis failed');
-      setFailures(prev => prev.map(f => ({ ...f, isAnalyzing: false, error: 'Analysis failed' })));
+      // On error, still keep the classified results
+      setFailures(prev => prev.map(f => ({ 
+        ...f, 
+        isAnalyzing: false, 
+        error: f.preClassified?.failureType ? undefined : 'Analysis failed',
+        analysis: f.preClassified?.failureType ? convertPreClassifiedToAnalysis(f.preClassified!) || undefined : f.analysis
+      })));
     } finally {
       setIsAnalyzing(false);
     }
