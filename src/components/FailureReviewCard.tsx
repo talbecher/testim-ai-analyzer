@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,22 +40,12 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
     action: failure.analysis?.suggestedAction
   });
 
-  const isPotentialBug = failure.analysis?.classification === 'Potential bug';
-
-  const handleAgree = () => {
-    if (isPotentialBug) {
-      // For Potential bug, show bug confirmation flow
+  // Show bug confirmation flow automatically for unreviewed items
+  useEffect(() => {
+    if (failure.analysis && !failure.isReviewed && !isEditing) {
       setShowBugConfirmation(true);
-    } else {
-      // For other classifications, mark as correct immediately
-      onFeedback(failure.id, {
-        wasCorrect: true,
-        userClassification: failure.analysis?.classification,
-        userPriority: failure.analysis?.priority,
-        userAction: failure.analysis?.suggestedAction
-      });
     }
-  };
+  }, [failure.analysis, failure.isReviewed, isEditing]);
 
   const handleConfirmBug = (category: string, bugLink?: string) => {
     onFeedback(failure.id, {
@@ -172,20 +162,6 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
           </div>
         )}
 
-        {/* Review Actions */}
-        {failure.analysis && !isReviewed && !isEditing && !showBugConfirmation && (
-          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
-            <span className="text-xs text-muted-foreground mr-2">AI correct?</span>
-            <Button size="sm" variant="outline" className="h-7 text-xs bg-confidence-high/10 hover:bg-confidence-high/20 text-confidence-high border-confidence-high/30" onClick={handleAgree}>
-              <Check className="h-3 w-3 mr-1" />
-              Agree
-            </Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs bg-bug/10 hover:bg-bug/20 text-bug border-bug/30" onClick={handleDisagree}>
-              <Edit2 className="h-3 w-3 mr-1" />
-              Correct
-            </Button>
-          </div>
-        )}
 
         {/* Correction Form */}
         {isEditing && (

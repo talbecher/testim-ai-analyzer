@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Upload, Zap, Trash2, AlertTriangle, Bug, Clock, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { FailureReviewCard } from '@/components/FailureReviewCard';
@@ -99,11 +100,12 @@ const Index = () => {
   const reviewedCount = failuresWithFeedback.filter(f => f.isReviewed).length;
 
   return (
-    <div className="min-h-screen bg-background dark p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <header className="text-center space-y-3 py-4 relative">
           <div className="absolute right-0 top-4 flex gap-2">
+            <ThemeToggle />
             <Button asChild variant="outline" size="sm">
               <Link to="/settings">
                 <SettingsIcon className="mr-2 h-4 w-4" />

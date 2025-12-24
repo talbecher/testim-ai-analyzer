@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, TrendingUp, Target, AlertTriangle, BarChart3 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { AccuracyTrendChart } from "@/components/dashboard/AccuracyTrendChart";
 import { MistakePatternChart } from "@/components/dashboard/MistakePatternChart";
 import { RecentReportsTable } from "@/components/dashboard/RecentReportsTable";
@@ -89,12 +90,15 @@ const Dashboard = () => {
             <h1 className="text-3xl font-bold text-foreground">AI Analysis Dashboard</h1>
             <p className="text-muted-foreground mt-1">Track accuracy trends and common failure patterns</p>
           </div>
-          <Button asChild variant="outline">
-            <Link to="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Analyzer
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <ThemeToggle />
+            <Button asChild variant="outline">
+              <Link to="/">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Analyzer
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {reports.length === 0 ? (
