@@ -25,6 +25,7 @@ export type Database = {
           run_date: string
           run_name: string
           total_analyzed: number
+          updated_at: string | null
         }
         Insert: {
           accuracy_percentage?: number | null
@@ -36,6 +37,7 @@ export type Database = {
           run_date: string
           run_name: string
           total_analyzed?: number
+          updated_at?: string | null
         }
         Update: {
           accuracy_percentage?: number | null
@@ -47,6 +49,7 @@ export type Database = {
           run_date?: string
           run_name?: string
           total_analyzed?: number
+          updated_at?: string | null
         }
         Relationships: []
       }

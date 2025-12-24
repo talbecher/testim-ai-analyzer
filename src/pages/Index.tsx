@@ -137,6 +137,12 @@ const Index = () => {
           <div className="absolute right-0 top-4 flex gap-2">
             <ThemeToggle />
             <Button asChild variant="outline" size="sm">
+              <Link to="/reports">
+                <FileText className="mr-2 h-4 w-4" />
+                Reports
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
               <Link to="/settings">
                 <SettingsIcon className="mr-2 h-4 w-4" />
                 Settings
