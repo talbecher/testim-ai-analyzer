@@ -59,14 +59,16 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
     setShowBugConfirmation(false);
   };
 
-  const handlePassedLocally = () => {
+  const handlePassedLocally = (reason: string, notes?: string) => {
     // AI was wrong - test passed locally, so it wasn't actually a bug
     onFeedback(failure.id, {
       wasCorrect: false,
       userClassification: failure.analysis?.classification,
       userPriority: failure.analysis?.priority,
       userAction: failure.analysis?.suggestedAction,
-      passedLocally: true
+      passedLocally: true,
+      passedLocallyReason: reason,
+      passedLocallyNotes: notes
     });
     setShowBugConfirmation(false);
   };
@@ -123,7 +125,7 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
           </div>
 
           {/* Analysis Badges */}
-          {failure.analysis && !isEditing && !showBugConfirmation && (
+          {failure.analysis && !isEditing && (
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className={cn("px-2 py-1 rounded text-xs font-medium text-white", priorityColors[failure.analysis.priority])}>
                 {failure.analysis.priority}
@@ -147,7 +149,7 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
         </div>
 
         {/* Priority Reason */}
-        {failure.analysis?.priorityReason && !isEditing && !showBugConfirmation && (
+        {failure.analysis?.priorityReason && !isEditing && (
           <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">{failure.analysis.priorityReason}</p>
         )}
 
@@ -226,9 +228,19 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
           <div className="mt-2 text-xs space-y-1">
             {/* Passed Locally indicator */}
             {failure.feedback?.passedLocally && (
-              <div className="flex items-center gap-1 text-confidence-high">
-                <TestTube className="h-3 w-3" />
-                <span>Passed locally (AI was wrong)</span>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1 text-confidence-high">
+                  <TestTube className="h-3 w-3" />
+                  <span>Passed locally (AI was wrong)</span>
+                  {failure.feedback?.passedLocallyReason && (
+                    <span className="px-1.5 py-0.5 rounded bg-confidence-high/10 font-medium">
+                      {failure.feedback.passedLocallyReason}
+                    </span>
+                  )}
+                </div>
+                {failure.feedback?.passedLocallyNotes && (
+                  <p className="text-muted-foreground italic pl-4">{failure.feedback.passedLocallyNotes}</p>
+                )}
               </div>
             )}
 
