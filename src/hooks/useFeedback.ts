@@ -11,22 +11,48 @@ import {
   ResultToSave 
 } from '@/types/feedback';
 import { format } from 'date-fns';
+import { convertPreClassifiedToFeedback } from '@/lib/testimClassificationMapper';
 
 export function useFeedback(failures: AnalyzedFailure[]) {
   const [failuresWithFeedback, setFailuresWithFeedback] = useState<AnalyzedFailureWithFeedback[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Initialize failures with feedback state
+  // Initialize failures with feedback state, auto-populating pre-classified entries
   const initializeFeedback = useCallback((analyzedFailures: AnalyzedFailure[]) => {
     setFailuresWithFeedback(
       analyzedFailures
         .filter(f => f.analysis)
-        .map(f => ({
-          ...f,
-          isReviewed: false,
-          feedback: undefined
-        }))
+        .map(f => {
+          // Check if this failure has pre-classified data
+          if (f.preClassified?.failureType) {
+            const mapped = convertPreClassifiedToFeedback(f.preClassified);
+            
+            // Auto-fill feedback from pre-classification
+            const autoFeedback: UserFeedback = {
+              wasCorrect: mapped.classification === f.analysis?.classification,
+              userClassification: mapped.classification || f.analysis?.classification,
+              userPriority: mapped.priority || f.analysis?.priority,
+              userAction: mapped.suggestedAction || f.analysis?.suggestedAction,
+              passedLocally: mapped.passedLocally,
+              passedLocallyReason: mapped.passedLocallyReason,
+              passedLocallyNotes: mapped.passedLocallyNotes,
+              bugLink: mapped.bugLink,
+            };
+
+            return {
+              ...f,
+              isReviewed: true, // Pre-classified = already reviewed
+              feedback: autoFeedback
+            };
+          }
+
+          return {
+            ...f,
+            isReviewed: false,
+            feedback: undefined
+          };
+        })
     );
   }, []);
 

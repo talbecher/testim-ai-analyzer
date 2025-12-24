@@ -23,7 +23,7 @@ import { Classification } from '@/types/testim';
 
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { failures, sortedFailures, stats, isLoading, isAnalyzing, error, uploadFailures, analyzeFailures, clearFailures } = useChecklist();
+  const { failures, sortedFailures, stats, isLoading, isAnalyzing, error, isPreClassifiedMode, preClassifiedStats, uploadFailures, analyzeFailures, clearFailures } = useChecklist();
   const { 
     failuresWithFeedback, 
     summary, 
@@ -243,7 +243,7 @@ const Index = () => {
             </div>
             <div className="text-center space-y-1">
               <p className="text-foreground font-medium">Drop your failures CSV here</p>
-              <p className="text-sm text-muted-foreground">or click to browse</p>
+              <p className="text-sm text-muted-foreground">Supports both regular CSV and pre-classified Testim exports</p>
             </div>
             <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
             <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="mt-2">
@@ -252,6 +252,29 @@ const Index = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Pre-classified info banner */}
+        {preClassifiedStats && (
+          <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-primary/20">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-foreground">Pre-classified Testim CSV detected</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  <span className="text-primary font-medium">{preClassifiedStats.classified}</span> tests already classified
+                  {preClassifiedStats.unclassified > 0 && (
+                    <span> • <span className="text-flaky font-medium">{preClassifiedStats.unclassified}</span> need AI analysis</span>
+                  )}
+                  {preClassifiedStats.withBugLink > 0 && (
+                    <span> • <span className="text-bug font-medium">{preClassifiedStats.withBugLink}</span> with bug links</span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && <div className="bg-destructive/10 text-destructive p-4 rounded-lg border border-destructive/20">{error}</div>}
 

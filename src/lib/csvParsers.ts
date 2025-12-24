@@ -6,12 +6,17 @@ const COLUMN_MAPPINGS = {
   testName: ['testname', 'test_name', 'test name', 'test', 'scenario', 'name', 'testid', 'test_id'],
   folder: ['folder', 'suite', 'group', 'category', 'path'],
   failureStep: ['failurestep', 'failure_step', 'failure step', 'step', 'failed_step', 'failed step'],
-  errorMessage: ['errormessage', 'error_message', 'error message', 'error', 'message', 'failure_reason', 'reason'],
+  errorMessage: ['errormessage', 'error_message', 'error message', 'error', 'message', 'failure_reason', 'failurereason', 'reason'],
   status: ['status', 'result', 'state', 'outcome'],
-  duration: ['duration', 'time', 'runtime', 'run_time', 'elapsed', 'elapsed_time'],
+  duration: ['duration', 'time', 'runtime', 'run_time', 'elapsed', 'elapsed_time', 'durationsec', 'duration sec', 'duration(sec)'],
   reason: ['reason', 'flaky_reason', 'flakyReason', 'why', 'cause'],
   notes: ['notes', 'note', 'comment', 'comments', 'description'],
   lastReviewed: ['lastreviewed', 'last_reviewed', 'last reviewed', 'reviewed', 'date', 'reviewed_at'],
+  // Pre-classified Testim columns
+  failureType: ['failure type', 'failure_type', 'failuretype', 'type'],
+  failureSubType: ['failure sub-type', 'failure_subtype', 'failuresubtype', 'subtype', 'sub-type', 'sub_type'],
+  linkToIssue: ['link to issue', 'link_to_issue', 'linktorissue', 'linktoissue', 'issue_link', 'bug_link', 'jira', 'bug'],
+  testResultUrl: ['test result url', 'result_url', 'testresulturl', 'testim_url', 'url'],
 };
 
 /**
@@ -69,9 +74,21 @@ function findColumnIndex(headers: string[], targetNames: string[]): number {
 }
 
 /**
- * Parse failures CSV from Testim
+ * Check if CSV has pre-classified Testim columns
  */
-export function parseFailuresCSV(content: string): FailureEntry[] {
+export function hasPreClassifiedColumns(content: string): boolean {
+  const rows = parseCSVContent(content);
+  if (rows.length < 1) return false;
+  
+  const headers = rows[0];
+  const failureTypeIdx = findColumnIndex(headers, COLUMN_MAPPINGS.failureType);
+  return failureTypeIdx !== -1;
+}
+
+/**
+ * Parse failures CSV from Testim (supports both regular and pre-classified)
+ */
+export function parseFailuresCSV(content: string, isPreClassified: boolean = false): FailureEntry[] {
   const rows = parseCSVContent(content);
   if (rows.length < 2) return [];
   
@@ -86,6 +103,12 @@ export function parseFailuresCSV(content: string): FailureEntry[] {
   const statusIdx = findColumnIndex(headers, COLUMN_MAPPINGS.status);
   const durationIdx = findColumnIndex(headers, COLUMN_MAPPINGS.duration);
   
+  // Pre-classified columns
+  const failureTypeIdx = findColumnIndex(headers, COLUMN_MAPPINGS.failureType);
+  const failureSubTypeIdx = findColumnIndex(headers, COLUMN_MAPPINGS.failureSubType);
+  const linkToIssueIdx = findColumnIndex(headers, COLUMN_MAPPINGS.linkToIssue);
+  const testResultUrlIdx = findColumnIndex(headers, COLUMN_MAPPINGS.testResultUrl);
+  
   if (testNameIdx === -1) {
     throw new Error('Could not find test name column. Expected columns: testName, test_name, test, scenario, or name');
   }
@@ -98,6 +121,14 @@ export function parseFailuresCSV(content: string): FailureEntry[] {
     
     const duration = durationIdx !== -1 ? row[durationIdx]?.trim() : undefined;
     
+    // Build pre-classified data if columns exist
+    const failureType = failureTypeIdx !== -1 ? row[failureTypeIdx]?.trim() : undefined;
+    const failureSubType = failureSubTypeIdx !== -1 ? row[failureSubTypeIdx]?.trim() : undefined;
+    const bugLink = linkToIssueIdx !== -1 ? row[linkToIssueIdx]?.trim() : undefined;
+    const testimResultUrl = testResultUrlIdx !== -1 ? row[testResultUrlIdx]?.trim() : undefined;
+    
+    const hasPreClassified = isPreClassified && (failureType || failureSubType || bugLink);
+    
     failures.push({
       id: generateId(),
       testName,
@@ -108,10 +139,35 @@ export function parseFailuresCSV(content: string): FailureEntry[] {
       status: statusIdx !== -1 ? row[statusIdx]?.trim() : undefined,
       duration,
       durationMs: parseDuration(duration),
+      preClassified: hasPreClassified ? {
+        failureType,
+        failureSubType,
+        bugLink,
+        testimResultUrl,
+      } : undefined,
     });
   }
   
   return failures;
+}
+
+/**
+ * Get stats about pre-classified entries
+ */
+export function getPreClassifiedStats(failures: FailureEntry[]): { 
+  total: number; 
+  classified: number; 
+  unclassified: number;
+  withBugLink: number;
+} {
+  const classified = failures.filter(f => f.preClassified?.failureType).length;
+  const withBugLink = failures.filter(f => f.preClassified?.bugLink).length;
+  return {
+    total: failures.length,
+    classified,
+    unclassified: failures.length - classified,
+    withBugLink,
+  };
 }
 
 /**

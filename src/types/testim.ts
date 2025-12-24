@@ -39,6 +39,14 @@ export interface FlakyKBData {
   lastUpdated: string | null;
 }
 
+// Pre-classified data from Testim export
+export interface PreClassifiedData {
+  failureType?: string;      // "Bug in app", "Environment Issue", "Test design", "Other"
+  failureSubType?: string;   // "Worked locally", "CLI Issue", etc.
+  bugLink?: string;          // Link To Issue
+  testimResultUrl?: string;  // Test Result URL
+}
+
 // CSV Failure Entry
 export interface FailureEntry {
   id: string;
@@ -50,6 +58,7 @@ export interface FailureEntry {
   status?: string;
   duration?: string;
   durationMs?: number;
+  preClassified?: PreClassifiedData;
 }
 
 // AI Analysis Result
