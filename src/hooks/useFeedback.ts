@@ -127,7 +127,10 @@ export function useFeedback(failures: AnalyzedFailure[]) {
         user_priority: f.feedback?.userPriority || null,
         user_action: f.feedback?.userAction || null,
         was_correct: f.feedback?.wasCorrect ?? true,
-        user_notes: f.feedback?.userNotes || null
+        user_notes: f.feedback?.userNotes || null,
+        bug_category: f.feedback?.bugCategory || null,
+        bug_link: f.feedback?.bugLink || null,
+        passed_locally: f.feedback?.passedLocally || false
       }));
 
       // Insert results

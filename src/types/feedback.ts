@@ -7,6 +7,10 @@ export interface UserFeedback {
   userPriority?: Priority;
   userAction?: SuggestedAction;
   userNotes?: string;
+  // New fields for enhanced bug tracking
+  bugCategory?: string;
+  bugLink?: string;
+  passedLocally?: boolean;
 }
 
 // Extended failure with review state
@@ -66,6 +70,10 @@ export interface ResultToSave {
   user_action: string | null;
   was_correct: boolean;
   user_notes: string | null;
+  // New fields for enhanced bug tracking
+  bug_category: string | null;
+  bug_link: string | null;
+  passed_locally: boolean;
 }
 
 // Historical correction for AI learning

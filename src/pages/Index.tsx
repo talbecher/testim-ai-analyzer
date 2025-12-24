@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Upload, Zap, Trash2, AlertTriangle, Bug, Clock, CalendarIcon, FileText, ClipboardList, BarChart3 } from 'lucide-react';
+import { Upload, Zap, Trash2, AlertTriangle, Bug, Clock, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { FailureReviewCard } from '@/components/FailureReviewCard';
@@ -103,12 +103,20 @@ const Index = () => {
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <header className="text-center space-y-3 py-4 relative">
-          <Button asChild variant="outline" size="sm" className="absolute right-0 top-4">
-            <Link to="/dashboard">
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Dashboard
-            </Link>
-          </Button>
+          <div className="absolute right-0 top-4 flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/settings">
+                <SettingsIcon className="mr-2 h-4 w-4" />
+                Settings
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/dashboard">
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Dashboard
+              </Link>
+            </Button>
+          </div>
           <div className="flex items-center justify-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
               <Bug className="h-8 w-8 text-primary" />

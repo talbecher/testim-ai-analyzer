@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Database, Clock, CheckCircle, Check, X, Edit2 } from 'lucide-react';
+import { Database, Clock, CheckCircle, Check, X, Edit2, Bug, TestTube, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
+import { BugConfirmationFlow } from './BugConfirmationFlow';
 
 interface FailureReviewCardProps {
   failure: AnalyzedFailureWithFeedback;
@@ -33,20 +33,56 @@ const actions: SuggestedAction[] = [
 
 export function FailureReviewCard({ failure, onFeedback, classColors, priorityColors }: FailureReviewCardProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [showBugConfirmation, setShowBugConfirmation] = useState(false);
   const [editValues, setEditValues] = useState({
     classification: failure.analysis?.classification,
     priority: failure.analysis?.priority,
     action: failure.analysis?.suggestedAction
   });
 
+  const isPotentialBug = failure.analysis?.classification === 'Potential bug';
+
   const handleAgree = () => {
+    if (isPotentialBug) {
+      // For Potential bug, show bug confirmation flow
+      setShowBugConfirmation(true);
+    } else {
+      // For other classifications, mark as correct immediately
+      onFeedback(failure.id, {
+        wasCorrect: true,
+        userClassification: failure.analysis?.classification,
+        userPriority: failure.analysis?.priority,
+        userAction: failure.analysis?.suggestedAction
+      });
+    }
+  };
+
+  const handleConfirmBug = (category: string, bugLink?: string) => {
     onFeedback(failure.id, {
       wasCorrect: true,
       userClassification: failure.analysis?.classification,
       userPriority: failure.analysis?.priority,
-      userAction: failure.analysis?.suggestedAction
+      userAction: failure.analysis?.suggestedAction,
+      bugCategory: category,
+      bugLink: bugLink
     });
-    setIsEditing(false);
+    setShowBugConfirmation(false);
+  };
+
+  const handlePassedLocally = () => {
+    // AI was wrong - test passed locally, so it wasn't actually a bug
+    onFeedback(failure.id, {
+      wasCorrect: false,
+      userClassification: failure.analysis?.classification,
+      userPriority: failure.analysis?.priority,
+      userAction: failure.analysis?.suggestedAction,
+      passedLocally: true
+    });
+    setShowBugConfirmation(false);
+  };
+
+  const handleCancelBugFlow = () => {
+    setShowBugConfirmation(false);
   };
 
   const handleDisagree = () => {
@@ -97,7 +133,7 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
           </div>
 
           {/* Analysis Badges */}
-          {failure.analysis && !isEditing && (
+          {failure.analysis && !isEditing && !showBugConfirmation && (
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className={cn("px-2 py-1 rounded text-xs font-medium text-white", priorityColors[failure.analysis.priority])}>
                 {failure.analysis.priority}
@@ -121,12 +157,23 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
         </div>
 
         {/* Priority Reason */}
-        {failure.analysis?.priorityReason && !isEditing && (
+        {failure.analysis?.priorityReason && !isEditing && !showBugConfirmation && (
           <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">{failure.analysis.priorityReason}</p>
         )}
 
+        {/* Bug Confirmation Flow */}
+        {showBugConfirmation && (
+          <div className="mt-3 pt-3 border-t border-border/50">
+            <BugConfirmationFlow
+              onConfirmBug={handleConfirmBug}
+              onPassedLocally={handlePassedLocally}
+              onCancel={handleCancelBugFlow}
+            />
+          </div>
+        )}
+
         {/* Review Actions */}
-        {failure.analysis && !isReviewed && !isEditing && (
+        {failure.analysis && !isReviewed && !isEditing && !showBugConfirmation && (
           <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
             <span className="text-xs text-muted-foreground mr-2">AI correct?</span>
             <Button size="sm" variant="outline" className="h-7 text-xs bg-confidence-high/10 hover:bg-confidence-high/20 text-confidence-high border-confidence-high/30" onClick={handleAgree}>
@@ -198,17 +245,51 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
           </div>
         )}
 
-        {/* Show correction if reviewed */}
-        {isReviewed && !failure.feedback?.wasCorrect && failure.feedback?.userClassification && (
-          <div className="mt-2 text-xs">
-            <span className="text-muted-foreground">Corrected to: </span>
-            <span className={cn("px-1.5 py-0.5 rounded font-medium", classColors[failure.feedback.userClassification])}>
-              {failure.feedback.userClassification}
-            </span>
-            {failure.feedback.userPriority && (
-              <span className={cn("ml-1 px-1.5 py-0.5 rounded font-medium text-white", priorityColors[failure.feedback.userPriority])}>
-                {failure.feedback.userPriority}
-              </span>
+        {/* Show correction/feedback info if reviewed */}
+        {isReviewed && (
+          <div className="mt-2 text-xs space-y-1">
+            {/* Passed Locally indicator */}
+            {failure.feedback?.passedLocally && (
+              <div className="flex items-center gap-1 text-confidence-high">
+                <TestTube className="h-3 w-3" />
+                <span>Passed locally (AI was wrong)</span>
+              </div>
+            )}
+
+            {/* Bug category and link */}
+            {failure.feedback?.bugCategory && (
+              <div className="flex items-center gap-2">
+                <Bug className="h-3 w-3 text-bug" />
+                <span className="px-1.5 py-0.5 rounded bg-bug/10 text-bug font-medium">
+                  {failure.feedback.bugCategory}
+                </span>
+                {failure.feedback?.bugLink && (
+                  <a 
+                    href={failure.feedback.bugLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    View Bug
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Standard correction display */}
+            {!failure.feedback?.wasCorrect && failure.feedback?.userClassification && !failure.feedback?.passedLocally && (
+              <div>
+                <span className="text-muted-foreground">Corrected to: </span>
+                <span className={cn("px-1.5 py-0.5 rounded font-medium", classColors[failure.feedback.userClassification])}>
+                  {failure.feedback.userClassification}
+                </span>
+                {failure.feedback.userPriority && (
+                  <span className={cn("ml-1 px-1.5 py-0.5 rounded font-medium text-white", priorityColors[failure.feedback.userPriority])}>
+                    {failure.feedback.userPriority}
+                  </span>
+                )}
+              </div>
             )}
           </div>
         )}
