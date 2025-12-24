@@ -56,11 +56,14 @@ export type Database = {
           ai_classification: string
           ai_confidence: number
           ai_priority: string
+          bug_category: string | null
+          bug_link: string | null
           created_at: string
           error_message: string | null
           error_pattern: string | null
           flaky_kb_matched: boolean | null
           id: string
+          passed_locally: boolean | null
           report_id: string
           test_name: string
           test_name_normalized: string
@@ -75,11 +78,14 @@ export type Database = {
           ai_classification: string
           ai_confidence: number
           ai_priority: string
+          bug_category?: string | null
+          bug_link?: string | null
           created_at?: string
           error_message?: string | null
           error_pattern?: string | null
           flaky_kb_matched?: boolean | null
           id?: string
+          passed_locally?: boolean | null
           report_id: string
           test_name: string
           test_name_normalized: string
@@ -94,11 +100,14 @@ export type Database = {
           ai_classification?: string
           ai_confidence?: number
           ai_priority?: string
+          bug_category?: string | null
+          bug_link?: string | null
           created_at?: string
           error_message?: string | null
           error_pattern?: string | null
           flaky_kb_matched?: boolean | null
           id?: string
+          passed_locally?: boolean | null
           report_id?: string
           test_name?: string
           test_name_normalized?: string
@@ -117,6 +126,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bug_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: []
       }
     }
     Views: {

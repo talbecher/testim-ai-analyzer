@@ -16,13 +16,15 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
 
-    // Fetch historical corrections from database
+    // Fetch historical corrections and passed locally patterns from database
     let historicalCorrections = '';
+    let passedLocallyPatterns = '';
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseKey);
       
+      // Fetch corrections
       const { data: corrections, error: dbError } = await supabase
         .from('analysis_results')
         .select('test_name_normalized, error_pattern, ai_classification, user_classification')
@@ -64,8 +66,48 @@ ${topCorrections.map(c =>
 Pay special attention to these patterns and adjust your classifications accordingly.`;
         }
       }
+
+      // Fetch passed locally patterns
+      const { data: passedLocally, error: plError } = await supabase
+        .from('analysis_results')
+        .select('test_name_normalized, error_pattern')
+        .eq('passed_locally', true)
+        .limit(100);
+
+      if (!plError && passedLocally && passedLocally.length > 0) {
+        // Aggregate by test name and error pattern
+        const patternMap = new Map<string, { name: string; pattern: string | null; count: number }>();
+        passedLocally.forEach(row => {
+          const key = `${row.test_name_normalized}|${row.error_pattern}`;
+          const existing = patternMap.get(key);
+          if (existing) {
+            existing.count++;
+          } else {
+            patternMap.set(key, {
+              name: row.test_name_normalized,
+              pattern: row.error_pattern,
+              count: 1
+            });
+          }
+        });
+
+        const topPatterns = Array.from(patternMap.values())
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 15);
+
+        if (topPatterns.length > 0) {
+          passedLocallyPatterns = `
+
+## Tests That Pass Locally (CAUTION - These are likely NOT real bugs):
+These tests were flagged as "Potential bug" but passed when run locally. 
+Consider "Likely Flaky" or "Environment / Infra Issue" instead:
+${topPatterns.map(p => 
+  `- "${p.name}" with error "${p.pattern || 'unknown'}" (passed locally ${p.count}x)`
+).join('\n')}`;
+        }
+      }
     } catch (dbErr) {
-      console.log("Could not fetch corrections, continuing without:", dbErr);
+      console.log("Could not fetch learning data, continuing without:", dbErr);
     }
 
     const systemPrompt = `You are an expert QA engineer analyzing test failures from Testim. Classify each failure accurately.
@@ -87,6 +129,7 @@ ${JSON.stringify(flakyTests, null, 2)}
 
 If a test matches Flaky KB (even fuzzy match), note it in your response.
 ${historicalCorrections}
+${passedLocallyPatterns}
 
 ## Failures to Analyze:
 ${JSON.stringify(failures, null, 2)}
