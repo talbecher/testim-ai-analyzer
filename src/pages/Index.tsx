@@ -299,9 +299,10 @@ const Index = () => {
             ) : (
               <>
                 <Zap className="h-4 w-4 text-confidence-high" />
-                <AlertTitle className="text-confidence-high">Production Mode</AlertTitle>
-                <AlertDescription className="text-muted-foreground">
-                  AI suggests classifications. You can confirm or edit each decision.
+                <AlertTitle className="text-confidence-high">Guidance Mode — Should QA investigate?</AlertTitle>
+                <AlertDescription className="text-muted-foreground space-y-1">
+                  <p>Recommendations are based on previously classified QA decisions, known flaky tests, and similar historical patterns.</p>
+                  <p className="text-xs italic">You are the final decision-maker.</p>
                 </AlertDescription>
               </>
             )}

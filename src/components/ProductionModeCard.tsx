@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, X, Edit2, Database, Zap, Clock, CheckCircle, Bug, TestTube, ExternalLink } from 'lucide-react';
+import { Check, X, Edit2, Database, Lightbulb, Clock, CheckCircle, Bug, TestTube, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
@@ -138,10 +138,10 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
           {/* Analysis Badges */}
           {failure.analysis && !isEditing && (
             <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Production Mode Badge */}
+              {/* QA Guidance Badge */}
               <Badge variant="outline" className="bg-primary/10 border-primary/30 text-primary">
-                <Zap className="h-3 w-3 mr-1" />
-                AI Suggested
+                <Lightbulb className="h-3 w-3 mr-1" />
+                QA Guidance
               </Badge>
               <span className={cn("px-2 py-1 rounded text-xs font-medium text-white", priorityColors[failure.analysis.priority])}>
                 {failure.analysis.priority}
@@ -182,9 +182,18 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
           <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">{failure.analysis.priorityReason}</p>
         )}
 
+        {/* Context explanation - visible for unreviewed items */}
+        {failure.analysis && !isEditing && !isReviewed && (
+          <p className="text-xs text-muted-foreground mt-2 italic">
+            Based on similar failures reviewed by QA
+            {failure.analysis.flakyKBMatch && " • Matched known flaky test"}
+          </p>
+        )}
+
         {/* Bug Confirmation Flow */}
         {showBugConfirmation && (
           <div className="mt-3 pt-3 border-t border-border/50">
+            <p className="text-sm font-medium text-foreground mb-2">Does this failure require manual QA investigation?</p>
             <BugConfirmationFlow
               onConfirmBug={handleConfirmBug}
               onPassedLocally={handlePassedLocally}
