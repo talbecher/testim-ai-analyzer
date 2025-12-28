@@ -1,8 +1,10 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Database, BookOpen, ExternalLink, TestTube, Bug } from 'lucide-react';
+import { Check, X, BookOpen, ExternalLink, User, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnalyzedFailureWithFeedback } from '@/types/feedback';
+import { PreClassifiedData } from '@/types/testim';
+import { Separator } from '@/components/ui/separator';
 
 interface LearningModeCardProps {
   failure: AnalyzedFailureWithFeedback;
@@ -10,71 +12,111 @@ interface LearningModeCardProps {
   priorityColors: Record<string, string>;
 }
 
-export function LearningModeCard({ failure, classColors, priorityColors }: LearningModeCardProps) {
-  const wasCorrect = failure.feedback?.wasCorrect ?? (
-    failure.analysis?.classification === failure.feedback?.userClassification
-  );
+// Check if this is a confirmed bug (Bug in App + has bug link)
+const isConfirmedBug = (preClassified: PreClassifiedData | undefined): boolean => {
+  if (!preClassified?.failureType || !preClassified?.bugLink) return false;
+  const type = preClassified.failureType.toLowerCase();
+  return type.includes('bug') && preClassified.bugLink.trim().length > 0;
+};
 
-  const humanClassification = failure.feedback?.userClassification || failure.preClassified?.failureType;
+// Get the reason why it's not a bug
+const getNotBugReason = (preClassified: PreClassifiedData | undefined): string => {
+  if (!preClassified?.failureType) return 'Unknown';
+  
+  const type = preClassified.failureType.toLowerCase();
+  const subType = preClassified.failureSubType?.toLowerCase() || '';
+  
+  // Check subtype first for more specific reasons
+  if (subType.includes('worked locally') || subType.includes('works locally')) 
+    return 'Worked Locally';
+  if (subType.includes('reassign')) 
+    return 'Reassign';
+  
+  // Check main type
+  if (type.includes('test design') || type.includes('update') || type.includes('ui')) 
+    return 'UI/Test Update';
+  if (type.includes('environment') || type.includes('infra')) 
+    return 'Environment Issue';
+  
+  // Bug without link
+  if (type.includes('bug') && !preClassified.bugLink) 
+    return 'Missing Bug Link';
+  
+  // Fallback to subtype or failure type
+  return preClassified.failureSubType || preClassified.failureType || 'Other';
+};
+
+export function LearningModeCard({ failure }: LearningModeCardProps) {
+  const humanFailureType = failure.preClassified?.failureType;
+  const bugLink = failure.preClassified?.bugLink;
   const aiClassification = failure.analysis?.classification;
+  
+  const confirmedBug = isConfirmedBug(failure.preClassified);
+  const notBugReason = !confirmedBug ? getNotBugReason(failure.preClassified) : null;
+  
+  // AI is correct if:
+  // - Human confirmed bug AND AI said "Potential bug"
+  // - Human didn't confirm bug AND AI said something other than "Potential bug"
+  const aiSaidBug = aiClassification === 'Potential bug';
+  const wasAICorrect = aiSaidBug === confirmedBug;
 
   return (
     <Card className={cn(
-      "animate-fade-in border-border/50 transition-all duration-200",
-      wasCorrect ? "border-l-4 border-l-confidence-high bg-confidence-high/5" : "border-l-4 border-l-bug bg-bug/5"
+      "animate-fade-in transition-all duration-200",
+      wasAICorrect 
+        ? "border-l-4 border-l-confidence-high bg-confidence-high/5" 
+        : "border-l-4 border-l-bug bg-bug/5"
     )}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
-          {/* Test Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <div className={cn(
-                "w-5 h-5 rounded-full flex items-center justify-center",
-                wasCorrect ? "bg-confidence-high" : "bg-bug"
-              )}>
-                {wasCorrect ? (
-                  <Check className="h-3 w-3 text-white" />
-                ) : (
-                  <X className="h-3 w-3 text-white" />
-                )}
-              </div>
-              <h3 className="font-mono text-sm font-medium truncate text-foreground">{failure.testName}</h3>
+      <CardContent className="p-4 space-y-3">
+        {/* Header - Test Name & Badge */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className={cn(
+              "w-5 h-5 rounded-full flex items-center justify-center shrink-0",
+              wasAICorrect ? "bg-confidence-high" : "bg-bug"
+            )}>
+              {wasAICorrect ? (
+                <Check className="h-3 w-3 text-white" />
+              ) : (
+                <X className="h-3 w-3 text-white" />
+              )}
             </div>
-            {failure.errorMessage && (
-              <p className="text-xs text-muted-foreground mt-1 truncate">{failure.errorMessage}</p>
-            )}
+            <h3 className="font-mono text-sm font-medium truncate text-foreground">
+              {failure.testName}
+            </h3>
           </div>
-
-          {/* Learning Mode Badge */}
-          <Badge variant="outline" className="bg-primary/10 border-primary/30 text-primary">
+          <Badge variant="outline" className="bg-primary/10 border-primary/30 text-primary shrink-0">
             <BookOpen className="h-3 w-3 mr-1" />
             Human Verified
           </Badge>
         </div>
 
-        {/* Classification Comparison */}
-        <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
-          {/* Human Classification (Ground Truth) */}
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground w-20">Human:</span>
-            {humanClassification && (
-              <>
-                <span className={cn("px-2 py-0.5 rounded text-xs font-medium", classColors[humanClassification] || 'bg-muted')}>
-                  {humanClassification}
-                </span>
-                {failure.feedback?.userPriority && (
-                  <span className={cn("px-2 py-0.5 rounded text-xs font-medium text-white", priorityColors[failure.feedback.userPriority])}>
-                    {failure.feedback.userPriority}
-                  </span>
-                )}
-              </>
+        {/* Error Message */}
+        {failure.errorMessage && (
+          <p className="text-xs text-muted-foreground truncate pl-7">
+            {failure.errorMessage}
+          </p>
+        )}
+
+        <Separator className="my-2" />
+
+        {/* Comparison Section */}
+        <div className="space-y-2 text-sm">
+          {/* Human Classification */}
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-muted-foreground w-14">Human:</span>
+            {humanFailureType && (
+              <Badge variant="secondary" className="font-medium">
+                {humanFailureType}
+              </Badge>
             )}
-            {failure.feedback?.bugLink && (
+            {bugLink && (
               <a 
-                href={failure.feedback.bugLink} 
+                href={bugLink} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-primary hover:underline text-xs"
+                className="flex items-center gap-1 text-primary hover:underline text-xs ml-auto"
               >
                 <ExternalLink className="h-3 w-3" />
                 Bug Link
@@ -82,71 +124,47 @@ export function LearningModeCard({ failure, classColors, priorityColors }: Learn
             )}
           </div>
 
-          {/* AI Prediction (Read-only) */}
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground w-20">AI Predicted:</span>
+          {/* AI Classification */}
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-muted-foreground w-14">AI:</span>
             {aiClassification && (
-              <>
-                <span className={cn("px-2 py-0.5 rounded text-xs font-medium opacity-70", classColors[aiClassification] || 'bg-muted')}>
-                  {aiClassification}
-                </span>
-                {failure.analysis?.priority && (
-                  <span className={cn("px-2 py-0.5 rounded text-xs font-medium text-white opacity-70", priorityColors[failure.analysis.priority])}>
-                    {failure.analysis.priority}
-                  </span>
-                )}
-                <span className="text-xs text-muted-foreground">({failure.analysis?.confidence}%)</span>
-              </>
+              <Badge variant="outline" className="font-medium opacity-80">
+                {aiClassification}
+              </Badge>
             )}
           </div>
+        </div>
 
-          {/* AI Accuracy Indicator */}
-          <div className="flex items-center gap-2 text-sm mt-2">
-            <Badge variant={wasCorrect ? "default" : "destructive"} className="text-xs">
-              {wasCorrect ? (
-                <>
-                  <Check className="h-3 w-3 mr-1" />
-                  AI was correct
-                </>
-              ) : (
-                <>
-                  <X className="h-3 w-3 mr-1" />
-                  AI was wrong
-                </>
-              )}
+        <Separator className="my-2" />
+
+        {/* Result Section */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Bug Status */}
+          {confirmedBug ? (
+            <Badge className="bg-bug text-white">
+              🐛 Confirmed Bug
             </Badge>
-          </div>
-
-          {/* Flaky KB Match */}
-          {failure.analysis?.flakyKBMatch && (
-            <div className="flex items-center gap-2 text-xs text-primary mt-2">
-              <Database className="h-3 w-3" />
-              <span>Known Flaky Test (Flaky KB)</span>
-            </div>
+          ) : (
+            <Badge variant="secondary" className="text-muted-foreground">
+              Not a Bug: {notBugReason}
+            </Badge>
           )}
 
-          {/* Passed Locally indicator */}
-          {failure.feedback?.passedLocally && (
-            <div className="flex items-center gap-2 text-xs text-confidence-high mt-2">
-              <TestTube className="h-3 w-3" />
-              <span>Passed locally</span>
-              {failure.feedback?.passedLocallyReason && (
-                <span className="px-1.5 py-0.5 rounded bg-confidence-high/10 font-medium">
-                  {failure.feedback.passedLocallyReason}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Bug Category */}
-          {failure.feedback?.bugCategory && (
-            <div className="flex items-center gap-2 text-xs mt-2">
-              <Bug className="h-3 w-3 text-bug" />
-              <span className="px-1.5 py-0.5 rounded bg-bug/10 text-bug font-medium">
-                {failure.feedback.bugCategory}
-              </span>
-            </div>
-          )}
+          {/* AI Accuracy */}
+          <Badge variant={wasAICorrect ? "default" : "destructive"} className="text-xs">
+            {wasAICorrect ? (
+              <>
+                <Check className="h-3 w-3 mr-1" />
+                AI Correct
+              </>
+            ) : (
+              <>
+                <X className="h-3 w-3 mr-1" />
+                AI Wrong
+              </>
+            )}
+          </Badge>
         </div>
       </CardContent>
     </Card>
