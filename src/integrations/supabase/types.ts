@@ -70,10 +70,13 @@ export type Database = {
           flaky_kb_matched: boolean | null
           id: string
           is_in_flaky_kb: boolean | null
+          manual_fix_notes: string | null
+          manual_fix_type: string | null
           passed_locally: boolean | null
           passed_locally_notes: string | null
           passed_locally_reason: string | null
           report_id: string
+          required_manual_fix: boolean | null
           test_name: string
           test_name_normalized: string
           user_action: string | null
@@ -95,10 +98,13 @@ export type Database = {
           flaky_kb_matched?: boolean | null
           id?: string
           is_in_flaky_kb?: boolean | null
+          manual_fix_notes?: string | null
+          manual_fix_type?: string | null
           passed_locally?: boolean | null
           passed_locally_notes?: string | null
           passed_locally_reason?: string | null
           report_id: string
+          required_manual_fix?: boolean | null
           test_name: string
           test_name_normalized: string
           user_action?: string | null
@@ -120,10 +126,13 @@ export type Database = {
           flaky_kb_matched?: boolean | null
           id?: string
           is_in_flaky_kb?: boolean | null
+          manual_fix_notes?: string | null
+          manual_fix_type?: string | null
           passed_locally?: boolean | null
           passed_locally_notes?: string | null
           passed_locally_reason?: string | null
           report_id?: string
+          required_manual_fix?: boolean | null
           test_name?: string
           test_name_normalized?: string
           user_action?: string | null
