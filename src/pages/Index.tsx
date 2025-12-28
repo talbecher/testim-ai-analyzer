@@ -306,6 +306,7 @@ const Index = () => {
               </>
             )}
           </Alert>
+        )}
 
         {error && <div className="bg-destructive/10 text-destructive p-4 rounded-lg border border-destructive/20">{error}</div>}
 
