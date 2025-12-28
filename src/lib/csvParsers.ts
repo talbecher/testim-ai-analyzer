@@ -110,15 +110,27 @@ function findColumnIndex(headers: string[], targetNames: string[]): number {
 }
 
 /**
- * Check if CSV has pre-classified Testim columns
+ * Check if CSV has pre-classified Testim columns with actual content
+ * Returns true only if there's at least one row with a non-empty failureType value
  */
 export function hasPreClassifiedColumns(content: string): boolean {
   const rows = parseCSVContent(content);
-  if (rows.length < 1) return false;
+  if (rows.length < 2) return false; // Need header + at least one data row
   
   const headers = rows[0];
   const failureTypeIdx = findColumnIndex(headers, COLUMN_MAPPINGS.failureType);
-  return failureTypeIdx !== -1;
+  
+  // If no Failure Type column exists, it's not pre-classified
+  if (failureTypeIdx === -1) return false;
+  
+  // Check if at least one data row has actual classification content
+  const dataRows = rows.slice(1);
+  const hasAnyClassification = dataRows.some(row => {
+    const value = row[failureTypeIdx]?.trim();
+    return value && value.length > 0;
+  });
+  
+  return hasAnyClassification;
 }
 
 /**
