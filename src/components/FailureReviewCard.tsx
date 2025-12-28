@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Database, Clock, CheckCircle, Check, X, Edit2, Bug, TestTube, ExternalLink } from 'lucide-react';
+import { Database, Clock, CheckCircle, Check, X, Edit2, Bug, TestTube, ExternalLink, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
@@ -69,6 +69,19 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
       passedLocally: true,
       passedLocallyReason: reason,
       passedLocallyNotes: notes
+    });
+    setShowBugConfirmation(false);
+  };
+
+  const handleRequiredManualFix = (fixType: string, notes?: string) => {
+    onFeedback(failure.id, {
+      wasCorrect: false, // AI was wrong - it said skip but manual work was needed
+      userClassification: failure.analysis?.classification,
+      userPriority: failure.analysis?.priority,
+      userAction: failure.analysis?.suggestedAction,
+      requiredManualFix: true,
+      manualFixType: fixType,
+      manualFixNotes: notes
     });
     setShowBugConfirmation(false);
   };
@@ -171,6 +184,7 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
             <BugConfirmationFlow
               onConfirmBug={handleConfirmBug}
               onPassedLocally={handlePassedLocally}
+              onRequiredManualFix={handleRequiredManualFix}
               onCancel={handleCancelBugFlow}
             />
           </div>
@@ -252,6 +266,24 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
                 </div>
                 {failure.feedback?.passedLocallyNotes && (
                   <p className="text-muted-foreground italic pl-4">{failure.feedback.passedLocallyNotes}</p>
+                )}
+              </div>
+            )}
+
+            {/* Required Manual Fix indicator */}
+            {failure.feedback?.requiredManualFix && (
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1 text-amber-600">
+                  <Wrench className="h-3 w-3" />
+                  <span>Required manual fix (AI was wrong)</span>
+                  {failure.feedback?.manualFixType && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/10 font-medium">
+                      {failure.feedback.manualFixType}
+                    </span>
+                  )}
+                </div>
+                {failure.feedback?.manualFixNotes && (
+                  <p className="text-muted-foreground italic pl-4">{failure.feedback.manualFixNotes}</p>
                 )}
               </div>
             )}

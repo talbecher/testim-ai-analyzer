@@ -3,22 +3,34 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, X, Link as LinkIcon, Bug, TestTube, MessageSquare } from 'lucide-react';
+import { Check, X, Link as LinkIcon, Bug, TestTube, MessageSquare, Wrench } from 'lucide-react';
 import { useBugCategories } from '@/hooks/useBugCategories';
 
 interface BugConfirmationFlowProps {
   onConfirmBug: (category: string, bugLink?: string) => void;
   onPassedLocally: (reason: string, notes?: string) => void;
+  onRequiredManualFix: (fixType: string, notes?: string) => void;
   onCancel: () => void;
 }
 
-export function BugConfirmationFlow({ onConfirmBug, onPassedLocally, onCancel }: BugConfirmationFlowProps) {
+const MANUAL_FIX_TYPES = [
+  'Test fix',
+  'Config change',
+  'Test data update',
+  'Test refactor',
+  'Environment fix',
+  'Other'
+];
+
+export function BugConfirmationFlow({ onConfirmBug, onPassedLocally, onRequiredManualFix, onCancel }: BugConfirmationFlowProps) {
   const { categories, isLoading } = useBugCategories();
-  const [step, setStep] = useState<'question' | 'category' | 'passed-reason'>('question');
+  const [step, setStep] = useState<'question' | 'category' | 'passed-reason' | 'manual-fix'>('question');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [bugLink, setBugLink] = useState('');
   const [passedReason, setPassedReason] = useState<string>('');
   const [passedNotes, setPassedNotes] = useState('');
+  const [manualFixType, setManualFixType] = useState<string>('');
+  const [manualFixNotes, setManualFixNotes] = useState('');
 
   const handleYesBug = () => {
     setStep('category');
@@ -26,6 +38,10 @@ export function BugConfirmationFlow({ onConfirmBug, onPassedLocally, onCancel }:
 
   const handleNoBug = () => {
     setStep('passed-reason');
+  };
+
+  const handleManualFix = () => {
+    setStep('manual-fix');
   };
 
   const handleConfirmCategory = () => {
@@ -40,11 +56,17 @@ export function BugConfirmationFlow({ onConfirmBug, onPassedLocally, onCancel }:
     }
   };
 
+  const handleConfirmManualFix = () => {
+    if (manualFixType) {
+      onRequiredManualFix(manualFixType, manualFixNotes || undefined);
+    }
+  };
+
   if (step === 'question') {
     return (
       <div className="space-y-3 animate-fade-in">
         <div className="text-sm font-medium text-foreground">Was there actually a bug?</div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
             className="h-8 text-xs bg-bug hover:bg-bug/90 text-bug-foreground"
@@ -64,12 +86,73 @@ export function BugConfirmationFlow({ onConfirmBug, onPassedLocally, onCancel }:
           </Button>
           <Button
             size="sm"
+            variant="outline"
+            className="h-8 text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 border-amber-500/30"
+            onClick={handleManualFix}
+          >
+            <Wrench className="h-3 w-3 mr-1" />
+            Required manual fix
+          </Button>
+          <Button
+            size="sm"
             variant="ghost"
             className="h-8 text-xs"
             onClick={onCancel}
           >
             Cancel
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'manual-fix') {
+    return (
+      <div className="space-y-3 animate-fade-in">
+        <div className="text-sm font-medium text-foreground">What type of manual fix was required?</div>
+        <div className="grid gap-2">
+          <Select value={manualFixType} onValueChange={setManualFixType}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Select fix type..." />
+            </SelectTrigger>
+            <SelectContent>
+              {MANUAL_FIX_TYPES.map(type => (
+                <SelectItem key={type} value={type} className="text-xs">
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-start gap-2">
+            <MessageSquare className="h-4 w-4 text-muted-foreground mt-2" />
+            <Textarea
+              placeholder="Additional notes for AI learning (optional)"
+              value={manualFixNotes}
+              onChange={(e) => setManualFixNotes(e.target.value)}
+              className="text-xs flex-1 min-h-[60px] resize-none"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleConfirmManualFix}
+              disabled={!manualFixType}
+            >
+              <Check className="h-3 w-3 mr-1" />
+              Confirm
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs"
+              onClick={() => setStep('question')}
+            >
+              Back
+            </Button>
+          </div>
         </div>
       </div>
     );
