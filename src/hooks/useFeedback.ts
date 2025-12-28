@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AnalyzedFailure } from '@/types/testim';
+import { AnalyzedFailure, ReportMode } from '@/types/testim';
 import { 
   AnalyzedFailureWithFeedback, 
   UserFeedback, 
@@ -13,7 +13,7 @@ import {
 import { format } from 'date-fns';
 import { convertPreClassifiedToFeedback } from '@/lib/testimClassificationMapper';
 
-export function useFeedback(failures: AnalyzedFailure[]) {
+export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode = 'production') {
   const [failuresWithFeedback, setFailuresWithFeedback] = useState<AnalyzedFailureWithFeedback[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -117,7 +117,7 @@ export function useFeedback(failures: AnalyzedFailure[]) {
     setSaveError(null);
 
     try {
-      // Prepare report data - cast common_mistakes to JSON compatible format
+      // Prepare report data with mode
       const reportData = {
         run_name: runDetails.name || 'Unnamed Run',
         run_date: format(runDetails.date, 'yyyy-MM-dd'),
@@ -125,7 +125,8 @@ export function useFeedback(failures: AnalyzedFailure[]) {
         total_analyzed: summary.totalAnalyzed,
         correct_count: summary.correctCount,
         accuracy_percentage: summary.accuracyPercentage,
-        common_mistakes: JSON.parse(JSON.stringify(summary.commonMistakes))
+        common_mistakes: JSON.parse(JSON.stringify(summary.commonMistakes)),
+        mode: reportMode // Save mode to database
       };
 
       // Insert report
@@ -137,7 +138,7 @@ export function useFeedback(failures: AnalyzedFailure[]) {
 
       if (reportError) throw reportError;
 
-      // Prepare results data
+      // Prepare results data with is_in_flaky_kb
       const resultsData: ResultToSave[] = failuresWithFeedback.map(f => ({
         report_id: report.id,
         test_name: f.testName,
@@ -149,6 +150,7 @@ export function useFeedback(failures: AnalyzedFailure[]) {
         ai_confidence: f.analysis?.confidence || 0,
         ai_action: f.analysis?.suggestedAction || null,
         flaky_kb_matched: f.analysis?.flakyKBMatch || false,
+        is_in_flaky_kb: f.analysis?.flakyKBMatch || false, // New field
         user_classification: f.feedback?.userClassification || null,
         user_priority: f.feedback?.userPriority || null,
         user_action: f.feedback?.userAction || null,
@@ -176,7 +178,7 @@ export function useFeedback(failures: AnalyzedFailure[]) {
     } finally {
       setIsSaving(false);
     }
-  }, [failuresWithFeedback, summary]);
+  }, [failuresWithFeedback, summary, reportMode]);
 
   // Reset feedback state
   const resetFeedback = useCallback(() => {

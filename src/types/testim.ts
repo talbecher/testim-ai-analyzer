@@ -1,5 +1,8 @@
 // Testim Morning Checklist Types
 
+// Report mode - Learning for evaluation, Production for decision support
+export type ReportMode = 'learning' | 'production';
+
 export type ErrorPattern = 
   | 'Element not found' 
   | 'Timeout' 

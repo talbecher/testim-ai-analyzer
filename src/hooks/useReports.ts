@@ -200,11 +200,17 @@ export function useReports() {
   const fetchLearningInsights = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Fetch all corrections where AI was wrong
+      // Fetch all corrections where AI was wrong - ONLY from learning mode reports
       const { data, error: fetchError } = await supabase
         .from('analysis_results')
-        .select('error_pattern, ai_classification, user_classification')
+        .select(`
+          error_pattern, 
+          ai_classification, 
+          user_classification,
+          analysis_reports!inner(mode)
+        `)
         .eq('was_correct', false)
+        .eq('analysis_reports.mode', 'learning')
         .not('user_classification', 'is', null);
 
       if (fetchError) throw fetchError;

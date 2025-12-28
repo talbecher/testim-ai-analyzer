@@ -21,6 +21,7 @@ export type Database = {
           correct_count: number
           created_at: string
           id: string
+          mode: string
           notes: string | null
           run_date: string
           run_name: string
@@ -33,6 +34,7 @@ export type Database = {
           correct_count?: number
           created_at?: string
           id?: string
+          mode?: string
           notes?: string | null
           run_date: string
           run_name: string
@@ -45,6 +47,7 @@ export type Database = {
           correct_count?: number
           created_at?: string
           id?: string
+          mode?: string
           notes?: string | null
           run_date?: string
           run_name?: string
@@ -66,6 +69,7 @@ export type Database = {
           error_pattern: string | null
           flaky_kb_matched: boolean | null
           id: string
+          is_in_flaky_kb: boolean | null
           passed_locally: boolean | null
           passed_locally_notes: string | null
           passed_locally_reason: string | null
@@ -90,6 +94,7 @@ export type Database = {
           error_pattern?: string | null
           flaky_kb_matched?: boolean | null
           id?: string
+          is_in_flaky_kb?: boolean | null
           passed_locally?: boolean | null
           passed_locally_notes?: string | null
           passed_locally_reason?: string | null
@@ -114,6 +119,7 @@ export type Database = {
           error_pattern?: string | null
           flaky_kb_matched?: boolean | null
           id?: string
+          is_in_flaky_kb?: boolean | null
           passed_locally?: boolean | null
           passed_locally_notes?: string | null
           passed_locally_reason?: string | null
