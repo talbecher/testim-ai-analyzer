@@ -20,39 +20,75 @@ const COLUMN_MAPPINGS = {
 };
 
 /**
- * Parse CSV content into rows
+ * Parse CSV content into rows - supports multiline quoted fields
  */
 function parseCSVContent(content: string): string[][] {
-  const lines = content.trim().split(/\r?\n/);
   const result: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
+  let i = 0;
   
-  for (const line of lines) {
-    if (!line.trim()) continue;
+  while (i < content.length) {
+    const char = content[i];
     
-    const row: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      
+    if (inQuotes) {
       if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i++;
+        // Check for escaped quote ""
+        if (content[i + 1] === '"') {
+          currentField += '"';
+          i += 2;
+          continue;
         } else {
-          inQuotes = !inQuotes;
+          // End of quoted field
+          inQuotes = false;
+          i++;
+          continue;
         }
-      } else if (char === ',' && !inQuotes) {
-        row.push(current.trim());
-        current = '';
       } else {
-        current += char;
+        // Include newlines as part of content when in quotes
+        currentField += char;
+        i++;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+        i++;
+      } else if (char === ',') {
+        currentRow.push(currentField.trim());
+        currentField = '';
+        i++;
+      } else if (char === '\n' || (char === '\r' && content[i + 1] === '\n')) {
+        // End of row
+        currentRow.push(currentField.trim());
+        if (currentRow.some(cell => cell !== '')) {
+          result.push(currentRow);
+        }
+        currentRow = [];
+        currentField = '';
+        i += (char === '\r') ? 2 : 1;
+      } else if (char === '\r') {
+        // Handle standalone \r
+        currentRow.push(currentField.trim());
+        if (currentRow.some(cell => cell !== '')) {
+          result.push(currentRow);
+        }
+        currentRow = [];
+        currentField = '';
+        i++;
+      } else {
+        currentField += char;
+        i++;
       }
     }
-    
-    row.push(current.trim());
-    result.push(row);
+  }
+  
+  // Don't forget the last row
+  if (currentField || currentRow.length > 0) {
+    currentRow.push(currentField.trim());
+    if (currentRow.some(cell => cell !== '')) {
+      result.push(currentRow);
+    }
   }
   
   return result;
