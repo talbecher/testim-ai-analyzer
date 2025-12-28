@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, X, Edit2, Database, Lightbulb, Clock, CheckCircle, Bug, TestTube, ExternalLink } from 'lucide-react';
+import { Check, X, Edit2, Database, Clock, CheckCircle, Bug, TestTube, ExternalLink, Search, CircleSlash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
@@ -103,6 +103,11 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
   };
 
   const isReviewed = failure.isReviewed;
+  
+  // Determine primary recommendation: should QA investigate?
+  const shouldInvestigate = failure.analysis?.classification === 'Potential bug' || 
+                            failure.analysis?.priority === 'P0' || 
+                            failure.analysis?.priority === 'P1';
 
   return (
     <Card className={cn(
@@ -135,65 +140,79 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
             )}
           </div>
 
-          {/* Analysis Badges */}
-          {failure.analysis && !isEditing && (
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {/* QA Guidance Badge */}
-              <Badge variant="outline" className="bg-primary/10 border-primary/30 text-primary">
-                <Lightbulb className="h-3 w-3 mr-1" />
-                QA Guidance
-              </Badge>
-              <span className={cn("px-2 py-1 rounded text-xs font-medium text-white", priorityColors[failure.analysis.priority])}>
-                {failure.analysis.priority}
-              </span>
-              <span className={cn("px-2 py-1 rounded text-xs font-medium", classColors[failure.analysis.classification])}>
-                {failure.analysis.classification}
-              </span>
-              <span className="text-xs text-muted-foreground">{failure.analysis.confidence}%</span>
-              {failure.analysis.flakyKBMatch && <Database className="h-4 w-4 text-primary" />}
-              {failure.analysis.requiresRerun ? (
-                <Clock className="h-4 w-4 text-environment" />
-              ) : (
-                <CheckCircle className="h-4 w-4 text-confidence-high" />
-              )}
-            </div>
-          )}
-
+          {/* Reviewing status indicator */}
           {failure.isAnalyzing && (
             <div className="animate-pulse text-muted-foreground text-sm">Analyzing...</div>
           )}
+
         </div>
 
-        {/* Flaky KB Badge */}
-        {failure.analysis?.flakyKBMatch && !isEditing && (
-          <div className="mt-2">
-            <Badge variant="outline" className="bg-flaky/10 border-flaky/30 text-flaky text-xs">
-              <Database className="h-3 w-3 mr-1" />
-              Known Flaky Test
-              {failure.analysis?.matchedFlakyReason && (
-                <span className="ml-1 opacity-75">• {failure.analysis.matchedFlakyReason}</span>
+        {/* PRIMARY: Investigation Recommendation */}
+        {failure.analysis && !isEditing && !isReviewed && (
+          <div className={cn(
+            "mt-3 p-3 rounded-lg border-2",
+            shouldInvestigate 
+              ? "bg-bug/10 border-bug/30" 
+              : "bg-confidence-high/10 border-confidence-high/30"
+          )}>
+            <div className="flex items-center gap-2">
+              {shouldInvestigate ? (
+                <>
+                  <Search className="h-5 w-5 text-bug" />
+                  <span className="font-medium text-bug">Recommended: Investigate</span>
+                </>
+              ) : (
+                <>
+                  <CircleSlash className="h-5 w-5 text-confidence-high" />
+                  <span className="font-medium text-confidence-high">Recommended: Skip investigation</span>
+                </>
               )}
-            </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1 italic">
+              Based on similar failures reviewed by QA
+              {failure.analysis.flakyKBMatch && " • Matched known flaky test"}
+            </p>
           </div>
         )}
 
-        {/* Priority Reason */}
-        {failure.analysis?.priorityReason && !isEditing && (
-          <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">{failure.analysis.priorityReason}</p>
-        )}
-
-        {/* Context explanation - visible for unreviewed items */}
+        {/* SECONDARY: Classification Context */}
         {failure.analysis && !isEditing && !isReviewed && (
-          <p className="text-xs text-muted-foreground mt-2 italic">
-            Based on similar failures reviewed by QA
-            {failure.analysis.flakyKBMatch && " • Matched known flaky test"}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <span className="font-medium">Context:</span>
+            <span className={cn("px-1.5 py-0.5 rounded opacity-80", classColors[failure.analysis.classification])}>
+              {failure.analysis.classification}
+            </span>
+            <span className="opacity-50">•</span>
+            <span className={cn("px-1.5 py-0.5 rounded opacity-80 text-white", priorityColors[failure.analysis.priority])}>
+              {failure.analysis.priority}
+            </span>
+            <span className="opacity-50">•</span>
+            <span>{failure.analysis.confidence}% confidence</span>
+            {failure.analysis.flakyKBMatch && (
+              <>
+                <span className="opacity-50">•</span>
+                <Database className="h-3 w-3 text-flaky" />
+                <span className="text-flaky">Known flaky</span>
+              </>
+            )}
+            {failure.analysis.requiresRerun && (
+              <>
+                <span className="opacity-50">•</span>
+                <Clock className="h-3 w-3 text-environment" />
+                <span className="text-environment">Rerun suggested</span>
+              </>
+            )}
+          </div>
         )}
 
-        {/* Bug Confirmation Flow */}
+        {/* Priority Reason - secondary detail */}
+        {failure.analysis?.priorityReason && !isEditing && !isReviewed && (
+          <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line opacity-70">{failure.analysis.priorityReason}</p>
+        )}
+
+        {/* Bug Confirmation Flow - actions for the recommendation */}
         {showBugConfirmation && (
-          <div className="mt-3 pt-3 border-t border-border/50">
-            <p className="text-sm font-medium text-foreground mb-2">Does this failure require manual QA investigation?</p>
+          <div className="mt-3">
             <BugConfirmationFlow
               onConfirmBug={handleConfirmBug}
               onPassedLocally={handlePassedLocally}
