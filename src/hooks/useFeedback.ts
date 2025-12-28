@@ -160,7 +160,10 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
         bug_link: f.feedback?.bugLink || null,
         passed_locally: f.feedback?.passedLocally || false,
         passed_locally_reason: f.feedback?.passedLocallyReason || null,
-        passed_locally_notes: f.feedback?.passedLocallyNotes || null
+        passed_locally_notes: f.feedback?.passedLocallyNotes || null,
+        required_manual_fix: f.feedback?.requiredManualFix || false,
+        manual_fix_type: f.feedback?.manualFixType || null,
+        manual_fix_notes: f.feedback?.manualFixNotes || null
       }));
 
       // Insert results

@@ -13,6 +13,10 @@ export interface UserFeedback {
   passedLocally?: boolean;
   passedLocallyReason?: string;
   passedLocallyNotes?: string;
+  // Fields for manual fix tracking (when AI said skip but manual work was needed)
+  requiredManualFix?: boolean;
+  manualFixType?: string;
+  manualFixNotes?: string;
 }
 
 // Extended failure with review state
@@ -78,6 +82,10 @@ export interface ResultToSave {
   passed_locally: boolean;
   passed_locally_reason: string | null;
   passed_locally_notes: string | null;
+  // Manual fix tracking fields
+  required_manual_fix: boolean;
+  manual_fix_type: string | null;
+  manual_fix_notes: string | null;
 }
 
 // Historical correction for AI learning
