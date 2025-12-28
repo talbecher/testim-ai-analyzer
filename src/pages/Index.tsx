@@ -10,11 +10,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Upload, Zap, Trash2, AlertTriangle, Bug, Clock, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Upload, Zap, Trash2, AlertTriangle, Bug, Clock, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { FailureReviewCard } from '@/components/FailureReviewCard';
+import { LearningModeCard } from '@/components/LearningModeCard';
+import { ProductionModeCard } from '@/components/ProductionModeCard';
 import { ReviewProgress } from '@/components/ReviewProgress';
 import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
 import { toast } from 'sonner';
@@ -23,7 +25,7 @@ import { Classification } from '@/types/testim';
 
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { failures, sortedFailures, stats, isLoading, isAnalyzing, error, isPreClassifiedMode, preClassifiedStats, uploadFailures, analyzeFailures, clearFailures } = useChecklist();
+  const { failures, sortedFailures, stats, isLoading, isAnalyzing, error, isPreClassifiedMode, preClassifiedStats, reportMode, uploadFailures, analyzeFailures, clearFailures } = useChecklist();
   const { 
     failuresWithFeedback, 
     summary, 
@@ -34,7 +36,7 @@ const Index = () => {
     handleFeedback, 
     saveReport, 
     resetFeedback 
-  } = useFeedback(failures);
+  } = useFeedback(failures, reportMode);
   
   const [dragOver, setDragOver] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
@@ -278,6 +280,33 @@ const Index = () => {
           </div>
         )}
 
+        {/* Mode Banner */}
+        {failures.length > 0 && (
+          <Alert className={cn(
+            "border",
+            reportMode === 'learning' 
+              ? "bg-primary/5 border-primary/30" 
+              : "bg-confidence-high/5 border-confidence-high/30"
+          )}>
+            {reportMode === 'learning' ? (
+              <>
+                <BookOpen className="h-4 w-4 text-primary" />
+                <AlertTitle className="text-primary">Learning Mode</AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  AI predictions will be compared against human classifications. This data trains the AI for better accuracy.
+                </AlertDescription>
+              </>
+            ) : (
+              <>
+                <Zap className="h-4 w-4 text-confidence-high" />
+                <AlertTitle className="text-confidence-high">Production Mode</AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  AI suggests classifications. You can confirm or edit each decision.
+                </AlertDescription>
+              </>
+            )}
+          </Alert>
+
         {error && <div className="bg-destructive/10 text-destructive p-4 rounded-lg border border-destructive/20">{error}</div>}
 
         {failures.length > 0 && (
@@ -402,17 +431,26 @@ const Index = () => {
               </Card>
             )}
 
-            {/* Results - Use review cards if analyzed */}
+            {/* Results - Use mode-specific cards */}
             <div className="space-y-3">
               {hasAnalyzedResults ? (
                 filteredFailures.map((f) => (
-                  <FailureReviewCard
-                    key={f.id}
-                    failure={f}
-                    onFeedback={handleFeedback}
-                    classColors={classColors}
-                    priorityColors={priorityColors}
-                  />
+                  reportMode === 'learning' ? (
+                    <LearningModeCard
+                      key={f.id}
+                      failure={f}
+                      classColors={classColors}
+                      priorityColors={priorityColors}
+                    />
+                  ) : (
+                    <ProductionModeCard
+                      key={f.id}
+                      failure={f}
+                      onFeedback={handleFeedback}
+                      classColors={classColors}
+                      priorityColors={priorityColors}
+                    />
+                  )
                 ))
               ) : (
                 sortedFailures.map((f) => (

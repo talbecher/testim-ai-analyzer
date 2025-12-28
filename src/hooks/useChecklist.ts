@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult } from '@/types/testim';
+import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult, ReportMode } from '@/types/testim';
 import { parseFailuresCSV, hasPreClassifiedColumns, getPreClassifiedStats } from '@/lib/csvParsers';
 import { detectErrorPattern, getPatternFlakiness } from '@/lib/errorPatternDetection';
 import { convertPreClassifiedToFeedback, convertPreClassifiedToAnalysis } from '@/lib/testimClassificationMapper';
@@ -21,7 +21,15 @@ export function useChecklist() {
   const [isPreClassifiedMode, setIsPreClassifiedMode] = useState(false);
   const [preClassifiedStats, setPreClassifiedStats] = useState<PreClassifiedUploadStats | null>(null);
   
+  // Mode detection: learning if CSV has Failure Type column, production otherwise
+  const [reportMode, setReportMode] = useState<ReportMode>('production');
+  
   const flakyKB = useFlakyKB();
+
+  // Detect mode based on CSV content
+  const detectMode = useCallback((content: string): ReportMode => {
+    return hasPreClassifiedColumns(content) ? 'learning' : 'production';
+  }, []);
 
   // Check if CSV has pre-classified columns
   const detectPreClassified = useCallback((content: string): boolean => {
@@ -36,6 +44,10 @@ export function useChecklist() {
     try {
       const isPreClassified = forcePreClassified ?? hasPreClassifiedColumns(content);
       setIsPreClassifiedMode(isPreClassified);
+      
+      // Set mode based on CSV content - this is the source of truth
+      const mode = detectMode(content);
+      setReportMode(mode);
       
       const parsed = parseFailuresCSV(content, isPreClassified);
       
@@ -52,7 +64,7 @@ export function useChecklist() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [detectMode]);
 
   // Analyze all failures with AI
   const analyzeFailures = useCallback(async () => {
@@ -61,18 +73,23 @@ export function useChecklist() {
     setIsAnalyzing(true);
     setError(null);
     
-    // Separate already-classified from needs-analysis
-    const alreadyClassified = failures.filter(f => f.preClassified?.failureType);
-    const needsAnalysis = failures.filter(f => !f.preClassified?.failureType);
+    // In learning mode: AI runs on ALL failures for prediction evaluation
+    // In production mode: AI runs only on unclassified failures
+    const alreadyClassified = reportMode === 'learning' 
+      ? [] // In learning mode, we still want AI to predict (for comparison)
+      : failures.filter(f => f.preClassified?.failureType);
+    const needsAnalysis = reportMode === 'learning'
+      ? failures // In learning mode, analyze ALL failures
+      : failures.filter(f => !f.preClassified?.failureType);
     
-    // Process already-classified failures immediately (no AI needed)
+    // Process already-classified failures immediately (production mode only)
     const classifiedResults: AnalyzedFailure[] = alreadyClassified.map(f => ({
       ...f,
       analysis: convertPreClassifiedToAnalysis(f.preClassified!) || undefined,
       isAnalyzing: false,
     }));
     
-    // If nothing needs AI analysis, we're done
+    // If nothing needs AI analysis (production mode with all pre-classified), we're done
     if (needsAnalysis.length === 0) {
       setFailures(classifiedResults);
       setIsAnalyzing(false);
@@ -110,11 +127,12 @@ export function useChecklist() {
         notes: t.notes,
       }));
       
-      // Call edge function
+      // Call edge function with mode
       const { data, error: fnError } = await supabase.functions.invoke('analyze-failures', {
         body: {
           failures: failuresForAI,
           flakyTests: flakyTestsForAI,
+          mode: reportMode, // Pass mode to edge function
         },
       });
       
@@ -122,33 +140,35 @@ export function useChecklist() {
       
       const results = data.results as Array<{ failureId: number; analysis: AIAnalysisResult }>;
       
-      // Process AI results for unclassified failures
+      // Process AI results
       const aiAnalyzedResults: AnalyzedFailure[] = needsAnalysis.map((f, idx) => {
         const result = results.find(r => r.failureId === idx);
         
-        // Post-processing: check Flaky KB match
+        // Post-processing: check Flaky KB match and set is_in_flaky_kb
         const flakyMatch = flakyKB.findFlakyTestMatch(f.testName);
+        const isInFlakyKB = flakyMatch.matched;
         
         let analysis = result?.analysis;
-        if (analysis && flakyMatch.matched) {
+        if (analysis) {
+          // Add flaky KB match info
           analysis = {
             ...analysis,
-            flakyKBMatch: true,
+            flakyKBMatch: isInFlakyKB,
             matchedFlakyTestName: flakyMatch.matchedTest?.testName,
             matchedFlakyReason: flakyMatch.matchedTest?.reason,
           };
           
-          // If in Flaky KB, adjust priority down one level
-          if (analysis.priority === 'P0') analysis.priority = 'P1';
-          else if (analysis.priority === 'P1') analysis.priority = 'P2';
-          else if (analysis.priority === 'P2') analysis.priority = 'P3';
+          // If in Flaky KB, adjust priority down one level (as confidence signal)
+          if (isInFlakyKB) {
+            if (analysis.priority === 'P0') analysis.priority = 'P1';
+            else if (analysis.priority === 'P1') analysis.priority = 'P2';
+            else if (analysis.priority === 'P2') analysis.priority = 'P3';
+            
+            // Add KB match to priority reason
+            analysis.priorityReason = `• Known flaky test (Flaky KB)\n${analysis.priorityReason}`;
+          }
           
-          // Add KB match to priority reason
-          analysis.priorityReason = `• Known flaky test (Flaky KB)\n${analysis.priorityReason}`;
-        }
-        
-        // Post-processing: adjust requiresRerun based on classification and confidence
-        if (analysis) {
+          // Post-processing: adjust requiresRerun based on classification and confidence
           if (analysis.classification === 'Likely Flaky' && analysis.confidence >= 80) {
             analysis.requiresRerun = false;
             analysis.rerunReason = 'High confidence flaky - no rerun needed';
@@ -171,8 +191,18 @@ export function useChecklist() {
         };
       });
       
-      // Merge both classified and AI-analyzed results
-      setFailures([...classifiedResults, ...aiAnalyzedResults]);
+      // In learning mode: merge AI predictions with human classifications
+      // The human classification comes from preClassified data
+      if (reportMode === 'learning') {
+        const learningResults = aiAnalyzedResults.map(f => {
+          // Keep the preClassified data - AI prediction is separate
+          return f;
+        });
+        setFailures(learningResults);
+      } else {
+        // In production mode: merge both classified and AI-analyzed results
+        setFailures([...classifiedResults, ...aiAnalyzedResults]);
+      }
     } catch (e) {
       console.error('Analysis failed:', e);
       setError(e instanceof Error ? e.message : 'Analysis failed');
@@ -186,7 +216,7 @@ export function useChecklist() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [failures, flakyKB]);
+  }, [failures, flakyKB, reportMode]);
 
   // Clear all failures
   const clearFailures = useCallback(() => {
@@ -194,6 +224,7 @@ export function useChecklist() {
     setError(null);
     setIsPreClassifiedMode(false);
     setPreClassifiedStats(null);
+    setReportMode('production');
   }, []);
 
   // Get sorted failures (by priority, then confidence)
@@ -240,6 +271,7 @@ export function useChecklist() {
     error,
     isPreClassifiedMode,
     preClassifiedStats,
+    reportMode,
     detectPreClassified,
     uploadFailures,
     analyzeFailures,
