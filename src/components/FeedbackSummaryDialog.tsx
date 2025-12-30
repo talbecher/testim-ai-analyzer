@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, XCircle, Save, Trash2, TrendingUp, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Save, Trash2, Target } from 'lucide-react';
 import { FeedbackSummary } from '@/types/feedback';
 import { cn } from '@/lib/utils';
 
@@ -28,87 +28,52 @@ export function FeedbackSummaryDialog({
     return 'text-bug';
   };
 
-  const getAccuracyBg = (accuracy: number) => {
-    if (accuracy >= 80) return 'bg-confidence-high';
-    if (accuracy >= 60) return 'bg-flaky';
-    return 'bg-bug';
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Analysis Summary
+            <Target className="h-5 w-5 text-primary" />
+            AI Accuracy Summary
           </DialogTitle>
           <DialogDescription>
-            Review complete! Here's how the AI performed.
+            How well did the AI recommend Investigate vs Skip?
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Accuracy Gauge */}
+          {/* Accuracy - Main Focus */}
           <div className="text-center space-y-2">
-            <div className={cn("text-5xl font-bold", getAccuracyColor(summary.accuracyPercentage))}>
-              {summary.accuracyPercentage.toFixed(1)}%
+            <div className={cn("text-6xl font-bold", getAccuracyColor(summary.accuracyPercentage))}>
+              {summary.accuracyPercentage.toFixed(0)}%
             </div>
-            <div className="text-sm text-muted-foreground">AI Accuracy</div>
             <Progress 
               value={summary.accuracyPercentage} 
-              className={cn("h-2", getAccuracyBg(summary.accuracyPercentage))}
+              className="h-2"
             />
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-muted/30 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-foreground">{summary.totalAnalyzed}</div>
-              <div className="text-xs text-muted-foreground">Total Analyzed</div>
+          {/* Simple Stats */}
+          <div className="flex justify-center gap-6 text-center">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-confidence-high" />
+              <span className="text-lg font-semibold text-confidence-high">{summary.correctCount}</span>
+              <span className="text-sm text-muted-foreground">correct</span>
             </div>
-            <div className="bg-muted/30 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-foreground">{summary.reviewedCount}</div>
-              <div className="text-xs text-muted-foreground">Reviewed</div>
-            </div>
-            <div className="bg-confidence-high/10 rounded-lg p-3 text-center">
-              <div className="flex items-center justify-center gap-1">
-                <CheckCircle className="h-4 w-4 text-confidence-high" />
-                <span className="text-2xl font-bold text-confidence-high">{summary.correctCount}</span>
-              </div>
-              <div className="text-xs text-muted-foreground">Correct</div>
-            </div>
-            <div className="bg-bug/10 rounded-lg p-3 text-center">
-              <div className="flex items-center justify-center gap-1">
-                <XCircle className="h-4 w-4 text-bug" />
-                <span className="text-2xl font-bold text-bug">{summary.incorrectCount}</span>
-              </div>
-              <div className="text-xs text-muted-foreground">Incorrect</div>
+            <div className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-bug" />
+              <span className="text-lg font-semibold text-bug">{summary.incorrectCount}</span>
+              <span className="text-sm text-muted-foreground">wrong</span>
             </div>
           </div>
 
-          {/* Common Mistakes */}
-          {summary.commonMistakes.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <AlertTriangle className="h-4 w-4 text-flaky" />
-                Common Mistakes
-              </div>
-              <div className="space-y-1">
-                {summary.commonMistakes.slice(0, 3).map((mistake, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs bg-muted/20 rounded px-2 py-1">
-                    <span className="text-muted-foreground">{mistake.from}</span>
-                    <span className="text-muted-foreground">→</span>
-                    <span className="font-medium text-foreground">{mistake.to}</span>
-                    <span className="ml-auto text-muted-foreground">({mistake.count}x)</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="text-center text-sm text-muted-foreground">
+            {summary.totalAnalyzed} failures analyzed
+          </div>
 
           {/* Save Info */}
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm text-muted-foreground">
-            <strong className="text-foreground">Saving this report</strong> helps the AI learn from mistakes and improve future analyses.
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm text-muted-foreground text-center">
+            Save to help AI improve future recommendations
           </div>
         </div>
 

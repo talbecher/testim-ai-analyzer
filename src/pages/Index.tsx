@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, Zap, Trash2, AlertTriangle, Bug, Clock, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen } from 'lucide-react';
+import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -115,6 +115,21 @@ const Index = () => {
 
   const hasAnalyzedResults = failuresWithFeedback.length > 0;
   const reviewedCount = failuresWithFeedback.filter(f => f.isReviewed).length;
+
+  // Recommendation stats (Investigate vs Skip)
+  const recommendationStats = useMemo(() => {
+    const analyzed = sortedFailures.filter(f => f.analysis);
+    const investigate = analyzed.filter(f => 
+      f.analysis?.classification === 'Potential bug' ||
+      f.analysis?.priority === 'P0' ||
+      f.analysis?.priority === 'P1'
+    );
+    return {
+      total: analyzed.length,
+      investigate: investigate.length,
+      skip: analyzed.length - investigate.length
+    };
+  }, [sortedFailures]);
 
   // Filter failures based on search and filters
   const filteredFailures = useMemo(() => {
@@ -328,33 +343,35 @@ const Index = () => {
               </div>
             )}
 
-            {/* Stats */}
+            {/* Stats - Recommendation based */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card className="border-border/50">
                 <CardContent className="pt-4 text-center">
-                  <div className="text-3xl font-bold text-foreground">{stats.total}</div>
-                  <div className="text-sm text-muted-foreground mt-1">Total Failures</div>
+                  <div className="text-3xl font-bold text-foreground">{recommendationStats.total}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Total Analyzed</div>
                 </CardContent>
               </Card>
               <Card className="border-bug/30 bg-bug/5">
                 <CardContent className="pt-4 text-center">
-                  <Bug className="h-5 w-5 mx-auto text-bug mb-1" />
-                  <div className="text-3xl font-bold text-bug">{stats.potentialBugs}</div>
-                  <div className="text-sm text-muted-foreground mt-1">Potential Bugs</div>
+                  <SearchCheck className="h-5 w-5 mx-auto text-bug mb-1" />
+                  <div className="text-3xl font-bold text-bug">{recommendationStats.investigate}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Investigate</div>
                 </CardContent>
               </Card>
               <Card className="border-flaky/30 bg-flaky/5">
                 <CardContent className="pt-4 text-center">
-                  <AlertTriangle className="h-5 w-5 mx-auto text-flaky mb-1" />
-                  <div className="text-3xl font-bold text-flaky">{stats.flaky}</div>
-                  <div className="text-sm text-muted-foreground mt-1">Flaky Tests</div>
+                  <CircleSlash className="h-5 w-5 mx-auto text-flaky mb-1" />
+                  <div className="text-3xl font-bold text-flaky">{recommendationStats.skip}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Skip</div>
                 </CardContent>
               </Card>
-              <Card className="border-environment/30 bg-environment/5">
+              <Card className="border-confidence-high/30 bg-confidence-high/5">
                 <CardContent className="pt-4 text-center">
-                  <Clock className="h-5 w-5 mx-auto text-environment mb-1" />
-                  <div className="text-3xl font-bold text-environment">{stats.environment}</div>
-                  <div className="text-sm text-muted-foreground mt-1">Environment Issues</div>
+                  <Target className="h-5 w-5 mx-auto text-confidence-high mb-1" />
+                  <div className="text-3xl font-bold text-confidence-high">
+                    {summary.reviewedCount > 0 ? `${summary.accuracyPercentage.toFixed(0)}%` : '—'}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">AI Accuracy</div>
                 </CardContent>
               </Card>
             </div>
