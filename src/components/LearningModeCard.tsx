@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, BookOpen, ExternalLink, User, Bot } from 'lucide-react';
+import { Check, X, BookOpen, ExternalLink, Search, CircleSlash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AnalyzedFailureWithFeedback } from '@/types/feedback';
 import { PreClassifiedData } from '@/types/testim';
@@ -12,53 +12,69 @@ interface LearningModeCardProps {
   priorityColors: Record<string, string>;
 }
 
-// Check if this is a confirmed bug (Bug in App + has bug link)
-const isConfirmedBug = (preClassified: PreClassifiedData | undefined): boolean => {
-  if (!preClassified?.failureType || !preClassified?.bugLink) return false;
-  const type = preClassified.failureType.toLowerCase();
-  return type.includes('bug') && preClassified.bugLink.trim().length > 0;
-};
-
-// Get the reason why it's not a bug
-const getNotBugReason = (preClassified: PreClassifiedData | undefined): string => {
-  if (!preClassified?.failureType) return 'Unknown';
-  
+// Determine if manual work was actually needed based on human classification
+const requiredManualWork = (preClassified: PreClassifiedData | undefined): boolean => {
+  if (!preClassified?.failureType) return false;
   const type = preClassified.failureType.toLowerCase();
   const subType = preClassified.failureSubType?.toLowerCase() || '';
   
-  // Check subtype first for more specific reasons
-  if (subType.includes('worked locally') || subType.includes('works locally')) 
-    return 'Worked Locally';
-  if (subType.includes('reassign')) 
+  // Worked locally = NO manual work needed
+  if (subType.includes('worked locally') || subType.includes('works locally')) {
+    return false;
+  }
+  
+  // Bug in App = manual work needed
+  if (type.includes('bug')) return true;
+  
+  // Test design/update/reassign = manual work needed  
+  if (type.includes('test design') || type.includes('update') || type.includes('ui')) return true;
+  if (subType.includes('reassign')) return true;
+  
+  // Environment/Infra = manual work needed
+  if (type.includes('environment') || type.includes('infra')) return true;
+  
+  return true; // Default: assume manual work needed
+};
+
+// Get a friendly description of what work was needed
+const getWorkDescription = (preClassified: PreClassifiedData | undefined): string => {
+  if (!preClassified?.failureType) return 'Unknown';
+  const type = preClassified.failureType.toLowerCase();
+  const subType = preClassified.failureSubType?.toLowerCase() || '';
+  
+  if (subType.includes('worked locally') || subType.includes('works locally')) {
+    return 'Worked locally';
+  }
+  if (subType.includes('reassign')) {
     return 'Reassign';
+  }
+  if (type.includes('bug')) {
+    return 'Bug fix';
+  }
+  if (type.includes('test design') || type.includes('update') || type.includes('ui')) {
+    return 'Test update';
+  }
+  if (type.includes('environment') || type.includes('infra')) {
+    return 'Environment issue';
+  }
   
-  // Check main type
-  if (type.includes('test design') || type.includes('update') || type.includes('ui')) 
-    return 'UI/Test Update';
-  if (type.includes('environment') || type.includes('infra')) 
-    return 'Environment Issue';
-  
-  // Bug without link
-  if (type.includes('bug') && !preClassified.bugLink) 
-    return 'Missing Bug Link';
-  
-  // Fallback to subtype or failure type
   return preClassified.failureSubType || preClassified.failureType || 'Other';
 };
 
 export function LearningModeCard({ failure }: LearningModeCardProps) {
-  const humanFailureType = failure.preClassified?.failureType;
   const bugLink = failure.preClassified?.bugLink;
-  const aiClassification = failure.analysis?.classification;
   
-  const confirmedBug = isConfirmedBug(failure.preClassified);
-  const notBugReason = !confirmedBug ? getNotBugReason(failure.preClassified) : null;
-  
-  // AI is correct if:
-  // - Human confirmed bug AND AI said "Potential bug"
-  // - Human didn't confirm bug AND AI said something other than "Potential bug"
-  const aiSaidBug = aiClassification === 'Potential bug';
-  const wasAICorrect = aiSaidBug === confirmedBug;
+  // AI recommendation: would it suggest investigating?
+  const aiRecommendedInvestigate = failure.analysis?.classification === 'Potential bug' || 
+                                    failure.analysis?.priority === 'P0' || 
+                                    failure.analysis?.priority === 'P1';
+
+  // Did this actually need manual work?
+  const neededManualWork = requiredManualWork(failure.preClassified);
+  const workDescription = getWorkDescription(failure.preClassified);
+
+  // AI is correct if recommendation matched actual need
+  const wasAICorrect = aiRecommendedInvestigate === neededManualWork;
 
   return (
     <Card className={cn(
@@ -100,68 +116,87 @@ export function LearningModeCard({ failure }: LearningModeCardProps) {
 
         <Separator className="my-2" />
 
-        {/* Comparison Section */}
-        <div className="space-y-2 text-sm">
-          {/* Human Classification */}
+        {/* AI Recommendation */}
+        <div className={cn(
+          "p-3 rounded-md border",
+          aiRecommendedInvestigate 
+            ? "bg-bug/10 border-bug/30" 
+            : "bg-confidence-high/10 border-confidence-high/30"
+        )}>
           <div className="flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-muted-foreground w-14">Human:</span>
-            {humanFailureType && (
-              <Badge variant="secondary" className="font-medium">
-                {humanFailureType}
-              </Badge>
+            {aiRecommendedInvestigate ? (
+              <>
+                <Search className="h-4 w-4 text-bug" />
+                <span className="font-medium text-bug text-sm">AI Recommendation: Investigate</span>
+              </>
+            ) : (
+              <>
+                <CircleSlash className="h-4 w-4 text-confidence-high" />
+                <span className="font-medium text-confidence-high text-sm">AI Recommendation: Skip investigation</span>
+              </>
             )}
+          </div>
+          {failure.analysis && (
+            <p className="text-xs text-muted-foreground mt-1 ml-6">
+              Classification: {failure.analysis.classification} • Priority: {failure.analysis.priority} • Confidence: {failure.analysis.confidence}%
+            </p>
+          )}
+        </div>
+
+        {/* Actual Outcome */}
+        <div className={cn(
+          "p-3 rounded-md border",
+          neededManualWork 
+            ? "bg-muted/50 border-border" 
+            : "bg-confidence-high/5 border-confidence-high/20"
+        )}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {neededManualWork ? (
+                <Badge variant="secondary" className="font-medium">
+                  Required manual work
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-confidence-high/10 border-confidence-high/30 text-confidence-high font-medium">
+                  No manual work needed
+                </Badge>
+              )}
+              <span className="text-xs text-muted-foreground">({workDescription})</span>
+            </div>
             {bugLink && (
               <a 
                 href={bugLink} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-primary hover:underline text-xs ml-auto"
+                className="flex items-center gap-1 text-primary hover:underline text-xs"
               >
                 <ExternalLink className="h-3 w-3" />
                 Bug Link
               </a>
             )}
           </div>
-
-          {/* AI Classification */}
-          <div className="flex items-center gap-2">
-            <Bot className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-muted-foreground w-14">AI:</span>
-            {aiClassification && (
-              <Badge variant="outline" className="font-medium opacity-80">
-                {aiClassification}
-              </Badge>
-            )}
-          </div>
         </div>
 
         <Separator className="my-2" />
 
-        {/* Result Section */}
-        <div className="flex items-center justify-between gap-2">
-          {/* Bug Status */}
-          {confirmedBug ? (
-            <Badge className="bg-bug text-white">
-              🐛 Confirmed Bug
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="text-muted-foreground">
-              Not a Bug: {notBugReason}
-            </Badge>
-          )}
-
-          {/* AI Accuracy */}
-          <Badge variant={wasAICorrect ? "default" : "destructive"} className="text-xs">
+        {/* Result - AI Accuracy */}
+        <div className="flex items-center justify-center">
+          <Badge 
+            variant={wasAICorrect ? "default" : "destructive"} 
+            className={cn(
+              "text-sm px-4 py-1",
+              wasAICorrect && "bg-confidence-high hover:bg-confidence-high/90"
+            )}
+          >
             {wasAICorrect ? (
               <>
-                <Check className="h-3 w-3 mr-1" />
-                AI Correct
+                <Check className="h-4 w-4 mr-1" />
+                AI Recommendation Correct
               </>
             ) : (
               <>
-                <X className="h-3 w-3 mr-1" />
-                AI Wrong
+                <X className="h-4 w-4 mr-1" />
+                AI Recommendation Wrong
               </>
             )}
           </Badge>
