@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AnalyzedFailure, ReportMode } from '@/types/testim';
+import { AnalyzedFailure, ReportMode, PreClassifiedData, AIAnalysisResult } from '@/types/testim';
 import { 
   AnalyzedFailureWithFeedback, 
   UserFeedback, 
@@ -12,6 +12,38 @@ import {
 } from '@/types/feedback';
 import { format } from 'date-fns';
 import { convertPreClassifiedToFeedback } from '@/lib/testimClassificationMapper';
+
+// Did AI recommend investigation? (based on classification and priority)
+const aiRecommendedInvestigate = (analysis: AIAnalysisResult | undefined): boolean => {
+  if (!analysis) return false;
+  return analysis.classification === 'Potential bug' || 
+         analysis.priority === 'P0' || 
+         analysis.priority === 'P1';
+};
+
+// Did this actually require manual work? (based on human classification)
+const requiredManualWork = (preClassified: PreClassifiedData | undefined): boolean => {
+  if (!preClassified?.failureType) return false;
+  const type = preClassified.failureType.toLowerCase();
+  const subType = preClassified.failureSubType?.toLowerCase() || '';
+  
+  // Worked locally = NO manual work needed
+  if (subType.includes('worked locally') || subType.includes('works locally')) {
+    return false;
+  }
+  
+  // Bug in App = manual work needed
+  if (type.includes('bug')) return true;
+  
+  // Test design/update/reassign = manual work needed  
+  if (type.includes('test design') || type.includes('update') || type.includes('ui')) return true;
+  if (subType.includes('reassign')) return true;
+  
+  // Environment/Infra = manual work needed
+  if (type.includes('environment') || type.includes('infra')) return true;
+  
+  return true; // Default: assume manual work needed
+};
 
 export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode = 'production') {
   const [failuresWithFeedback, setFailuresWithFeedback] = useState<AnalyzedFailureWithFeedback[]>([]);
@@ -29,8 +61,9 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
             const mapped = convertPreClassifiedToFeedback(f.preClassified);
             
             // Auto-fill feedback from pre-classification
+            // wasCorrect is based on whether AI recommendation matched actual need for manual work
             const autoFeedback: UserFeedback = {
-              wasCorrect: mapped.classification === f.analysis?.classification,
+              wasCorrect: aiRecommendedInvestigate(f.analysis) === requiredManualWork(f.preClassified),
               userClassification: mapped.classification || f.analysis?.classification,
               userPriority: mapped.priority || f.analysis?.priority,
               userAction: mapped.suggestedAction || f.analysis?.suggestedAction,
