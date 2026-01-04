@@ -22,22 +22,33 @@ import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
 import { toast } from 'sonner';
 import { RunDetails } from '@/types/feedback';
 import { Classification } from '@/types/testim';
-
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { failures, sortedFailures, stats, isLoading, isAnalyzing, error, isPreClassifiedMode, preClassifiedStats, reportMode, uploadFailures, analyzeFailures, clearFailures } = useChecklist();
-  const { 
-    failuresWithFeedback, 
-    summary, 
-    isReviewComplete, 
-    isSaving, 
-    saveError, 
-    initializeFeedback, 
-    handleFeedback, 
-    saveReport, 
-    resetFeedback 
+  const {
+    failures,
+    sortedFailures,
+    stats,
+    isLoading,
+    isAnalyzing,
+    error,
+    isPreClassifiedMode,
+    preClassifiedStats,
+    reportMode,
+    uploadFailures,
+    analyzeFailures,
+    clearFailures
+  } = useChecklist();
+  const {
+    failuresWithFeedback,
+    summary,
+    isReviewComplete,
+    isSaving,
+    saveError,
+    initializeFeedback,
+    handleFeedback,
+    saveReport,
+    resetFeedback
   } = useFeedback(failures, reportMode);
-  
   const [dragOver, setDragOver] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [runDetails, setRunDetails] = useState<RunDetails>({
@@ -50,13 +61,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterClassification, setFilterClassification] = useState<string>('all');
   const [filterReviewStatus, setFilterReviewStatus] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
-
-  const classifications: Classification[] = [
-    'Potential bug',
-    'Likely Flaky',
-    'Environment / Infra Issue',
-    'Expected Change'
-  ];
+  const classifications: Classification[] = ['Potential bug', 'Likely Flaky', 'Environment / Infra Issue', 'Expected Change'];
 
   // Initialize feedback when analysis completes
   useEffect(() => {
@@ -65,29 +70,24 @@ const Index = () => {
       initializeFeedback(analyzedFailures);
     }
   }, [sortedFailures, initializeFeedback, failuresWithFeedback.length]);
-
   const handleFileUpload = (file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => uploadFailures(e.target?.result as string);
+    reader.onload = e => uploadFailures(e.target?.result as string);
     reader.readAsText(file);
   };
-
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
     if (file?.name.endsWith('.csv')) handleFileUpload(file);
   };
-
   const handleClearAll = () => {
     clearFailures();
     resetFeedback();
   };
-
   const handleCompleteReview = () => {
     setShowSummaryDialog(true);
   };
-
   const handleSaveReport = async () => {
     const success = await saveReport(runDetails);
     if (success) {
@@ -98,32 +98,29 @@ const Index = () => {
       toast.error(saveError || 'Failed to save report');
     }
   };
-
   const handleDiscardReport = () => {
     setShowSummaryDialog(false);
     toast.info('Report discarded');
   };
-
   const classColors: Record<string, string> = {
     'Potential bug': 'bg-bug text-bug-foreground',
     'Likely Flaky': 'bg-flaky text-flaky-foreground',
     'Environment / Infra Issue': 'bg-environment text-environment-foreground',
-    'Expected Change': 'bg-expected text-expected-foreground',
+    'Expected Change': 'bg-expected text-expected-foreground'
   };
-
-  const priorityColors: Record<string, string> = { P0: 'bg-p0', P1: 'bg-p1', P2: 'bg-p2', P3: 'bg-p3' };
-
+  const priorityColors: Record<string, string> = {
+    P0: 'bg-p0',
+    P1: 'bg-p1',
+    P2: 'bg-p2',
+    P3: 'bg-p3'
+  };
   const hasAnalyzedResults = failuresWithFeedback.length > 0;
   const reviewedCount = failuresWithFeedback.filter(f => f.isReviewed).length;
 
   // Recommendation stats (Investigate vs Skip)
   const recommendationStats = useMemo(() => {
     const analyzed = sortedFailures.filter(f => f.analysis);
-    const investigate = analyzed.filter(f => 
-      f.analysis?.classification === 'Potential bug' ||
-      f.analysis?.priority === 'P0' ||
-      f.analysis?.priority === 'P1'
-    );
+    const investigate = analyzed.filter(f => f.analysis?.classification === 'Potential bug' || f.analysis?.priority === 'P0' || f.analysis?.priority === 'P1');
     return {
       total: analyzed.length,
       investigate: investigate.length,
@@ -134,20 +131,13 @@ const Index = () => {
   // Filter failures based on search and filters
   const filteredFailures = useMemo(() => {
     return failuresWithFeedback.filter(f => {
-      const matchesSearch = !searchQuery || 
-        f.testName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        f.errorMessage?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesClassification = filterClassification === 'all' || 
-        f.analysis?.classification === filterClassification;
-      const matchesStatus = filterReviewStatus === 'all' || 
-        (filterReviewStatus === 'reviewed' && f.isReviewed) ||
-        (filterReviewStatus === 'unreviewed' && !f.isReviewed);
+      const matchesSearch = !searchQuery || f.testName.toLowerCase().includes(searchQuery.toLowerCase()) || f.errorMessage?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesClassification = filterClassification === 'all' || f.analysis?.classification === filterClassification;
+      const matchesStatus = filterReviewStatus === 'all' || filterReviewStatus === 'reviewed' && f.isReviewed || filterReviewStatus === 'unreviewed' && !f.isReviewed;
       return matchesSearch && matchesClassification && matchesStatus;
     });
   }, [failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus]);
-
-  return (
-    <div className="min-h-screen bg-background p-6">
+  return <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <header className="text-center space-y-3 py-4 relative">
@@ -172,7 +162,7 @@ const Index = () => {
               </Link>
             </Button>
           </div>
-          <div className="flex items-center justify-center gap-3">
+          <div className="gap-3 flex items-center justify-start">
             <div className="p-2 rounded-lg bg-primary/10">
               <Bug className="h-8 w-8 text-primary" />
             </div>
@@ -180,7 +170,7 @@ const Index = () => {
               Testim.io Regression Failure Analyzer
             </h1>
           </div>
-          <p className="text-muted-foreground text-lg">AI-powered test failure classification & prioritization</p>
+          
         </header>
 
         {/* Run Details Card */}
@@ -196,12 +186,10 @@ const Index = () => {
               {/* Run Name */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Run Name</label>
-                <Input
-                  placeholder="e.g., Regression 1, Nightly Build"
-                  value={runDetails.name}
-                  onChange={(e) => setRunDetails(prev => ({ ...prev, name: e.target.value }))}
-                  className="bg-background/50"
-                />
+                <Input placeholder="e.g., Regression 1, Nightly Build" value={runDetails.name} onChange={e => setRunDetails(prev => ({
+                ...prev,
+                name: e.target.value
+              }))} className="bg-background/50" />
               </div>
 
               {/* Date Picker */}
@@ -209,25 +197,16 @@ const Index = () => {
                 <label className="text-sm font-medium text-foreground">Date</label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal bg-background/50",
-                        !runDetails.date && "text-muted-foreground"
-                      )}
-                    >
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal bg-background/50", !runDetails.date && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {runDetails.date ? format(runDetails.date, "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={runDetails.date}
-                      onSelect={(date) => date && setRunDetails(prev => ({ ...prev, date }))}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
+                    <Calendar mode="single" selected={runDetails.date} onSelect={date => date && setRunDetails(prev => ({
+                    ...prev,
+                    date
+                  }))} initialFocus className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -236,24 +215,19 @@ const Index = () => {
             {/* Notes */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Notes (optional)</label>
-              <Textarea
-                placeholder="Add any relevant notes about this run... e.g., Weekly regression after release 2.5.0"
-                value={runDetails.notes}
-                onChange={(e) => setRunDetails(prev => ({ ...prev, notes: e.target.value }))}
-                className="bg-background/50 min-h-[80px] resize-none"
-              />
+              <Textarea placeholder="Add any relevant notes about this run... e.g., Weekly regression after release 2.5.0" value={runDetails.notes} onChange={e => setRunDetails(prev => ({
+              ...prev,
+              notes: e.target.value
+            }))} className="bg-background/50 min-h-[80px] resize-none" />
             </div>
           </CardContent>
         </Card>
 
         {/* Upload Area */}
-        <Card className={cn(
-          "border-2 border-dashed transition-all duration-200",
-          dragOver ? "border-primary bg-primary/5 scale-[1.01]" : "border-border hover:border-primary/50"
-        )}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}>
+        <Card className={cn("border-2 border-dashed transition-all duration-200", dragOver ? "border-primary bg-primary/5 scale-[1.01]" : "border-border hover:border-primary/50")} onDragOver={e => {
+        e.preventDefault();
+        setDragOver(true);
+      }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}>
           <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
             <div className="p-4 rounded-full bg-muted/50">
               <Upload className="h-10 w-10 text-muted-foreground" />
@@ -262,7 +236,7 @@ const Index = () => {
               <p className="text-foreground font-medium">Drop your failures CSV here</p>
               <p className="text-sm text-muted-foreground">Supports both regular CSV and pre-classified Testim exports</p>
             </div>
-            <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
+            <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
             <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="mt-2">
               <FileText className="mr-2 h-4 w-4" />
               Select CSV File
@@ -271,8 +245,7 @@ const Index = () => {
         </Card>
 
         {/* Already-classified info banner */}
-        {preClassifiedStats && (
-          <div className="bg-confidence-high/10 border border-confidence-high/30 rounded-lg p-4">
+        {preClassifiedStats && <div className="bg-confidence-high/10 border border-confidence-high/30 rounded-lg p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-confidence-high/20">
                 <CheckCircle className="h-5 w-5 text-confidence-high" />
@@ -282,66 +255,45 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground mt-1">
                   <span className="text-confidence-high font-medium">{preClassifiedStats.classified}</span> כשלונות כבר מסווגים 
                   <span className="text-muted-foreground"> ← יסומנו כ-reviewed</span>
-                  {preClassifiedStats.unclassified > 0 && (
-                    <span> • <span className="text-flaky font-medium">{preClassifiedStats.unclassified}</span> ללא סיווג 
-                    <span className="text-muted-foreground"> ← ינותחו ע"י AI</span></span>
-                  )}
-                  {preClassifiedStats.withBugLink > 0 && (
-                    <span> • <span className="text-bug font-medium">{preClassifiedStats.withBugLink}</span> עם לינק לבאג</span>
-                  )}
+                  {preClassifiedStats.unclassified > 0 && <span> • <span className="text-flaky font-medium">{preClassifiedStats.unclassified}</span> ללא סיווג 
+                    <span className="text-muted-foreground"> ← ינותחו ע"י AI</span></span>}
+                  {preClassifiedStats.withBugLink > 0 && <span> • <span className="text-bug font-medium">{preClassifiedStats.withBugLink}</span> עם לינק לבאג</span>}
                 </p>
               </div>
             </div>
-          </div>
-        )}
+          </div>}
 
         {/* Mode Banner */}
-        {failures.length > 0 && (
-          <Alert className={cn(
-            "border",
-            reportMode === 'learning' 
-              ? "bg-primary/5 border-primary/30" 
-              : "bg-confidence-high/5 border-confidence-high/30"
-          )}>
-            {reportMode === 'learning' ? (
-              <>
+        {failures.length > 0 && <Alert className={cn("border", reportMode === 'learning' ? "bg-primary/5 border-primary/30" : "bg-confidence-high/5 border-confidence-high/30")}>
+            {reportMode === 'learning' ? <>
                 <BookOpen className="h-4 w-4 text-primary" />
                 <AlertTitle className="text-primary">Learning Mode</AlertTitle>
                 <AlertDescription className="text-muted-foreground">
                   AI predictions will be compared against human classifications. This data trains the AI for better accuracy.
                 </AlertDescription>
-              </>
-            ) : (
-              <>
+              </> : <>
                 <Zap className="h-4 w-4 text-confidence-high" />
                 <AlertTitle className="text-confidence-high">Guidance Mode — Should QA investigate?</AlertTitle>
                 <AlertDescription className="text-muted-foreground space-y-1">
                   <p>Recommendations are based on previously classified QA decisions, known flaky tests, and similar historical patterns.</p>
                   <p className="text-xs italic">You are the final decision-maker.</p>
                 </AlertDescription>
-              </>
-            )}
-          </Alert>
-        )}
+              </>}
+          </Alert>}
 
         {error && <div className="bg-destructive/10 text-destructive p-4 rounded-lg border border-destructive/20">{error}</div>}
 
-        {failures.length > 0 && (
-          <>
+        {failures.length > 0 && <>
             {/* Run Info Banner */}
-            {runDetails.name && (
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-center justify-between">
+            {runDetails.name && <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-muted-foreground">Run:</span>
                   <span className="font-semibold text-foreground">{runDetails.name}</span>
                   <span className="text-muted-foreground">•</span>
                   <span className="text-sm text-muted-foreground">{format(runDetails.date, "PPP")}</span>
                 </div>
-                {runDetails.notes && (
-                  <span className="text-sm text-muted-foreground italic truncate max-w-[300px]">{runDetails.notes}</span>
-                )}
-              </div>
-            )}
+                {runDetails.notes && <span className="text-sm text-muted-foreground italic truncate max-w-[300px]">{runDetails.notes}</span>}
+              </div>}
 
             {/* Stats - Recommendation based */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -389,28 +341,16 @@ const Index = () => {
             </div>
 
             {/* Review Progress Bar */}
-            {hasAnalyzedResults && (
-              <ReviewProgress 
-                reviewed={reviewedCount} 
-                total={failuresWithFeedback.length} 
-                onComplete={handleCompleteReview}
-              />
-            )}
+            {hasAnalyzedResults && <ReviewProgress reviewed={reviewedCount} total={failuresWithFeedback.length} onComplete={handleCompleteReview} />}
 
             {/* Search and Filters */}
-            {hasAnalyzedResults && (
-              <Card className="border-border/50 bg-card/50">
+            {hasAnalyzedResults && <Card className="border-border/50 bg-card/50">
                 <CardContent className="p-4">
                   <div className="flex flex-col md:flex-row gap-4">
                     {/* Search Input */}
                     <div className="flex-1 relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search by test name or error message..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 bg-background/50"
-                      />
+                      <Input placeholder="Search by test name or error message..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 bg-background/50" />
                     </div>
                     
                     {/* Classification Filter */}
@@ -422,20 +362,13 @@ const Index = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Classifications</SelectItem>
-                          {classifications.map(c => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                          ))}
+                          {classifications.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
 
                     {/* Review Status Toggle */}
-                    <ToggleGroup 
-                      type="single" 
-                      value={filterReviewStatus} 
-                      onValueChange={(v) => v && setFilterReviewStatus(v as 'all' | 'reviewed' | 'unreviewed')}
-                      className="bg-background/50 rounded-md p-1"
-                    >
+                    <ToggleGroup type="single" value={filterReviewStatus} onValueChange={v => v && setFilterReviewStatus(v as 'all' | 'reviewed' | 'unreviewed')} className="bg-background/50 rounded-md p-1">
                       <ToggleGroupItem value="all" className="text-xs px-3">All</ToggleGroupItem>
                       <ToggleGroupItem value="reviewed" className="text-xs px-3">Reviewed</ToggleGroupItem>
                       <ToggleGroupItem value="unreviewed" className="text-xs px-3">Unreviewed</ToggleGroupItem>
@@ -447,33 +380,11 @@ const Index = () => {
                     Showing {filteredFailures.length} of {failuresWithFeedback.length} results
                   </div>
                 </CardContent>
-              </Card>
-            )}
+              </Card>}
 
             {/* Results - Use mode-specific cards */}
             <div className="space-y-3">
-              {hasAnalyzedResults ? (
-                filteredFailures.map((f) => (
-                  reportMode === 'learning' ? (
-                    <LearningModeCard
-                      key={f.id}
-                      failure={f}
-                      classColors={classColors}
-                      priorityColors={priorityColors}
-                    />
-                  ) : (
-                    <ProductionModeCard
-                      key={f.id}
-                      failure={f}
-                      onFeedback={handleFeedback}
-                      classColors={classColors}
-                      priorityColors={priorityColors}
-                    />
-                  )
-                ))
-              ) : (
-                sortedFailures.map((f) => (
-                  <Card key={f.id} className="animate-fade-in border-border/50 hover:border-border transition-colors">
+              {hasAnalyzedResults ? filteredFailures.map(f => reportMode === 'learning' ? <LearningModeCard key={f.id} failure={f} classColors={classColors} priorityColors={priorityColors} /> : <ProductionModeCard key={f.id} failure={f} onFeedback={handleFeedback} classColors={classColors} priorityColors={priorityColors} />) : sortedFailures.map(f => <Card key={f.id} className="animate-fade-in border-border/50 hover:border-border transition-colors">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
@@ -483,25 +394,13 @@ const Index = () => {
                         {f.isAnalyzing && <div className="animate-pulse text-muted-foreground text-sm">Analyzing...</div>}
                       </div>
                     </CardContent>
-                  </Card>
-                ))
-              )}
+                  </Card>)}
             </div>
-          </>
-        )}
+          </>}
       </div>
 
       {/* Feedback Summary Dialog */}
-      <FeedbackSummaryDialog
-        open={showSummaryDialog}
-        onOpenChange={setShowSummaryDialog}
-        summary={summary}
-        onSave={handleSaveReport}
-        onDiscard={handleDiscardReport}
-        isSaving={isSaving}
-      />
-    </div>
-  );
+      <FeedbackSummaryDialog open={showSummaryDialog} onOpenChange={setShowSummaryDialog} summary={summary} onSave={handleSaveReport} onDiscard={handleDiscardReport} isSaving={isSaving} />
+    </div>;
 };
-
 export default Index;
