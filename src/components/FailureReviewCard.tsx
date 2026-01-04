@@ -47,9 +47,15 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
     }
   }, [failure.analysis, failure.isReviewed, isEditing]);
 
+  // Determine primary recommendation: should QA investigate?
+  const shouldInvestigate = failure.analysis?.classification === 'Potential bug' || 
+                            failure.analysis?.priority === 'P0' || 
+                            failure.analysis?.priority === 'P1';
+
   const handleConfirmBug = (category: string, bugLink?: string) => {
+    // AI is correct if it recommended investigation (bug found = investigation was right)
     onFeedback(failure.id, {
-      wasCorrect: true,
+      wasCorrect: shouldInvestigate,
       userClassification: failure.analysis?.classification,
       userPriority: failure.analysis?.priority,
       userAction: failure.analysis?.suggestedAction,
@@ -60,9 +66,9 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
   };
 
   const handlePassedLocally = (reason: string, notes?: string) => {
-    // AI was wrong - test passed locally, so it wasn't actually a bug
+    // AI is correct if it recommended to SKIP (no bug = skip was right)
     onFeedback(failure.id, {
-      wasCorrect: false,
+      wasCorrect: !shouldInvestigate,
       userClassification: failure.analysis?.classification,
       userPriority: failure.analysis?.priority,
       userAction: failure.analysis?.suggestedAction,
@@ -74,8 +80,9 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
   };
 
   const handleRequiredManualFix = (fixType: string, notes?: string) => {
+    // AI is correct if it recommended investigation (manual fix = work was needed)
     onFeedback(failure.id, {
-      wasCorrect: false, // AI was wrong - it said skip but manual work was needed
+      wasCorrect: shouldInvestigate,
       userClassification: failure.analysis?.classification,
       userPriority: failure.analysis?.priority,
       userAction: failure.analysis?.suggestedAction,
@@ -255,9 +262,9 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
             {/* Passed Locally indicator */}
             {failure.feedback?.passedLocally && (
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1 text-confidence-high">
+                <div className={cn("flex items-center gap-1", failure.feedback?.wasCorrect ? "text-confidence-high" : "text-bug")}>
                   <TestTube className="h-3 w-3" />
-                  <span>Passed locally (AI was wrong)</span>
+                  <span>Passed locally {failure.feedback?.wasCorrect ? "(AI was correct)" : "(AI was wrong)"}</span>
                   {failure.feedback?.passedLocallyReason && (
                     <span className="px-1.5 py-0.5 rounded bg-confidence-high/10 font-medium">
                       {failure.feedback.passedLocallyReason}
@@ -273,9 +280,9 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
             {/* Required Manual Fix indicator */}
             {failure.feedback?.requiredManualFix && (
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1 text-amber-600">
+                <div className={cn("flex items-center gap-1", failure.feedback?.wasCorrect ? "text-confidence-high" : "text-bug")}>
                   <Wrench className="h-3 w-3" />
-                  <span>Required manual fix (AI was wrong)</span>
+                  <span>Required manual fix {failure.feedback?.wasCorrect ? "(AI was correct)" : "(AI was wrong)"}</span>
                   {failure.feedback?.manualFixType && (
                     <span className="px-1.5 py-0.5 rounded bg-amber-500/10 font-medium">
                       {failure.feedback.manualFixType}
