@@ -104,8 +104,9 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
   };
 
   const handleEditClick = () => {
-    setIsEditing(true);
-    setShowBugConfirmation(false);
+    // Reset to options selection instead of showing correction form
+    setShowBugConfirmation(true);
+    setIsEditing(false);
   };
 
   const handleSaveCorrection = () => {
@@ -149,7 +150,7 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
                   )}
                 </div>
               )}
-              <h3 className="font-mono text-sm font-medium truncate text-foreground">{failure.testName}</h3>
+              <h3 className="font-mono text-sm font-bold truncate text-foreground">{failure.testName}</h3>
             </div>
             {failure.errorMessage && (
               <p className="text-xs text-muted-foreground mt-1 truncate">{failure.errorMessage}</p>

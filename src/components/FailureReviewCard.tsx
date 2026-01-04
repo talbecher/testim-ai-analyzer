@@ -137,7 +137,7 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
                   )}
                 </div>
               )}
-              <h3 className="font-mono text-sm font-medium truncate text-foreground">{failure.testName}</h3>
+              <h3 className="font-mono text-sm font-bold truncate text-foreground">{failure.testName}</h3>
             </div>
             {failure.errorMessage && (
               <p className="text-xs text-muted-foreground mt-1 truncate">{failure.errorMessage}</p>
@@ -330,6 +330,17 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
                 )}
               </div>
             )}
+
+            {/* Edit button for reviewed items */}
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              className="h-6 text-xs mt-1"
+              onClick={() => setShowBugConfirmation(true)}
+            >
+              <Edit2 className="h-3 w-3 mr-1" />
+              Edit
+            </Button>
           </div>
         )}
       </CardContent>
