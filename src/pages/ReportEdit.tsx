@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { ArrowLeft, Save, FileText, Search, Filter, CheckCircle2, XCircle, Edit3, Brain } from 'lucide-react';
+import { ArrowLeft, Save, FileText, Search, Filter, CheckCircle2, XCircle, Edit3, Brain, SearchCheck, SkipForward, Wrench } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -134,12 +134,54 @@ export default function ReportEdit() {
     }
   };
 
+  // Helper: Calculate AI recommendation based on classification and priority
+  const getAIRecommendation = (result: ReportResult) => {
+    const shouldInvestigate = 
+      result.ai_classification === 'Potential bug' || 
+      result.ai_priority === 'P0' || 
+      result.ai_priority === 'P1';
+    return shouldInvestigate ? 'Investigate' : 'Skip';
+  };
+
+  // Helper: Calculate actual outcome based on user feedback
+  const getActualOutcome = (result: ReportResult) => {
+    if (result.passed_locally) {
+      return { neededWork: false, description: 'Passed locally', reason: result.passed_locally_reason };
+    }
+    if (result.required_manual_fix) {
+      return { neededWork: true, description: result.manual_fix_type || 'Manual fix required' };
+    }
+    if (result.bug_link) {
+      return { neededWork: true, description: 'Bug filed' };
+    }
+    if (result.was_correct === false && result.user_classification) {
+      return { neededWork: true, description: result.user_classification };
+    }
+    // Default - AI was correct, check if investigation was needed
+    const aiRecommendedInvestigate = getAIRecommendation(result) === 'Investigate';
+    return { 
+      neededWork: aiRecommendedInvestigate,
+      description: aiRecommendedInvestigate ? 'Investigated as recommended' : 'Skipped as recommended'
+    };
+  };
+
+  // Helper: Determine if AI recommendation was correct
+  const wasAIRecommendationCorrect = (result: ReportResult) => {
+    const aiRecommendedInvestigate = getAIRecommendation(result) === 'Investigate';
+    const outcome = getActualOutcome(result);
+    
+    // AI correct if: recommended Investigate AND needed work, OR recommended Skip AND didn't need work
+    return (aiRecommendedInvestigate && outcome.neededWork) || (!aiRecommendedInvestigate && !outcome.neededWork);
+  };
+
   const stats = useMemo(() => {
     const total = currentResults.length;
-    const correct = currentResults.filter(r => r.was_correct !== false).length;
-    const incorrect = currentResults.filter(r => r.was_correct === false).length;
+    const investigateCount = currentResults.filter(r => getAIRecommendation(r) === 'Investigate').length;
+    const skipCount = currentResults.filter(r => getAIRecommendation(r) === 'Skip').length;
+    const correctRecommendations = currentResults.filter(r => wasAIRecommendationCorrect(r)).length;
+    const wrongRecommendations = total - correctRecommendations;
     const passedLocally = currentResults.filter(r => r.passed_locally).length;
-    return { total, correct, incorrect, passedLocally };
+    return { total, investigateCount, skipCount, correctRecommendations, wrongRecommendations, passedLocally };
   }, [currentResults]);
 
   if (isLoading && !currentReport) {
@@ -222,32 +264,39 @@ export default function ReportEdit() {
         </header>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="border-border/50">
             <CardContent className="pt-4 text-center">
               <div className="text-3xl font-bold text-foreground">{stats.total}</div>
               <div className="text-sm text-muted-foreground mt-1">Total Results</div>
             </CardContent>
           </Card>
+          <Card className="border-amber-500/30 bg-amber-500/5">
+            <CardContent className="pt-4 text-center">
+              <SearchCheck className="h-5 w-5 mx-auto text-amber-500 mb-1" />
+              <div className="text-3xl font-bold text-amber-500">{stats.investigateCount}</div>
+              <div className="text-sm text-muted-foreground mt-1">Investigate</div>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-500/30 bg-slate-500/5">
+            <CardContent className="pt-4 text-center">
+              <SkipForward className="h-5 w-5 mx-auto text-slate-500 mb-1" />
+              <div className="text-3xl font-bold text-slate-500">{stats.skipCount}</div>
+              <div className="text-sm text-muted-foreground mt-1">Skip</div>
+            </CardContent>
+          </Card>
           <Card className="border-green-500/30 bg-green-500/5">
             <CardContent className="pt-4 text-center">
               <CheckCircle2 className="h-5 w-5 mx-auto text-green-500 mb-1" />
-              <div className="text-3xl font-bold text-green-500">{stats.correct}</div>
-              <div className="text-sm text-muted-foreground mt-1">AI Correct</div>
+              <div className="text-3xl font-bold text-green-500">{stats.correctRecommendations}</div>
+              <div className="text-sm text-muted-foreground mt-1">Correct Recommendations</div>
             </CardContent>
           </Card>
           <Card className="border-red-500/30 bg-red-500/5">
             <CardContent className="pt-4 text-center">
               <XCircle className="h-5 w-5 mx-auto text-red-500 mb-1" />
-              <div className="text-3xl font-bold text-red-500">{stats.incorrect}</div>
-              <div className="text-sm text-muted-foreground mt-1">Corrections Made</div>
-            </CardContent>
-          </Card>
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="pt-4 text-center">
-              <Brain className="h-5 w-5 mx-auto text-primary mb-1" />
-              <div className="text-3xl font-bold text-primary">{stats.passedLocally}</div>
-              <div className="text-sm text-muted-foreground mt-1">Passed Locally</div>
+              <div className="text-3xl font-bold text-red-500">{stats.wrongRecommendations}</div>
+              <div className="text-sm text-muted-foreground mt-1">Wrong Recommendations</div>
             </CardContent>
           </Card>
         </div>
@@ -315,175 +364,221 @@ export default function ReportEdit() {
 
         {/* Results */}
         <div className="space-y-3">
-          {filteredResults.map((result) => (
-            <Card key={result.id} className={cn(
-              "border-border/50 transition-all",
-              result.was_correct === false && "border-red-500/30",
-              result.passed_locally && "border-green-500/30"
-            )}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-mono text-sm font-medium truncate text-foreground">
-                        {result.test_name}
-                      </h3>
-                      {result.passed_locally && (
-                        <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 text-xs">
-                          ✓ Passed Locally
-                        </Badge>
-                      )}
-                      {result.was_correct === false && (
-                        <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/30 text-xs">
-                          Corrected
-                        </Badge>
-                      )}
-                    </div>
-                    {result.error_message && (
-                      <p className="text-xs text-muted-foreground truncate mb-3">{result.error_message}</p>
-                    )}
+          {filteredResults.map((result) => {
+            const aiRecommendation = getAIRecommendation(result);
+            const actualOutcome = getActualOutcome(result);
+            const isCorrect = wasAIRecommendationCorrect(result);
 
-                    {/* AI Analysis */}
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <span className="text-xs text-muted-foreground">AI:</span>
-                      <Badge className={cn("text-xs", classColors[result.ai_classification])}>
-                        {result.ai_classification}
-                      </Badge>
-                      <Badge className={cn("text-xs", priorityColors[result.ai_priority])}>
-                        {result.ai_priority}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {result.ai_confidence}% confidence
-                      </Badge>
-                    </div>
-
-                    {/* User Correction (if different) */}
-                    {result.was_correct === false && result.user_classification && (
-                      <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <span className="text-xs text-muted-foreground">Corrected to:</span>
-                        <Badge className={cn("text-xs", classColors[result.user_classification])}>
-                          {result.user_classification}
-                        </Badge>
-                        {result.user_priority && (
-                          <Badge className={cn("text-xs", priorityColors[result.user_priority])}>
-                            {result.user_priority}
-                          </Badge>
+            return (
+              <Card key={result.id} className={cn(
+                "border-border/50 transition-all",
+                !isCorrect && "border-red-500/30",
+                isCorrect && "border-green-500/30"
+              )}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      {/* Header with test name and correctness badge */}
+                      <div className="flex items-center gap-2 mb-2">
+                        {isCorrect ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
                         )}
+                        <h3 className="font-mono text-sm font-bold truncate text-foreground">
+                          {result.test_name}
+                        </h3>
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "text-xs ml-auto flex-shrink-0",
+                            isCorrect 
+                              ? "bg-green-500/10 text-green-500 border-green-500/30"
+                              : "bg-red-500/10 text-red-500 border-red-500/30"
+                          )}
+                        >
+                          {isCorrect ? 'AI Correct' : 'AI Wrong'}
+                        </Badge>
                       </div>
-                    )}
 
-                    {/* Passed Locally Details */}
-                    {result.passed_locally && result.passed_locally_reason && (
-                      <div className="text-xs text-muted-foreground mb-2">
-                        <span className="font-medium">Reason:</span> {result.passed_locally_reason}
-                        {result.passed_locally_notes && <> • {result.passed_locally_notes}</>}
-                      </div>
-                    )}
+                      {result.error_message && (
+                        <p className="text-xs text-muted-foreground truncate mb-4">{result.error_message}</p>
+                      )}
 
-                    {/* Bug Link */}
-                    {result.bug_link && (
-                      <div className="text-xs">
-                        <a href={result.bug_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                          {result.bug_link}
-                        </a>
-                      </div>
-                    )}
-
-                    {/* Edit Mode */}
-                    {editingResultId === result.id && (
-                      <div className="mt-4 p-4 bg-muted/30 rounded-lg space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <label className="text-xs font-medium text-muted-foreground">Classification</label>
-                            <Select
-                              value={editValues.user_classification || ''}
-                              onValueChange={(v) => setEditValues(prev => ({ ...prev, user_classification: v }))}
-                            >
-                              <SelectTrigger className="mt-1">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {classifications.map(c => (
-                                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                      {/* AI Recommendation vs Actual Outcome - Side by Side */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                        {/* AI Recommendation Box */}
+                        <div className={cn(
+                          "p-3 rounded-lg border",
+                          aiRecommendation === 'Investigate' 
+                            ? "bg-amber-500/10 border-amber-500/30" 
+                            : "bg-slate-500/10 border-slate-500/30"
+                        )}>
+                          <div className="flex items-center gap-2 mb-1">
+                            {aiRecommendation === 'Investigate' ? (
+                              <SearchCheck className="h-4 w-4 text-amber-500" />
+                            ) : (
+                              <SkipForward className="h-4 w-4 text-slate-500" />
+                            )}
+                            <span className={cn(
+                              "text-sm font-semibold",
+                              aiRecommendation === 'Investigate' ? "text-amber-500" : "text-slate-500"
+                            )}>
+                              AI: {aiRecommendation}
+                            </span>
                           </div>
-                          <div>
-                            <label className="text-xs font-medium text-muted-foreground">Priority</label>
-                            <Select
-                              value={editValues.user_priority || ''}
-                              onValueChange={(v) => setEditValues(prev => ({ ...prev, user_priority: v }))}
-                            >
-                              <SelectTrigger className="mt-1">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {priorities.map(p => (
-                                  <SelectItem key={p} value={p}>{p}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="text-xs font-medium text-muted-foreground">Category</label>
-                            <Select
-                              value={editValues.bug_category || ''}
-                              onValueChange={(v) => setEditValues(prev => ({ ...prev, bug_category: v }))}
-                            >
-                              <SelectTrigger className="mt-1">
-                                <SelectValue placeholder="Select..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories.map(c => (
-                                  <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                            <Badge className={cn("text-xs", classColors[result.ai_classification])}>
+                              {result.ai_classification}
+                            </Badge>
+                            <Badge className={cn("text-xs", priorityColors[result.ai_priority])}>
+                              {result.ai_priority}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {result.ai_confidence}%
+                            </Badge>
                           </div>
                         </div>
-                        <div>
-                          <label className="text-xs font-medium text-muted-foreground">Bug Link</label>
-                          <Input
-                            value={editValues.bug_link || ''}
-                            onChange={(e) => setEditValues(prev => ({ ...prev, bug_link: e.target.value }))}
-                            placeholder="https://..."
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-muted-foreground">Notes</label>
-                          <Textarea
-                            value={editValues.user_notes || ''}
-                            onChange={(e) => setEditValues(prev => ({ ...prev, user_notes: e.target.value }))}
-                            placeholder="Add notes..."
-                            className="mt-1 min-h-[60px]"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button onClick={() => handleSaveResult(result.id)} size="sm">
-                            <Save className="h-4 w-4 mr-1" />
-                            Save Changes
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setEditingResultId(null)}>
-                            Cancel
-                          </Button>
+
+                        {/* Actual Outcome Box */}
+                        <div className={cn(
+                          "p-3 rounded-lg border",
+                          actualOutcome.neededWork 
+                            ? "bg-amber-500/10 border-amber-500/30" 
+                            : "bg-green-500/10 border-green-500/30"
+                        )}>
+                          <div className="flex items-center gap-2 mb-1">
+                            {actualOutcome.neededWork ? (
+                              <Wrench className="h-4 w-4 text-amber-500" />
+                            ) : (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            )}
+                            <span className={cn(
+                              "text-sm font-semibold",
+                              actualOutcome.neededWork ? "text-amber-500" : "text-green-500"
+                            )}>
+                              Outcome: {actualOutcome.neededWork ? 'Manual work needed' : 'No work needed'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {actualOutcome.description}
+                            {actualOutcome.reason && ` (${actualOutcome.reason})`}
+                          </p>
                         </div>
                       </div>
+
+                      {/* Additional details */}
+                      {result.passed_locally_notes && (
+                        <div className="text-xs text-muted-foreground mb-2">
+                          <span className="font-medium">Notes:</span> {result.passed_locally_notes}
+                        </div>
+                      )}
+
+                      {/* Bug Link */}
+                      {result.bug_link && (
+                        <div className="text-xs mb-2">
+                          <a href={result.bug_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                            🔗 {result.bug_link}
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Edit Mode */}
+                      {editingResultId === result.id && (
+                        <div className="mt-4 p-4 bg-muted/30 rounded-lg space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="text-xs font-medium text-muted-foreground">Classification</label>
+                              <Select
+                                value={editValues.user_classification || ''}
+                                onValueChange={(v) => setEditValues(prev => ({ ...prev, user_classification: v }))}
+                              >
+                                <SelectTrigger className="mt-1">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {classifications.map(c => (
+                                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-muted-foreground">Priority</label>
+                              <Select
+                                value={editValues.user_priority || ''}
+                                onValueChange={(v) => setEditValues(prev => ({ ...prev, user_priority: v }))}
+                              >
+                                <SelectTrigger className="mt-1">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {priorities.map(p => (
+                                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-muted-foreground">Category</label>
+                              <Select
+                                value={editValues.bug_category || ''}
+                                onValueChange={(v) => setEditValues(prev => ({ ...prev, bug_category: v }))}
+                              >
+                                <SelectTrigger className="mt-1">
+                                  <SelectValue placeholder="Select..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {categories.map(c => (
+                                    <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Bug Link</label>
+                            <Input
+                              value={editValues.bug_link || ''}
+                              onChange={(e) => setEditValues(prev => ({ ...prev, bug_link: e.target.value }))}
+                              placeholder="https://..."
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Notes</label>
+                            <Textarea
+                              value={editValues.user_notes || ''}
+                              onChange={(e) => setEditValues(prev => ({ ...prev, user_notes: e.target.value }))}
+                              placeholder="Add notes..."
+                              className="mt-1 min-h-[60px]"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button onClick={() => handleSaveResult(result.id)} size="sm">
+                              <Save className="h-4 w-4 mr-1" />
+                              Save Changes
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setEditingResultId(null)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    {editingResultId !== result.id && (
+                      <Button variant="outline" size="sm" onClick={() => handleStartEditResult(result)}>
+                        <Edit3 className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
                     )}
                   </div>
-
-                  {/* Actions */}
-                  {editingResultId !== result.id && (
-                    <Button variant="outline" size="sm" onClick={() => handleStartEditResult(result)}>
-                      <Edit3 className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </div>

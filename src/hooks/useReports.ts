@@ -37,6 +37,9 @@ export interface ReportResult {
   passed_locally: boolean | null;
   passed_locally_reason: string | null;
   passed_locally_notes: string | null;
+  required_manual_fix: boolean | null;
+  manual_fix_type: string | null;
+  manual_fix_notes: string | null;
   created_at: string;
 }
 
