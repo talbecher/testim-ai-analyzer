@@ -55,25 +55,30 @@ serve(async (req) => {
     // Fetch historical corrections and passed locally patterns from database
     let historicalCorrections = '';
     let passedLocallyPatterns = '';
+    let learningPatternsPrompt = '';
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseKey);
       
-      // Fetch corrections ONLY from learning mode reports
+      // Fetch corrections from ALL modes (not just learning)
       const { data: corrections, error: dbError } = await supabase
         .from('analysis_results')
         .select(`
           test_name_normalized, 
           error_pattern, 
           ai_classification, 
-          user_classification,
-          analysis_reports!inner(mode)
+          user_classification
         `)
         .eq('was_correct', false)
-        .eq('analysis_reports.mode', 'learning')
         .not('user_classification', 'is', null)
         .limit(100);
+
+      // Fetch aggregated learning patterns (from Boost)
+      const { data: learningPatterns } = await supabase
+        .from('learning_patterns')
+        .select('*')
+        .order('importance', { ascending: true }); // critical first
 
       if (!dbError && corrections && corrections.length > 0) {
         // Aggregate corrections
@@ -110,17 +115,37 @@ Pay special attention to these patterns and adjust your classifications accordin
         }
       }
 
-      // Fetch passed locally patterns ONLY from learning mode reports
+      // Fetch passed locally patterns from ALL modes
       const { data: passedLocally, error: plError } = await supabase
         .from('analysis_results')
         .select(`
           test_name_normalized, 
-          error_pattern,
-          analysis_reports!inner(mode)
+          error_pattern
         `)
         .eq('passed_locally', true)
-        .eq('analysis_reports.mode', 'learning')
         .limit(100);
+
+      // Build learning patterns section for prompt
+      if (learningPatterns && learningPatterns.length > 0) {
+        const criticalPatterns = learningPatterns.filter(p => p.importance === 'critical');
+        const highPatterns = learningPatterns.filter(p => p.importance === 'high');
+        
+        if (criticalPatterns.length > 0 || highPatterns.length > 0) {
+          learningPatternsPrompt = `
+
+## CRITICAL LEARNING PATTERNS (PAY CLOSE ATTENTION!):
+${criticalPatterns.map(p => 
+  `🔴 CRITICAL: Error "${p.error_pattern || 'general'}" - AI predicted "${p.ai_classification}" but should be "${p.correct_classification}" (happened ${p.occurrence_count}x)`
+).join('\n')}
+
+## HIGH IMPORTANCE PATTERNS:
+${highPatterns.map(p => 
+  `⚠️ HIGH: Error "${p.error_pattern || 'general'}" - AI predicted "${p.ai_classification}" but should be "${p.correct_classification}" (happened ${p.occurrence_count}x)`
+).join('\n')}
+
+IMPORTANT: The above patterns are based on aggregated user feedback. Adjust your classifications accordingly!`;
+        }
+      }
 
       if (!plError && passedLocally && passedLocally.length > 0) {
         // Aggregate by test name and error pattern
@@ -168,6 +193,7 @@ ${JSON.stringify(flakyTests, null, 2)}
 
 If a test matches Flaky KB (even fuzzy match), note it in your response.
 IMPORTANT: Flaky KB is a strong signal but NOT a hard rule. Never auto-classify solely based on this.
+${learningPatternsPrompt}
 ${historicalCorrections}
 ${passedLocallyPatterns}
 
