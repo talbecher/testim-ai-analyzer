@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Zap, Loader2, CheckCircle, AlertCircle, Brain } from 'lucide-react';
+import { Zap, Loader2, CheckCircle, AlertCircle, Brain, MessageSquareText, Hash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -11,10 +11,16 @@ interface BoostStats {
   totalCorrections: number;
   totalPassedLocally: number;
   totalManualFixes: number;
+  totalNotesAnalyzed: number;
+  uniqueKeywords: number;
+  aiPatternsFound: number;
+  aiInsights: string[];
+  topKeywords: Array<{ keyword: string; count: number }>;
   uniquePatterns: number;
   criticalPatterns: number;
   highPatterns: number;
   normalPatterns: number;
+  notesPatterns: number;
   timestamp: string;
 }
 
@@ -101,7 +107,7 @@ export function LearningBoostButton() {
 
         {/* Success Stats Display */}
         {lastBoost && !error && (
-          <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20 space-y-3">
+          <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20 space-y-4">
             <div className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-500" />
               <span className="font-medium text-green-600 dark:text-green-400">
@@ -109,6 +115,7 @@ export function LearningBoostButton() {
               </span>
             </div>
             
+            {/* Main Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               <div className="p-2 rounded bg-background/50">
                 <div className="text-muted-foreground">Corrections Analyzed</div>
@@ -128,6 +135,65 @@ export function LearningBoostButton() {
               </div>
             </div>
 
+            {/* Notes Analysis Section */}
+            {lastBoost.totalNotesAnalyzed > 0 && (
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 space-y-3">
+                <div className="flex items-center gap-2">
+                  <MessageSquareText className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Notes Analysis</span>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="p-2 rounded bg-background/50">
+                    <div className="text-muted-foreground">Notes Analyzed</div>
+                    <div className="font-bold text-foreground">{lastBoost.totalNotesAnalyzed}</div>
+                  </div>
+                  <div className="p-2 rounded bg-background/50">
+                    <div className="text-muted-foreground">Keywords Found</div>
+                    <div className="font-bold text-foreground">{lastBoost.uniqueKeywords}</div>
+                  </div>
+                  <div className="p-2 rounded bg-background/50">
+                    <div className="text-muted-foreground">AI Patterns</div>
+                    <div className="font-bold text-foreground">{lastBoost.aiPatternsFound}</div>
+                  </div>
+                </div>
+
+                {/* Top Keywords */}
+                {lastBoost.topKeywords && lastBoost.topKeywords.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Hash className="h-3 w-3" />
+                      Top Keywords:
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {lastBoost.topKeywords.slice(0, 8).map((kw, idx) => (
+                        <Badge 
+                          key={idx} 
+                          variant="outline" 
+                          className="text-xs bg-background"
+                        >
+                          {kw.keyword} ({kw.count})
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Insights */}
+                {lastBoost.aiInsights && lastBoost.aiInsights.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted-foreground">AI Insights:</div>
+                    <ul className="text-xs space-y-1 list-disc list-inside text-foreground/80">
+                      {lastBoost.aiInsights.slice(0, 3).map((insight, idx) => (
+                        <li key={idx}>{insight}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Pattern Badges */}
             <div className="flex flex-wrap gap-2">
               <Badge className={cn(
                 "text-xs",
@@ -144,10 +210,15 @@ export function LearningBoostButton() {
               <Badge className="text-xs bg-muted text-muted-foreground">
                 {lastBoost.normalPatterns} Normal (1-2 times)
               </Badge>
+              {lastBoost.notesPatterns > 0 && (
+                <Badge className="text-xs bg-primary/20 text-primary">
+                  {lastBoost.notesPatterns} From Notes
+                </Badge>
+              )}
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Next analysis will use these {lastBoost.uniquePatterns} patterns to improve accuracy.
+              Next analysis will use these {lastBoost.uniquePatterns} patterns (including {lastBoost.notesPatterns} from notes) to improve accuracy.
             </p>
           </div>
         )}

@@ -184,36 +184,42 @@ export type Database = {
           correct_classification: string | null
           created_at: string | null
           error_pattern: string | null
+          extracted_keywords: string[] | null
           id: string
           importance: string | null
           last_updated: string | null
           occurrence_count: number | null
           pattern_type: string
           test_name_pattern: string | null
+          user_notes_pattern: string | null
         }
         Insert: {
           ai_classification?: string | null
           correct_classification?: string | null
           created_at?: string | null
           error_pattern?: string | null
+          extracted_keywords?: string[] | null
           id?: string
           importance?: string | null
           last_updated?: string | null
           occurrence_count?: number | null
           pattern_type: string
           test_name_pattern?: string | null
+          user_notes_pattern?: string | null
         }
         Update: {
           ai_classification?: string | null
           correct_classification?: string | null
           created_at?: string | null
           error_pattern?: string | null
+          extracted_keywords?: string[] | null
           id?: string
           importance?: string | null
           last_updated?: string | null
           occurrence_count?: number | null
           pattern_type?: string
           test_name_pattern?: string | null
+          user_notes_pattern?: string | null
         }
         Relationships: []
       }
