@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult, ReportMode } from '@/types/testim';
+import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult, ReportMode, SortOption } from '@/types/testim';
 import { parseFailuresCSV, hasPreClassifiedColumns, getPreClassifiedStats } from '@/lib/csvParsers';
 import { detectErrorPattern, getPatternFlakiness } from '@/lib/errorPatternDetection';
 import { convertPreClassifiedToFeedback, convertPreClassifiedToAnalysis } from '@/lib/testimClassificationMapper';
@@ -227,21 +227,28 @@ export function useChecklist() {
     setReportMode('production');
   }, []);
 
-  // Get sorted failures (by priority, then confidence)
-  const getSortedFailures = useCallback(() => {
+  // Get sorted failures with flexible sort options
+  const getSortedFailures = useCallback((sortBy: SortOption = 'original') => {
     const priorityOrder: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
     
     return [...failures].sort((a, b) => {
-      // First by priority
-      const aPriority = a.analysis?.priority ?? 'P3';
-      const bPriority = b.analysis?.priority ?? 'P3';
-      const priorityDiff = priorityOrder[aPriority] - priorityOrder[bPriority];
-      if (priorityDiff !== 0) return priorityDiff;
-      
-      // Then by confidence (higher first)
-      const aConf = a.analysis?.confidence ?? 0;
-      const bConf = b.analysis?.confidence ?? 0;
-      return bConf - aConf;
+      switch (sortBy) {
+        case 'original':
+          return a.originalIndex - b.originalIndex;
+        case 'priority':
+          // First by priority, then by confidence
+          const aPriority = a.analysis?.priority ?? 'P3';
+          const bPriority = b.analysis?.priority ?? 'P3';
+          const priorityDiff = priorityOrder[aPriority] - priorityOrder[bPriority];
+          if (priorityDiff !== 0) return priorityDiff;
+          return (b.analysis?.confidence ?? 0) - (a.analysis?.confidence ?? 0);
+        case 'confidence':
+          return (b.analysis?.confidence ?? 0) - (a.analysis?.confidence ?? 0);
+        case 'testName':
+          return a.testName.localeCompare(b.testName);
+        default:
+          return a.originalIndex - b.originalIndex;
+      }
     });
   }, [failures]);
 
@@ -264,7 +271,7 @@ export function useChecklist() {
 
   return {
     failures,
-    sortedFailures: getSortedFailures(),
+    getSortedFailures,
     stats: getStats(),
     isLoading,
     isAnalyzing,

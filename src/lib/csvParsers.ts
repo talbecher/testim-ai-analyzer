@@ -162,6 +162,7 @@ export function parseFailuresCSV(content: string, isPreClassified: boolean = fal
   }
   
   const failures: FailureEntry[] = [];
+  let originalIndex = 0;
   
   for (const row of dataRows) {
     const testName = row[testNameIdx]?.trim();
@@ -179,6 +180,7 @@ export function parseFailuresCSV(content: string, isPreClassified: boolean = fal
     
     failures.push({
       id: generateId(),
+      originalIndex: originalIndex++,
       testName,
       testNameNormalized: normalizeTestName(testName),
       folder: folderIdx !== -1 ? row[folderIdx]?.trim() : undefined,

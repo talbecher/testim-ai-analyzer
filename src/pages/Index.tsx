@@ -21,12 +21,15 @@ import { ReviewProgress } from '@/components/ReviewProgress';
 import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
 import { toast } from 'sonner';
 import { RunDetails } from '@/types/feedback';
-import { Classification } from '@/types/testim';
+import { Classification, SortOption } from '@/types/testim';
+
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sortOption, setSortOption] = useState<SortOption>('original');
+  
   const {
     failures,
-    sortedFailures,
+    getSortedFailures,
     stats,
     isLoading,
     isAnalyzing,
@@ -38,6 +41,9 @@ const Index = () => {
     analyzeFailures,
     clearFailures
   } = useChecklist();
+  
+  // Get sorted failures based on current sort option
+  const sortedFailures = getSortedFailures(sortOption);
   const {
     failuresWithFeedback,
     summary,
@@ -363,6 +369,21 @@ const Index = () => {
                         <SelectContent>
                           <SelectItem value="all">All Classifications</SelectItem>
                           {classifications.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Sort Options */}
+                    <div className="flex items-center gap-2">
+                      <Select value={sortOption} onValueChange={(v) => setSortOption(v as SortOption)}>
+                        <SelectTrigger className="w-[180px] bg-background/50">
+                          <SelectValue placeholder="Sort by..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="original">📄 Original Order</SelectItem>
+                          <SelectItem value="priority">🔥 Priority (P0→P3)</SelectItem>
+                          <SelectItem value="confidence">📊 AI Confidence</SelectItem>
+                          <SelectItem value="testName">🔤 Test Name (A-Z)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
