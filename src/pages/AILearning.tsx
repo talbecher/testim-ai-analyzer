@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Brain, TrendingUp, Zap, ArrowRightLeft, CheckCircle, FileText, BarChart3, Settings as SettingsIcon } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { LearningBoostButton } from '@/components/LearningBoostButton';
 import { cn } from '@/lib/utils';
 
 const classColors: Record<string, string> = {
@@ -136,6 +137,9 @@ export default function AILearning() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Learning Boost */}
+        <LearningBoostButton />
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
