@@ -129,21 +129,50 @@ Pay special attention to these patterns and adjust your classifications accordin
       if (learningPatterns && learningPatterns.length > 0) {
         const criticalPatterns = learningPatterns.filter(p => p.importance === 'critical');
         const highPatterns = learningPatterns.filter(p => p.importance === 'high');
+        const notesPatterns = learningPatterns.filter(p => p.pattern_type === 'notes_analysis');
         
-        if (criticalPatterns.length > 0 || highPatterns.length > 0) {
-          learningPatternsPrompt = `
-
+        let patternsSection = '';
+        
+        if (criticalPatterns.length > 0) {
+          patternsSection += `
 ## CRITICAL LEARNING PATTERNS (PAY CLOSE ATTENTION!):
-${criticalPatterns.map(p => 
-  `🔴 CRITICAL: Error "${p.error_pattern || 'general'}" - AI predicted "${p.ai_classification}" but should be "${p.correct_classification}" (happened ${p.occurrence_count}x)`
-).join('\n')}
-
+${criticalPatterns.map(p => {
+  const notesInfo = p.user_notes_pattern ? ` | User notes: "${p.user_notes_pattern}"` : '';
+  return `🔴 CRITICAL: Error "${p.error_pattern || 'general'}" - AI predicted "${p.ai_classification}" but should be "${p.correct_classification}" (happened ${p.occurrence_count}x)${notesInfo}`;
+}).join('\n')}
+`;
+        }
+        
+        if (highPatterns.length > 0) {
+          patternsSection += `
 ## HIGH IMPORTANCE PATTERNS:
-${highPatterns.map(p => 
-  `⚠️ HIGH: Error "${p.error_pattern || 'general'}" - AI predicted "${p.ai_classification}" but should be "${p.correct_classification}" (happened ${p.occurrence_count}x)`
-).join('\n')}
+${highPatterns.map(p => {
+  const notesInfo = p.user_notes_pattern ? ` | User notes: "${p.user_notes_pattern}"` : '';
+  return `⚠️ HIGH: Error "${p.error_pattern || 'general'}" - AI predicted "${p.ai_classification}" but should be "${p.correct_classification}" (happened ${p.occurrence_count}x)${notesInfo}`;
+}).join('\n')}
+`;
+        }
+        
+        // Add notes-based patterns
+        if (notesPatterns.length > 0) {
+          patternsSection += `
+## USER NOTES PATTERNS (Important context from QA feedback):
+${notesPatterns.map(p => {
+  const keywords = p.extracted_keywords?.join(', ') || 'N/A';
+  return `📝 When notes mention "${keywords}": ${p.user_notes_pattern} → Suggest "${p.correct_classification}" (seen ${p.occurrence_count}x)`;
+}).join('\n')}
 
-IMPORTANT: The above patterns are based on aggregated user feedback. Adjust your classifications accordingly!`;
+Examples of actionable patterns from user notes:
+- "Reassign", "reassign element" → UI changed, test needs update → "Expected Change"
+- "Expired", "provision file" → Test data/config outdated → "Environment / Infra Issue"
+- "Deploy tab", "navigation" → Infrastructure problem → Lower priority, suggest rerun
+`;
+        }
+        
+        if (patternsSection) {
+          learningPatternsPrompt = patternsSection + `
+IMPORTANT: The above patterns are based on aggregated user feedback AND analysis of user notes. 
+When you see similar error messages or patterns, use this learning to improve your classification accuracy!`;
         }
       }
 
