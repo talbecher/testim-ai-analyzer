@@ -50,9 +50,13 @@ export interface PreClassifiedData {
   testimResultUrl?: string;  // Test Result URL
 }
 
+// Sort options for failure list
+export type SortOption = 'original' | 'priority' | 'confidence' | 'testName';
+
 // CSV Failure Entry
 export interface FailureEntry {
   id: string;
+  originalIndex: number;
   testName: string;
   testNameNormalized: string;
   folder?: string;
