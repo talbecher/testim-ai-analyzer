@@ -150,7 +150,7 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
     setSaveError(null);
 
     try {
-      // Prepare report data with mode
+      // Prepare report data with mode and feature rollout flag
       const reportData = {
         run_name: runDetails.name || 'Unnamed Run',
         run_date: format(runDetails.date, 'yyyy-MM-dd'),
@@ -159,7 +159,8 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
         correct_count: summary.correctCount,
         accuracy_percentage: summary.accuracyPercentage,
         common_mistakes: JSON.parse(JSON.stringify(summary.commonMistakes)),
-        mode: reportMode // Save mode to database
+        mode: reportMode, // Save mode to database
+        is_feature_rollout: runDetails.isFeatureRollout || false // Exclude from AI learning
       };
 
       // Insert report

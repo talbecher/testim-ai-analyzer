@@ -149,32 +149,57 @@ serve(async (req) => {
 
     console.log('Starting learning aggregation with notes analysis...');
 
-    // 1. Fetch ALL corrections (from all modes, not just learning)
-    const { data: corrections, error: corrError } = await supabase
+    // First, get all report IDs that are feature rollouts (to exclude from learning)
+    const { data: featureRolloutReports, error: frError } = await supabase
+      .from('analysis_reports')
+      .select('id')
+      .eq('is_feature_rollout', true);
+
+    if (frError) {
+      console.log('Error fetching feature rollout reports:', frError);
+    }
+
+    const excludeReportIds = new Set(
+      featureRolloutReports?.map(r => r.id) || []
+    );
+
+    console.log(`Found ${excludeReportIds.size} feature rollout reports to exclude from learning`);
+
+    // 1. Fetch ALL corrections (from all modes, not just learning) - EXCLUDING feature rollouts
+    const { data: allCorrections, error: corrError } = await supabase
       .from('analysis_results')
-      .select('test_name_normalized, error_pattern, ai_classification, user_classification, user_notes')
+      .select('report_id, test_name_normalized, error_pattern, ai_classification, user_classification, user_notes')
       .eq('was_correct', false)
       .not('user_classification', 'is', null);
 
     if (corrError) throw corrError;
 
-    // 2. Fetch all passed_locally patterns with notes
-    const { data: passedLocally, error: plError } = await supabase
+    // Filter out results from feature rollout runs
+    const corrections = allCorrections?.filter(c => !excludeReportIds.has(c.report_id)) || [];
+
+    // 2. Fetch all passed_locally patterns with notes - EXCLUDING feature rollouts
+    const { data: allPassedLocally, error: plError } = await supabase
       .from('analysis_results')
-      .select('test_name_normalized, error_pattern, ai_classification, passed_locally_reason, passed_locally_notes')
+      .select('report_id, test_name_normalized, error_pattern, ai_classification, passed_locally_reason, passed_locally_notes')
       .eq('passed_locally', true);
 
     if (plError) throw plError;
 
-    // 3. Fetch all manual_fix patterns with notes
-    const { data: manualFixes, error: mfError } = await supabase
+    // Filter out results from feature rollout runs
+    const passedLocally = allPassedLocally?.filter(c => !excludeReportIds.has(c.report_id)) || [];
+
+    // 3. Fetch all manual_fix patterns with notes - EXCLUDING feature rollouts
+    const { data: allManualFixes, error: mfError } = await supabase
       .from('analysis_results')
-      .select('test_name_normalized, error_pattern, ai_classification, manual_fix_type, manual_fix_notes')
+      .select('report_id, test_name_normalized, error_pattern, ai_classification, manual_fix_type, manual_fix_notes')
       .eq('required_manual_fix', true);
 
     if (mfError) throw mfError;
 
-    console.log(`Found: ${corrections?.length || 0} corrections, ${passedLocally?.length || 0} passed locally, ${manualFixes?.length || 0} manual fixes`);
+    // Filter out results from feature rollout runs
+    const manualFixes = allManualFixes?.filter(c => !excludeReportIds.has(c.report_id)) || [];
+
+    console.log(`Found: ${corrections?.length || 0} corrections, ${passedLocally?.length || 0} passed locally, ${manualFixes?.length || 0} manual fixes (excluding ${excludeReportIds.size} feature rollout reports)`);
 
     // Collect all notes for AI analysis
     const allNotes: string[] = [];

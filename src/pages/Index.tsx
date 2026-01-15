@@ -11,7 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug } from 'lucide-react';
+import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug, Rocket, Info } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -60,7 +62,8 @@ const Index = () => {
   const [runDetails, setRunDetails] = useState<RunDetails>({
     name: '',
     date: new Date(),
-    notes: ''
+    notes: '',
+    isFeatureRollout: false
   });
 
   // Search and filter state
@@ -225,6 +228,41 @@ const Index = () => {
               ...prev,
               notes: e.target.value
             }))} className="bg-background/50 min-h-[80px] resize-none" />
+            </div>
+
+            {/* Feature Rollout Toggle */}
+            <div className="flex items-center space-x-3 pt-2 border-t border-border/50">
+              <Checkbox
+                id="feature-rollout"
+                checked={runDetails.isFeatureRollout}
+                onCheckedChange={(checked) => 
+                  setRunDetails(prev => ({ ...prev, isFeatureRollout: !!checked }))
+                }
+              />
+              <div className="flex items-center gap-2">
+                <label 
+                  htmlFor="feature-rollout" 
+                  className="text-sm font-medium text-foreground cursor-pointer flex items-center gap-2"
+                >
+                  <Rocket className="h-4 w-4 text-amber-500" />
+                  Feature Rollout Run
+                </label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[300px]">
+                      <p>Check this if failures are expected due to a new feature rollout. QA feedback will still be saved for documentation, but will be excluded from AI learning.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              {runDetails.isFeatureRollout && (
+                <span className="text-xs text-amber-600 bg-amber-500/10 px-2 py-1 rounded">
+                  Excluded from AI learning
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>

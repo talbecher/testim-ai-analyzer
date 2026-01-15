@@ -21,6 +21,7 @@ export type Database = {
           correct_count: number
           created_at: string
           id: string
+          is_feature_rollout: boolean | null
           mode: string
           notes: string | null
           run_date: string
@@ -34,6 +35,7 @@ export type Database = {
           correct_count?: number
           created_at?: string
           id?: string
+          is_feature_rollout?: boolean | null
           mode?: string
           notes?: string | null
           run_date: string
@@ -47,6 +49,7 @@ export type Database = {
           correct_count?: number
           created_at?: string
           id?: string
+          is_feature_rollout?: boolean | null
           mode?: string
           notes?: string | null
           run_date?: string
