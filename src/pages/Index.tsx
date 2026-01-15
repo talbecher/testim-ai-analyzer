@@ -441,9 +441,9 @@ const Index = () => {
                 </CardContent>
               </Card>}
 
-            {/* Results - Use mode-specific cards */}
+            {/* Results - Row-level card selection based on pre-classification */}
             <div className="space-y-3">
-              {hasAnalyzedResults ? filteredFailures.map(f => reportMode === 'learning' ? <LearningModeCard key={f.id} failure={f} classColors={classColors} priorityColors={priorityColors} /> : <ProductionModeCard key={f.id} failure={f} onFeedback={handleFeedback} classColors={classColors} priorityColors={priorityColors} />) : sortedFailures.map(f => <Card key={f.id} className="animate-fade-in border-border/50 hover:border-border transition-colors">
+              {hasAnalyzedResults ? filteredFailures.map(f => f.preClassified?.failureType ? <LearningModeCard key={f.id} failure={f} classColors={classColors} priorityColors={priorityColors} /> : <ProductionModeCard key={f.id} failure={f} onFeedback={handleFeedback} classColors={classColors} priorityColors={priorityColors} />) : sortedFailures.map(f => <Card key={f.id} className="animate-fade-in border-border/50 hover:border-border transition-colors">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
