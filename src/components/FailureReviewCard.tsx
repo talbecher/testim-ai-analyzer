@@ -150,7 +150,7 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
               {/* Source badge */}
               {failure.analysis.isFromTestim ? (
                 <span className="px-2 py-1 rounded text-xs font-medium bg-confidence-high/20 text-confidence-high border border-confidence-high/30">
-                  מסווג ב-Testim
+                  Testim Classified
                 </span>
               ) : (
                 <span className="px-2 py-1 rounded text-xs font-medium bg-primary/20 text-primary border border-primary/30">
