@@ -257,13 +257,13 @@ const Index = () => {
                 <CheckCircle className="h-5 w-5 text-confidence-high" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-foreground">📋 קובץ מסווג מ-Testim.io</p>
+                <p className="font-medium text-foreground">📋 Pre-classified file from Testim.io</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  <span className="text-confidence-high font-medium">{preClassifiedStats.classified}</span> כשלונות כבר מסווגים 
-                  <span className="text-muted-foreground"> ← יסומנו כ-reviewed</span>
-                  {preClassifiedStats.unclassified > 0 && <span> • <span className="text-flaky font-medium">{preClassifiedStats.unclassified}</span> ללא סיווג 
-                    <span className="text-muted-foreground"> ← ינותחו ע"י AI</span></span>}
-                  {preClassifiedStats.withBugLink > 0 && <span> • <span className="text-bug font-medium">{preClassifiedStats.withBugLink}</span> עם לינק לבאג</span>}
+                  <span className="text-confidence-high font-medium">{preClassifiedStats.classified}</span> failures already classified 
+                  <span className="text-muted-foreground"> → will be marked as reviewed</span>
+                  {preClassifiedStats.unclassified > 0 && <span> • <span className="text-flaky font-medium">{preClassifiedStats.unclassified}</span> unclassified 
+                    <span className="text-muted-foreground"> → will be analyzed by AI</span></span>}
+                  {preClassifiedStats.withBugLink > 0 && <span> • <span className="text-bug font-medium">{preClassifiedStats.withBugLink}</span> with bug link</span>}
                 </p>
               </div>
             </div>
