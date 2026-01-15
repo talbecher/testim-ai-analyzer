@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { ArrowLeft, Save, FileText, Search, Filter, CheckCircle2, XCircle, Edit3, Brain, SearchCheck, SkipForward, Wrench } from 'lucide-react';
+import { ArrowLeft, Save, FileText, Search, Filter, CheckCircle2, XCircle, Edit3, Brain, SearchCheck, SkipForward, Wrench, Rocket, AlertTriangle } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -249,6 +249,12 @@ export default function ReportEdit() {
                     <Button variant="ghost" size="icon" onClick={() => setEditingName(true)}>
                       <Edit3 className="h-4 w-4" />
                     </Button>
+                    {(currentReport as any).is_feature_rollout && (
+                      <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                        <Rocket className="h-3 w-3 mr-1" />
+                        Feature Rollout
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {format(new Date(currentReport.run_date), 'MMMM dd, yyyy')}
@@ -300,6 +306,23 @@ export default function ReportEdit() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Feature Rollout Info Banner */}
+        {(currentReport as any).is_feature_rollout && (
+          <Card className="border-amber-500/30 bg-amber-500/5">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-amber-600">Feature Rollout Run — Excluded from AI Learning</p>
+                  <p className="text-sm text-muted-foreground">
+                    Feedback from this run is saved for documentation purposes only and will not influence future AI recommendations.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Notes */}
         {editingName && (

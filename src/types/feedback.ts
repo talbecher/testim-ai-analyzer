@@ -47,6 +47,7 @@ export interface RunDetails {
   name: string;
   date: Date;
   notes: string;
+  isFeatureRollout?: boolean;
 }
 
 // For saving to database

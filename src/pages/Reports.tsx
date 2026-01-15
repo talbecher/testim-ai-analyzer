@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, FileText, Pencil, Trash2, Brain, Search, BarChart3, Bug, Settings as SettingsIcon } from 'lucide-react';
+import { ArrowLeft, FileText, Pencil, Trash2, Brain, Search, BarChart3, Bug, Settings as SettingsIcon, Rocket } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { format } from 'date-fns';
 
@@ -190,14 +190,20 @@ export default function Reports() {
                       onClick={() => navigate(`/reports/${report.id}`)}
                     >
                       <TableCell className="font-medium">
-                        <div>
-                          {report.run_name}
-                          {report.notes && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                              {report.notes}
-                            </p>
+                        <div className="flex items-center gap-2">
+                          <span>{report.run_name}</span>
+                          {report.is_feature_rollout && (
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs">
+                              <Rocket className="h-3 w-3 mr-1" />
+                              Feature Rollout
+                            </Badge>
                           )}
                         </div>
+                        {report.notes && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            {report.notes}
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {format(new Date(report.run_date), 'MMM dd, yyyy')}
