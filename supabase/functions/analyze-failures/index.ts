@@ -6,39 +6,116 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Core decision framework - shared between modes
+const DECISION_FRAMEWORK = `
+## DECISION FRAMEWORK (FOLLOW THIS ORDER STRICTLY)
+
+### 1. LEARNING PATTERNS (STRONGEST SIGNAL)
+Patterns generated via AI Learning Boost.
+- If marked CRITICAL (3+ occurrences) -> MUST FOLLOW with 95% confidence
+- If marked HIGH (2 occurrences) -> Strong signal with 80% confidence
+- If marked NORMAL (1 occurrence) -> Weak reference, 60% confidence
+
+### 2. HISTORICAL CORRECTIONS (FROM USER FEEDBACK)
+- 3+ occurrences -> MUST FOLLOW (very high confidence)
+- 2 occurrences -> Strong signal
+- 1 occurrence -> Weak reference only
+
+### 3. PASSED LOCALLY PATTERNS
+- Passed locally 3+ times -> Very strong signal for Likely Flaky
+- Passed locally 1-2 times -> Supporting signal only
+
+### 4. FLAKY KB MATCH
+- If matched -> increase probability of Likely Flaky
+- This is a supporting signal, not an absolute rule
+
+### 5. ERROR PATTERN HEURISTICS (USE ONLY IF ABOVE SIGNALS WEAK)
+- Element not found -> usually Likely Flaky (UI/timing related)
+- Element is not visible -> usually Likely Flaky
+- Timeout -> Likely Flaky or Environment / Infra Issue
+- AssertionError -> usually Potential bug
+- Network / infra errors -> Environment / Infra Issue
+- Null / Undefined errors -> Potential bug unless strong flaky signals exist
+`;
+
+const GUARDRAILS = `
+## IMPORTANT GUARDRAILS
+
+### P0 PRIORITY RULE
+- Use P0 ONLY when confidence is extremely high (90%+) for a real Potential bug in critical flow
+- NEVER use P0 for flaky, timing, or environment-related issues
+
+### When Signals Conflict
+- Follow the strongest signal based on the decision order above
+- Reduce confidence when uncertain
+
+### COMMON MISTAKES TO AVOID
+❌ Do NOT ignore learning patterns or historical corrections
+❌ Do NOT classify flaky UI/timing failures as P0
+❌ Do NOT output high confidence when signals are weak or conflicting
+❌ Do NOT invent new labels or priorities
+❌ Do NOT assume "Flaky > Bug" globally
+
+### BEST PRACTICES
+✅ Prefer Likely Flaky only when supported by learning patterns, historical corrections, passed-locally data, or Flaky KB
+✅ AssertionError tends to be a Potential bug unless strong flaky signals override it
+✅ Prefer consistency over creativity
+✅ Reduce confidence when uncertain
+✅ Explain reasoning using existing fields only
+`;
+
+const OUTPUT_REQUIREMENTS = `
+## OUTPUT REQUIREMENTS (CRITICAL)
+
+### Classification Values (MUST MATCH EXACTLY - case-sensitive):
+- "Potential bug"
+- "Likely Flaky"
+- "Environment / Infra Issue"
+- "Expected Change"
+
+Do NOT invent new labels or variations.
+
+### Required Keys for Each Item:
+- classification
+- confidence
+- priority
+- suggestedAction
+- priorityReason
+- errorPattern
+- requiresRerun
+- rerunReason
+- flakyKBMatch
+
+### Field Alignment Rules:
+- errorPattern: Use the provided error pattern as-is. Do NOT invent or replace unless clearly incorrect.
+- requiresRerun: Keep consistent with classification and confidence. Avoid extreme recommendations when confidence low.
+- priorityReason: Include bullet points explaining which signals were used.
+
+### Output Rules:
+- Return ONLY a valid JSON array
+- Each item MUST include ALL required keys, even if some values are null
+- Do NOT change key names, casing, or structure
+- Do NOT add or remove keys
+- Do NOT output markdown, code fences, or explanations outside the JSON
+`;
+
 // Learning mode prompt - focus on prediction accuracy evaluation
 const LEARNING_PROMPT = `You are an expert QA engineer analyzing test failures from Testim for EVALUATION purposes.
 The user has ALREADY classified these failures. Your job is to make predictions that will be compared against the human classifications.
 Be as accurate as possible - your predictions will be used to measure AI accuracy.
 
-## Classification Rules:
-- "Potential bug": Assertion failures, unexpected behavior, logic errors. Low flakiness.
-- "Likely Flaky": Element not found, timing issues, intermittent failures. High flakiness.
-- "Environment / Infra Issue": Network errors, server 5xx, connection refused. Infrastructure problems.
-- "Expected Change": Feature changed, UI updated, intentional changes.
-
-## Priority Rules:
-- P0: High confidence Potential bug in critical flow, or repeated assertion failures
-- P1: Medium confidence Potential bug, or shared-step changes
-- P2: High confidence Flaky, or Environment Issues
-- P3: Low confidence Flaky, or one-time issues`;
+${DECISION_FRAMEWORK}
+${GUARDRAILS}
+${OUTPUT_REQUIREMENTS}`;
 
 // Production mode prompt - focus on actionable recommendations
 const PRODUCTION_PROMPT = `You are an expert QA engineer analyzing test failures from Testim for DECISION SUPPORT.
 The user needs your help to classify and prioritize these failures. Provide clear, actionable recommendations.
 Be confident but acknowledge uncertainty when appropriate.
 
-## Classification Rules:
-- "Potential bug": Assertion failures, unexpected behavior, logic errors. Low flakiness.
-- "Likely Flaky": Element not found, timing issues, intermittent failures. High flakiness.
-- "Environment / Infra Issue": Network errors, server 5xx, connection refused. Infrastructure problems.
-- "Expected Change": Feature changed, UI updated, intentional changes.
-
-## Priority Rules:
-- P0: High confidence Potential bug in critical flow, or repeated assertion failures - needs immediate attention
-- P1: Medium confidence Potential bug, or shared-step changes - should be addressed today
-- P2: High confidence Flaky, or Environment Issues - monitor and rerun
-- P3: Low confidence Flaky, or one-time issues - can wait`;
+${DECISION_FRAMEWORK}
+${GUARDRAILS}
+${OUTPUT_REQUIREMENTS}`;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -61,7 +138,7 @@ serve(async (req) => {
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseKey);
       
-      // Fetch corrections from ALL modes (not just learning)
+      // Fetch corrections from ALL modes (not just learning) - INCREASED LIMIT
       const { data: corrections, error: dbError } = await supabase
         .from('analysis_results')
         .select(`
@@ -72,7 +149,7 @@ serve(async (req) => {
         `)
         .eq('was_correct', false)
         .not('user_classification', 'is', null)
-        .limit(100);
+        .limit(200); // Increased from 100
 
       // Fetch aggregated learning patterns (from Boost)
       const { data: learningPatterns } = await supabase
@@ -100,18 +177,41 @@ serve(async (req) => {
 
         const topCorrections = Array.from(correctionMap.values())
           .sort((a, b) => b.count - a.count)
-          .slice(0, 20);
+          .slice(0, 50); // Increased from 20
 
         if (topCorrections.length > 0) {
+          // Filter by importance levels
+          const criticalCorrections = topCorrections.filter(c => c.count >= 3);
+          const highCorrections = topCorrections.filter(c => c.count === 2);
+          const normalCorrections = topCorrections.filter(c => c.count === 1).slice(0, 10);
+
           historicalCorrections = `
 
 ## Historical Corrections (IMPORTANT - Learn from past mistakes):
 Users have corrected the following patterns. Use these to improve your accuracy:
-${topCorrections.map(c => 
-  `- Error pattern "${c.pattern || 'general'}": AI said "${c.from}" but users corrected to "${c.to}" (${c.count}x)`
-).join('\n')}
 
-Pay special attention to these patterns and adjust your classifications accordingly.`;
+### CRITICAL (3+ corrections - MUST FOLLOW with 95% confidence):
+${criticalCorrections.length > 0 
+  ? criticalCorrections.map(c => 
+    `🔴 Error pattern "${c.pattern || 'general'}": AI said "${c.from}" but users corrected to "${c.to}" (${c.count}x) -> MUST FOLLOW`
+  ).join('\n')
+  : 'None'}
+
+### HIGH (2 corrections - Strong signal with 80% confidence):
+${highCorrections.length > 0 
+  ? highCorrections.map(c => 
+    `⚠️ Error pattern "${c.pattern || 'general'}": AI said "${c.from}" but users corrected to "${c.to}" (${c.count}x) -> Strong signal`
+  ).join('\n')
+  : 'None'}
+
+### NORMAL (1 correction - Weak reference, consider only if other signals align):
+${normalCorrections.length > 0 
+  ? normalCorrections.map(c => 
+    `📝 Error pattern "${c.pattern || 'general'}": AI said "${c.from}" but users corrected to "${c.to}" (${c.count}x)`
+  ).join('\n')
+  : 'None'}
+
+Pay special attention to CRITICAL and HIGH patterns - these represent repeated user corrections!`;
         }
       }
 
@@ -123,7 +223,7 @@ Pay special attention to these patterns and adjust your classifications accordin
           error_pattern
         `)
         .eq('passed_locally', true)
-        .limit(100);
+        .limit(150); // Increased from 100
 
       // Build learning patterns section for prompt
       if (learningPatterns && learningPatterns.length > 0) {
@@ -135,7 +235,7 @@ Pay special attention to these patterns and adjust your classifications accordin
         
         if (criticalPatterns.length > 0) {
           patternsSection += `
-## CRITICAL LEARNING PATTERNS (PAY CLOSE ATTENTION!):
+## CRITICAL LEARNING PATTERNS (MUST FOLLOW - 95% confidence):
 ${criticalPatterns.map(p => {
   const notesInfo = p.user_notes_pattern ? ` | User notes: "${p.user_notes_pattern}"` : '';
   return `🔴 CRITICAL: Error "${p.error_pattern || 'general'}" - AI predicted "${p.ai_classification}" but should be "${p.correct_classification}" (happened ${p.occurrence_count}x)${notesInfo}`;
@@ -145,7 +245,7 @@ ${criticalPatterns.map(p => {
         
         if (highPatterns.length > 0) {
           patternsSection += `
-## HIGH IMPORTANCE PATTERNS:
+## HIGH IMPORTANCE PATTERNS (Strong signal - 80% confidence):
 ${highPatterns.map(p => {
   const notesInfo = p.user_notes_pattern ? ` | User notes: "${p.user_notes_pattern}"` : '';
   return `⚠️ HIGH: Error "${p.error_pattern || 'general'}" - AI predicted "${p.ai_classification}" but should be "${p.correct_classification}" (happened ${p.occurrence_count}x)${notesInfo}`;
@@ -195,16 +295,29 @@ When you see similar error messages or patterns, use this learning to improve yo
 
         const topPatterns = Array.from(patternMap.values())
           .sort((a, b) => b.count - a.count)
-          .slice(0, 15);
+          .slice(0, 25); // Increased from 15
 
         if (topPatterns.length > 0) {
+          // Separate by strength
+          const veryStrong = topPatterns.filter(p => p.count >= 3);
+          const supporting = topPatterns.filter(p => p.count < 3);
+
           passedLocallyPatterns = `
 
 ## Tests That Pass Locally (CAUTION - These are likely NOT real bugs):
 These tests were flagged as "Potential bug" but passed when run locally. 
 Consider "Likely Flaky" or "Environment / Infra Issue" instead:
-${topPatterns.map(p => 
-  `- "${p.name}" with error "${p.pattern || 'unknown'}" (passed locally ${p.count}x)`
+
+### VERY STRONG (3+ times passed locally - likely Likely Flaky):
+${veryStrong.length > 0 
+  ? veryStrong.map(p => 
+    `🔴 "${p.name}" with error "${p.pattern || 'unknown'}" (passed locally ${p.count}x) -> VERY likely flaky`
+  ).join('\n')
+  : 'None'}
+
+### SUPPORTING (1-2 times passed locally):
+${supporting.slice(0, 15).map(p => 
+  `📝 "${p.name}" with error "${p.pattern || 'unknown'}" (passed locally ${p.count}x)`
 ).join('\n')}`;
         }
       }
@@ -234,8 +347,8 @@ For EACH failure, respond with JSON array containing objects with:
 - confidence: 0-100
 - suggestedAction: "Open bug" | "Update shared step" | "Rerun only" | "Ignore today / monitor"
 - priority: "P0" | "P1" | "P2" | "P3"
-- priorityReason: bullet points explaining why
-- errorPattern: the detected error pattern
+- priorityReason: bullet points explaining which signals were used (learning patterns, historical corrections, passed locally, etc.)
+- errorPattern: the detected error pattern (use provided pattern as-is)
 - requiresRerun: true/false
 - rerunReason: explanation
 - flakyKBMatch: true/false if matched in Flaky KB
@@ -252,6 +365,7 @@ Return ONLY valid JSON array, no markdown.`;
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
+        temperature: 0.3, // CRITICAL: Ensures consistent, deterministic output
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: "Analyze these failures and return the JSON array." }
@@ -265,6 +379,11 @@ Return ONLY valid JSON array, no markdown.`;
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Payment required, please add credits" }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       throw new Error(`AI gateway error: ${response.status}`);
