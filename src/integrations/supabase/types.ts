@@ -156,6 +156,7 @@ export type Database = {
       }
       bug_categories: {
         Row: {
+          category_type: string
           created_at: string | null
           description: string | null
           id: string
@@ -164,6 +165,7 @@ export type Database = {
           sort_order: number | null
         }
         Insert: {
+          category_type?: string
           created_at?: string | null
           description?: string | null
           id?: string
@@ -172,6 +174,7 @@ export type Database = {
           sort_order?: number | null
         }
         Update: {
+          category_type?: string
           created_at?: string | null
           description?: string | null
           id?: string

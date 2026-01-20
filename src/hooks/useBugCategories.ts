@@ -1,53 +1,80 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { BugCategory } from '@/types/bugCategory';
+import { BugCategory, CategoryType } from '@/types/bugCategory';
 
-export function useBugCategories() {
+export function useBugCategories(initialType?: CategoryType) {
   const [categories, setCategories] = useState<BugCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCategories = useCallback(async () => {
+  const fetchCategories = useCallback(async (type?: CategoryType) => {
     setIsLoading(true);
     setError(null);
     
-    const { data, error: fetchError } = await supabase
+    let query = supabase
       .from('bug_categories')
       .select('*')
       .eq('is_active', true)
       .order('sort_order', { ascending: true });
 
+    if (type) {
+      query = query.eq('category_type', type);
+    }
+
+    const { data, error: fetchError } = await query;
+
     if (fetchError) {
       setError(fetchError.message);
     } else {
-      setCategories(data || []);
+      setCategories((data as BugCategory[]) || []);
     }
     setIsLoading(false);
   }, []);
 
-  const fetchAllCategories = useCallback(async () => {
+  const fetchAllCategories = useCallback(async (type?: CategoryType) => {
     setIsLoading(true);
     setError(null);
     
-    const { data, error: fetchError } = await supabase
+    let query = supabase
       .from('bug_categories')
       .select('*')
       .order('sort_order', { ascending: true });
 
+    if (type) {
+      query = query.eq('category_type', type);
+    }
+
+    const { data, error: fetchError } = await query;
+
     if (fetchError) {
       setError(fetchError.message);
     } else {
-      setCategories(data || []);
+      setCategories((data as BugCategory[]) || []);
     }
     setIsLoading(false);
   }, []);
 
-  const addCategory = useCallback(async (name: string, description?: string) => {
+  const fetchCategoriesByType = useCallback(async (type: CategoryType) => {
+    const { data, error: fetchError } = await supabase
+      .from('bug_categories')
+      .select('*')
+      .eq('is_active', true)
+      .eq('category_type', type)
+      .order('sort_order', { ascending: true });
+
+    if (fetchError) {
+      throw new Error(fetchError.message);
+    }
+    
+    return (data as BugCategory[]) || [];
+  }, []);
+
+  const addCategory = useCallback(async (name: string, type: CategoryType = 'bug', description?: string) => {
     const maxOrder = Math.max(...categories.map(c => c.sort_order), 0);
     
     const { data, error: insertError } = await supabase
       .from('bug_categories')
-      .insert([{ name, description, sort_order: maxOrder + 1, is_active: true }])
+      .insert([{ name, description, sort_order: maxOrder + 1, is_active: true, category_type: type }])
       .select()
       .single();
 
@@ -55,8 +82,8 @@ export function useBugCategories() {
       throw new Error(insertError.message);
     }
     
-    setCategories(prev => [...prev, data]);
-    return data;
+    setCategories(prev => [...prev, data as BugCategory]);
+    return data as BugCategory;
   }, [categories]);
 
   const updateCategory = useCallback(async (id: string, updates: Partial<BugCategory>) => {
@@ -90,8 +117,8 @@ export function useBugCategories() {
   }, [updateCategory]);
 
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    fetchCategories(initialType);
+  }, [fetchCategories, initialType]);
 
   return {
     categories,
@@ -99,6 +126,7 @@ export function useBugCategories() {
     error,
     fetchCategories,
     fetchAllCategories,
+    fetchCategoriesByType,
     addCategory,
     updateCategory,
     deleteCategory,
