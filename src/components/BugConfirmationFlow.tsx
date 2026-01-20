@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Check, X, Link as LinkIcon, Bug, TestTube, MessageSquare, Wrench } from 'lucide-react';
 import { useBugCategories } from '@/hooks/useBugCategories';
+import { BugCategory } from '@/types/bugCategory';
 
 interface BugConfirmationFlowProps {
   onConfirmBug: (category: string, bugLink?: string) => void;
@@ -13,17 +14,8 @@ interface BugConfirmationFlowProps {
   onCancel: () => void;
 }
 
-const MANUAL_FIX_TYPES = [
-  'Test fix',
-  'Config change',
-  'Test data update',
-  'Test refactor',
-  'Environment fix',
-  'Other'
-];
-
 export function BugConfirmationFlow({ onConfirmBug, onPassedLocally, onRequiredManualFix, onCancel }: BugConfirmationFlowProps) {
-  const { categories, isLoading } = useBugCategories();
+  const { fetchCategoriesByType, isLoading } = useBugCategories();
   const [step, setStep] = useState<'question' | 'category' | 'passed-reason' | 'manual-fix'>('question');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [bugLink, setBugLink] = useState('');
@@ -31,6 +23,35 @@ export function BugConfirmationFlow({ onConfirmBug, onPassedLocally, onRequiredM
   const [passedNotes, setPassedNotes] = useState('');
   const [manualFixType, setManualFixType] = useState<string>('');
   const [manualFixNotes, setManualFixNotes] = useState('');
+
+  // Separate state for each category type
+  const [bugCategories, setBugCategories] = useState<BugCategory[]>([]);
+  const [passedLocallyCategories, setPassedLocallyCategories] = useState<BugCategory[]>([]);
+  const [manualFixCategories, setManualFixCategories] = useState<BugCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
+  // Load categories when step changes
+  useEffect(() => {
+    const loadCategories = async () => {
+      setLoadingCategories(true);
+      try {
+        if (step === 'category' && bugCategories.length === 0) {
+          const cats = await fetchCategoriesByType('bug');
+          setBugCategories(cats);
+        } else if (step === 'passed-reason' && passedLocallyCategories.length === 0) {
+          const cats = await fetchCategoriesByType('passed_locally');
+          setPassedLocallyCategories(cats);
+        } else if (step === 'manual-fix' && manualFixCategories.length === 0) {
+          const cats = await fetchCategoriesByType('manual_fix');
+          setManualFixCategories(cats);
+        }
+      } catch (error) {
+        console.error('Failed to load categories:', error);
+      }
+      setLoadingCategories(false);
+    };
+    loadCategories();
+  }, [step, fetchCategoriesByType, bugCategories.length, passedLocallyCategories.length, manualFixCategories.length]);
 
   const handleYesBug = () => {
     setStep('category');
@@ -113,12 +134,12 @@ export function BugConfirmationFlow({ onConfirmBug, onPassedLocally, onRequiredM
         <div className="grid gap-2">
           <Select value={manualFixType} onValueChange={setManualFixType}>
             <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Select fix type..." />
+              <SelectValue placeholder={loadingCategories ? "Loading..." : "Select fix type..."} />
             </SelectTrigger>
             <SelectContent>
-              {MANUAL_FIX_TYPES.map(type => (
-                <SelectItem key={type} value={type} className="text-xs">
-                  {type}
+              {manualFixCategories.map(cat => (
+                <SelectItem key={cat.id} value={cat.name} className="text-xs">
+                  {cat.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -165,10 +186,10 @@ export function BugConfirmationFlow({ onConfirmBug, onPassedLocally, onRequiredM
         <div className="grid gap-2">
           <Select value={passedReason} onValueChange={setPassedReason}>
             <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder={isLoading ? "Loading..." : "Select reason..."} />
+              <SelectValue placeholder={loadingCategories ? "Loading..." : "Select reason..."} />
             </SelectTrigger>
             <SelectContent>
-              {categories.map(cat => (
+              {passedLocallyCategories.map(cat => (
                 <SelectItem key={cat.id} value={cat.name} className="text-xs">
                   {cat.name}
                 </SelectItem>
@@ -216,10 +237,10 @@ export function BugConfirmationFlow({ onConfirmBug, onPassedLocally, onRequiredM
       <div className="grid gap-2">
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
           <SelectTrigger className="h-8 text-xs">
-            <SelectValue placeholder={isLoading ? "Loading..." : "Select category..."} />
+            <SelectValue placeholder={loadingCategories ? "Loading..." : "Select category..."} />
           </SelectTrigger>
           <SelectContent>
-            {categories.map(cat => (
+            {bugCategories.map(cat => (
               <SelectItem key={cat.id} value={cat.name} className="text-xs">
                 {cat.name}
               </SelectItem>
