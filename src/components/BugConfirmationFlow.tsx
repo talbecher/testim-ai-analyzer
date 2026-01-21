@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,6 +29,33 @@ export function BugConfirmationFlow({ onConfirmBug, onPassedLocally, onRequiredM
   const [passedLocallyCategories, setPassedLocallyCategories] = useState<BugCategory[]>([]);
   const [manualFixCategories, setManualFixCategories] = useState<BugCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+
+  // Refresh categories function - can be called on visibility change
+  const refreshCategories = useCallback(async (type: 'bug' | 'passed_locally' | 'manual_fix') => {
+    try {
+      const cats = await fetchCategoriesByType(type);
+      if (type === 'bug') setBugCategories(cats);
+      else if (type === 'passed_locally') setPassedLocallyCategories(cats);
+      else if (type === 'manual_fix') setManualFixCategories(cats);
+    } catch (error) {
+      console.error('Failed to refresh categories:', error);
+    }
+  }, [fetchCategoriesByType]);
+
+  // Auto-refresh categories when tab becomes visible (user might have added categories in settings)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Refresh all loaded categories
+        if (bugCategories.length > 0) refreshCategories('bug');
+        if (passedLocallyCategories.length > 0) refreshCategories('passed_locally');
+        if (manualFixCategories.length > 0) refreshCategories('manual_fix');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [bugCategories.length, passedLocallyCategories.length, manualFixCategories.length, refreshCategories]);
 
   // Load categories when step changes
   useEffect(() => {

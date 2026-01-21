@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AnalyzedFailure, ReportMode, PreClassifiedData, AIAnalysisResult } from '@/types/testim';
 import { 
@@ -12,6 +12,7 @@ import {
 } from '@/types/feedback';
 import { format } from 'date-fns';
 import { convertPreClassifiedToFeedback } from '@/lib/testimClassificationMapper';
+import { useSessionPersistence } from './useSessionPersistence';
 
 // Did AI recommend investigation? (based on classification and priority)
 const aiRecommendedInvestigate = (analysis: AIAnalysisResult | undefined): boolean => {
@@ -49,6 +50,29 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
   const [failuresWithFeedback, setFailuresWithFeedback] = useState<AnalyzedFailureWithFeedback[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const { saveFeedbackSession, loadFeedbackSession } = useSessionPersistence();
+
+  // Auto-save feedback to sessionStorage whenever it changes
+  useEffect(() => {
+    if (failuresWithFeedback.length > 0) {
+      saveFeedbackSession(failuresWithFeedback);
+    }
+  }, [failuresWithFeedback, saveFeedbackSession]);
+
+  // Restore feedback session
+  const restoreFeedbackSession = useCallback(() => {
+    const session = loadFeedbackSession();
+    if (session) {
+      setFailuresWithFeedback(session.failuresWithFeedback);
+      return true;
+    }
+    return false;
+  }, [loadFeedbackSession]);
+
+  // Check if there's feedback to restore
+  const hasFeedbackToRestore = useCallback(() => {
+    return loadFeedbackSession() !== null;
+  }, [loadFeedbackSession]);
 
   // Initialize failures with feedback state, auto-populating pre-classified entries
   const initializeFeedback = useCallback((analyzedFailures: AnalyzedFailure[]) => {
@@ -232,6 +256,8 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
     initializeFeedback,
     handleFeedback,
     saveReport,
-    resetFeedback
+    resetFeedback,
+    restoreFeedbackSession,
+    hasFeedbackToRestore,
   };
 }

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useChecklist } from '@/hooks/useChecklist';
 import { useFeedback } from '@/hooks/useFeedback';
+import { useSessionPersistence } from '@/hooks/useSessionPersistence';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug, Rocket, Info } from 'lucide-react';
+import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug, Rocket, Info, RotateCcw, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -28,6 +29,7 @@ import { Classification, SortOption } from '@/types/testim';
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sortOption, setSortOption] = useState<SortOption>('original');
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
   
   const {
     failures,
@@ -41,7 +43,9 @@ const Index = () => {
     reportMode,
     uploadFailures,
     analyzeFailures,
-    clearFailures
+    clearFailures,
+    restoreSession,
+    hasSessionToRestore,
   } = useChecklist();
   
   // Get sorted failures based on current sort option
@@ -55,8 +59,12 @@ const Index = () => {
     initializeFeedback,
     handleFeedback,
     saveReport,
-    resetFeedback
+    resetFeedback,
+    restoreFeedbackSession,
   } = useFeedback(failures, reportMode);
+  
+  const { saveRunDetails, loadRunDetails, clearAllSessions, hasExistingSession } = useSessionPersistence();
+  
   const [dragOver, setDragOver] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [runDetails, setRunDetails] = useState<RunDetails>({
@@ -65,6 +73,42 @@ const Index = () => {
     notes: '',
     isFeatureRollout: false
   });
+
+  // Check for existing session on mount
+  useEffect(() => {
+    if (hasExistingSession() && failures.length === 0) {
+      setShowRestoreBanner(true);
+    }
+  }, [hasExistingSession, failures.length]);
+
+  // Auto-save run details whenever they change
+  useEffect(() => {
+    if (runDetails.name || runDetails.notes) {
+      saveRunDetails(runDetails);
+    }
+  }, [runDetails, saveRunDetails]);
+
+  // Handle session restoration
+  const handleRestoreSession = () => {
+    const restoredAnalysis = restoreSession();
+    const restoredFeedback = restoreFeedbackSession();
+    const savedRunDetails = loadRunDetails();
+    
+    if (savedRunDetails) {
+      setRunDetails(savedRunDetails);
+    }
+    
+    if (restoredAnalysis || restoredFeedback) {
+      toast.success('עבודה קודמת שוחזרה בהצלחה');
+    }
+    setShowRestoreBanner(false);
+  };
+
+  // Handle starting fresh
+  const handleStartFresh = () => {
+    clearAllSessions();
+    setShowRestoreBanner(false);
+  };
 
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -93,6 +137,7 @@ const Index = () => {
   const handleClearAll = () => {
     clearFailures();
     resetFeedback();
+    clearAllSessions();
   };
   const handleCompleteReview = () => {
     setShowSummaryDialog(true);
@@ -102,6 +147,8 @@ const Index = () => {
     if (success) {
       toast.success('Report saved! AI will learn from your feedback.');
       setShowSummaryDialog(false);
+      // Clear session storage after successful save
+      clearAllSessions();
       handleClearAll();
     } else {
       toast.error(saveError || 'Failed to save report');
@@ -148,6 +195,27 @@ const Index = () => {
   }, [failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus]);
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Session Restore Banner */}
+        {showRestoreBanner && (
+          <Alert className="bg-amber-500/10 border-amber-500/30">
+            <RotateCcw className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-600">יש לך עבודה שלא נשמרה</AlertTitle>
+            <AlertDescription className="flex items-center justify-between">
+              <span className="text-muted-foreground">נמצאה עבודה קודמת. האם להמשיך מאיפה שהפסקת?</span>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleRestoreSession} className="bg-amber-600 hover:bg-amber-700">
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  המשך עבודה
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleStartFresh}>
+                  <X className="h-3 w-3 mr-1" />
+                  התחל מחדש
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Header */}
         <header className="text-center space-y-3 py-4 relative">
           <div className="absolute right-0 top-4 flex gap-2">
