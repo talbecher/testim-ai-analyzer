@@ -116,6 +116,11 @@ export function useBugCategories(initialType?: CategoryType) {
     await updateCategory(id, { is_active: isActive });
   }, [updateCategory]);
 
+  // Refetch categories (useful for when user returns from settings)
+  const refetch = useCallback(() => {
+    fetchCategories(initialType);
+  }, [fetchCategories, initialType]);
+
   useEffect(() => {
     fetchCategories(initialType);
   }, [fetchCategories, initialType]);
@@ -130,6 +135,7 @@ export function useBugCategories(initialType?: CategoryType) {
     addCategory,
     updateCategory,
     deleteCategory,
-    toggleActive
+    toggleActive,
+    refetch,
   };
 }

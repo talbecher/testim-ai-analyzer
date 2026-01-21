@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult, ReportMode, SortOption } from '@/types/testim';
 import { parseFailuresCSV, hasPreClassifiedColumns, getPreClassifiedStats } from '@/lib/csvParsers';
 import { detectErrorPattern, getPatternFlakiness } from '@/lib/errorPatternDetection';
 import { convertPreClassifiedToFeedback, convertPreClassifiedToAnalysis } from '@/lib/testimClassificationMapper';
 import { useFlakyKB } from './useFlakyKB';
+import { useSessionPersistence } from './useSessionPersistence';
 
 export interface PreClassifiedUploadStats {
   total: number;
@@ -25,6 +26,37 @@ export function useChecklist() {
   const [reportMode, setReportMode] = useState<ReportMode>('production');
   
   const flakyKB = useFlakyKB();
+  const { saveAnalysisSession, loadAnalysisSession } = useSessionPersistence();
+
+  // Auto-save to sessionStorage whenever failures change
+  useEffect(() => {
+    if (failures.length > 0) {
+      saveAnalysisSession({
+        failures,
+        reportMode,
+        preClassifiedStats,
+        isPreClassifiedMode,
+      });
+    }
+  }, [failures, reportMode, preClassifiedStats, isPreClassifiedMode, saveAnalysisSession]);
+
+  // Restore session from sessionStorage
+  const restoreSession = useCallback(() => {
+    const session = loadAnalysisSession();
+    if (session) {
+      setFailures(session.failures);
+      setReportMode(session.reportMode);
+      setPreClassifiedStats(session.preClassifiedStats);
+      setIsPreClassifiedMode(session.isPreClassifiedMode);
+      return true;
+    }
+    return false;
+  }, [loadAnalysisSession]);
+
+  // Check if there's a session to restore
+  const hasSessionToRestore = useCallback(() => {
+    return loadAnalysisSession() !== null;
+  }, [loadAnalysisSession]);
 
   // Detect mode based on CSV content
   const detectMode = useCallback((content: string): ReportMode => {
@@ -285,5 +317,7 @@ export function useChecklist() {
     clearFailures,
     flakyKB,
     convertPreClassifiedToFeedback,
+    restoreSession,
+    hasSessionToRestore,
   };
 }
