@@ -99,7 +99,7 @@ const Index = () => {
     }
     
     if (restoredAnalysis || restoredFeedback) {
-      toast.success('עבודה קודמת שוחזרה בהצלחה');
+      toast.success('Previous work restored successfully');
     }
     setShowRestoreBanner(false);
   };
@@ -199,17 +199,17 @@ const Index = () => {
         {showRestoreBanner && (
           <Alert className="bg-amber-500/10 border-amber-500/30">
             <RotateCcw className="h-4 w-4 text-amber-600" />
-            <AlertTitle className="text-amber-600">יש לך עבודה שלא נשמרה</AlertTitle>
+            <AlertTitle className="text-amber-600">You have unsaved work</AlertTitle>
             <AlertDescription className="flex items-center justify-between">
-              <span className="text-muted-foreground">נמצאה עבודה קודמת. האם להמשיך מאיפה שהפסקת?</span>
+              <span className="text-muted-foreground">Previous work found. Would you like to continue where you left off?</span>
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleRestoreSession} className="bg-amber-600 hover:bg-amber-700">
                   <RotateCcw className="h-3 w-3 mr-1" />
-                  המשך עבודה
+                  Continue Work
                 </Button>
                 <Button size="sm" variant="outline" onClick={handleStartFresh}>
                   <X className="h-3 w-3 mr-1" />
-                  התחל מחדש
+                  Start Fresh
                 </Button>
               </div>
             </AlertDescription>
