@@ -16,7 +16,8 @@ export type Classification =
   | 'Potential bug' 
   | 'Likely Flaky' 
   | 'Environment / Infra Issue' 
-  | 'Expected Change';
+  | 'Expected Change'
+  | 'Investigate';
 
 export type Priority = 'P0' | 'P1' | 'P2' | 'P3';
 
@@ -24,7 +25,29 @@ export type SuggestedAction =
   | 'Open bug' 
   | 'Update shared step' 
   | 'Rerun only' 
-  | 'Ignore today / monitor';
+  | 'Ignore today / monitor'
+  | 'Verify manually';
+
+// Regression buckets for isolated learning
+export const REGRESSION_BUCKETS = [
+  'Regression 1', 'Regression 2', 'Regression 3', 'Regression 4',
+  'Regression 5', 'Regression 6', 'Regression 7', 'Regression 8'
+] as const;
+
+export type RegressionBucket = typeof REGRESSION_BUCKETS[number];
+
+// Regression test history for run-to-run comparison
+export interface RegressionTestHistory {
+  testNameNormalized: string;
+  totalRunsInRegression: number;
+  failCountInRegression: number;
+  passedLocallyCount: number;
+  currentStreak: number;
+  isFirstSeenInRegression: boolean;
+  isFirstSeenGlobally: boolean;
+  isIntermittent: boolean;
+  recentPassRate: number;
+}
 
 // Flaky Knowledge Base
 export interface FlakyTest {
