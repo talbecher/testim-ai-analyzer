@@ -71,6 +71,7 @@ export function mapSubTypeToPassedLocally(subType?: string): {
 
 /**
  * Map classification to suggested action
+ * IMPORTANT: "Investigate" NEVER maps to "Open bug" - only "Verify manually" or "Rerun only"
  */
 export function mapClassificationToAction(classification: Classification): SuggestedAction {
   switch (classification) {
@@ -82,6 +83,8 @@ export function mapClassificationToAction(classification: Classification): Sugge
       return 'Rerun only';
     case 'Environment / Infra Issue':
       return 'Ignore today / monitor';
+    case 'Investigate':
+      return 'Verify manually'; // NEVER 'Open bug' for Investigate
     default:
       return 'Rerun only';
   }
@@ -100,6 +103,8 @@ export function mapClassificationToPriority(classification: Classification): Pri
       return 'P3';
     case 'Environment / Infra Issue':
       return 'P2';
+    case 'Investigate':
+      return 'P2'; // Medium priority for ambiguous cases
     default:
       return 'P2';
   }
