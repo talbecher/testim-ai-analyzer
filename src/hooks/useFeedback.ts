@@ -17,7 +17,9 @@ import { useSessionPersistence } from './useSessionPersistence';
 // Did AI recommend investigation? (based on classification and priority)
 const aiRecommendedInvestigate = (analysis: AIAnalysisResult | undefined): boolean => {
   if (!analysis) return false;
+  // Investigate classification also counts as "investigate" recommendation
   return analysis.classification === 'Potential bug' || 
+         analysis.classification === 'Investigate' ||
          analysis.priority === 'P0' || 
          analysis.priority === 'P1';
 };
@@ -174,7 +176,7 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
     setSaveError(null);
 
     try {
-      // Prepare report data with mode and feature rollout flag
+      // Prepare report data with mode, feature rollout flag, and regression bucket
       const reportData = {
         run_name: runDetails.name || 'Unnamed Run',
         run_date: format(runDetails.date, 'yyyy-MM-dd'),
@@ -184,7 +186,8 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
         accuracy_percentage: summary.accuracyPercentage,
         common_mistakes: JSON.parse(JSON.stringify(summary.commonMistakes)),
         mode: reportMode, // Save mode to database
-        is_feature_rollout: runDetails.isFeatureRollout || false // Exclude from AI learning
+        is_feature_rollout: runDetails.isFeatureRollout || false, // Exclude from AI learning
+        regression_bucket: runDetails.name || null // Save regression bucket for isolated learning
       };
 
       // Insert report

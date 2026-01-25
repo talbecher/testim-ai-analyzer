@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult, ReportMode, SortOption } from '@/types/testim';
+import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult, ReportMode, SortOption, REGRESSION_BUCKETS, RegressionBucket } from '@/types/testim';
 import { parseFailuresCSV, hasPreClassifiedColumns, getPreClassifiedStats } from '@/lib/csvParsers';
 import { detectErrorPattern, getPatternFlakiness } from '@/lib/errorPatternDetection';
 import { convertPreClassifiedToFeedback, convertPreClassifiedToAnalysis } from '@/lib/testimClassificationMapper';
@@ -24,6 +24,9 @@ export function useChecklist() {
   
   // Mode detection: learning if CSV has Failure Type column, production otherwise
   const [reportMode, setReportMode] = useState<ReportMode>('production');
+  
+  // Regression bucket for isolated learning
+  const [regressionBucket, setRegressionBucket] = useState<RegressionBucket | null>(null);
   
   const flakyKB = useFlakyKB();
   const { saveAnalysisSession, loadAnalysisSession } = useSessionPersistence();
@@ -99,11 +102,20 @@ export function useChecklist() {
   }, [detectMode]);
 
   // Analyze all failures with AI
-  const analyzeFailures = useCallback(async () => {
+  const analyzeFailures = useCallback(async (selectedRegressionBucket?: string) => {
     if (failures.length === 0) return;
+    
+    // Validate regression bucket selection
+    if (!selectedRegressionBucket || !REGRESSION_BUCKETS.includes(selectedRegressionBucket as RegressionBucket)) {
+      setError('Please select a valid regression bucket before analyzing');
+      return;
+    }
     
     setIsAnalyzing(true);
     setError(null);
+    
+    // Store the selected regression bucket
+    setRegressionBucket(selectedRegressionBucket as RegressionBucket);
     
     // In learning mode: AI runs on ALL failures for prediction evaluation
     // In production mode: AI runs only on unclassified failures
@@ -159,12 +171,13 @@ export function useChecklist() {
         notes: t.notes,
       }));
       
-      // Call edge function with mode
+      // Call edge function with mode and regression bucket
       const { data, error: fnError } = await supabase.functions.invoke('analyze-failures', {
         body: {
           failures: failuresForAI,
           flakyTests: flakyTestsForAI,
-          mode: reportMode, // Pass mode to edge function
+          mode: reportMode,
+          regressionBucket: selectedRegressionBucket, // Pass regression bucket for isolated learning
         },
       });
       
