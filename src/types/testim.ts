@@ -49,6 +49,37 @@ export interface RegressionTestHistory {
   recentPassRate: number;
 }
 
+// Streak analysis for intermittent detection
+export interface TestStreakInfo {
+  totalRuns: number;
+  failedRuns: number;
+  passedLocallyRuns: number;
+  currentStreak: 'pass' | 'fail' | 'alternating';
+  streakLength: number;
+  alternationCount: number;
+  isIntermittent: boolean;          // 2+ alternations in 4+ runs
+  isConsistentFailure: boolean;     // 3+ consecutive fails
+  lastClassifications: string[];
+}
+
+// Co-failure information for AI analysis
+export interface CoFailureInfoForAI {
+  isPartOfGroup: boolean;
+  groupSize: number;
+  sharedStep?: string;
+  sharedErrorPattern?: string;
+  otherTestsInGroup: string[];
+  groupConfidence: number;
+}
+
+// Assertion details for better bug/flaky differentiation
+export interface AssertionDetailsForAI {
+  hasExpectedActual: boolean;
+  isValueMismatch: boolean;
+  isVisualAssertion: boolean;
+  isNullUndefinedMismatch: boolean;
+}
+
 // Flaky Knowledge Base
 export interface FlakyTest {
   id: string;
@@ -91,6 +122,15 @@ export interface FailureEntry {
   preClassified?: PreClassifiedData;
 }
 
+// Signal breakdown for transparency
+export interface SignalBreakdownData {
+  bugScore: number;
+  flakyScore: number;
+  environmentScore: number;
+  investigateScore: number;
+  activeSignals: string[];
+}
+
 // AI Analysis Result
 export interface AIAnalysisResult {
   classification: Classification;
@@ -105,6 +145,12 @@ export interface AIAnalysisResult {
   matchedFlakyTestName?: string;
   matchedFlakyReason?: string;
   isFromTestim?: boolean; // True if classification came from Testim export
+  
+  // NEW: Enhanced signals for transparency
+  signalBreakdown?: SignalBreakdownData;
+  coFailureInfo?: CoFailureInfoForAI;
+  streakInfo?: TestStreakInfo;
+  assertionDetails?: AssertionDetailsForAI;
 }
 
 // Combined Failure with Analysis
@@ -125,6 +171,10 @@ export interface FailureForAI {
   durationMs?: number;
   detectedErrorPattern: ErrorPattern;
   patternConfidence: number;
+  
+  // NEW: Enhanced signals for AI analysis
+  assertionDetails?: AssertionDetailsForAI;
+  coFailureInfo?: CoFailureInfoForAI;
 }
 
 export interface FlakyTestForAI {

@@ -5,7 +5,18 @@ interface PatternMatch {
   confidence: number;
 }
 
+// Enhanced Assertion details for better differentiation
+export interface AssertionDetails {
+  hasExpectedActual: boolean;      // "expected X but got Y"
+  expectedValue?: string;          // The expected value
+  actualValue?: string;            // The actual value received
+  isValueMismatch: boolean;        // Difference in values (not null/undefined)
+  isVisualAssertion: boolean;      // Visual check (screenshot, color, pixel)
+  isNullUndefinedMismatch: boolean; // null/undefined in expected or actual
+}
+
 // Error message patterns and their classifications
+// IMPROVEMENT: Increased AssertionError baseConfidence from 20-30% to 60-65%
 const ERROR_PATTERNS: Array<{
   regex: RegExp;
   pattern: ErrorPattern;
@@ -28,14 +39,14 @@ const ERROR_PATTERNS: Array<{
   { regex: /wait\s+.*expired/i, pattern: 'Timeout', baseConfidence: 70 },
   { regex: /deadline\s+exceeded/i, pattern: 'Timeout', baseConfidence: 75 },
   
-  // Assertion patterns
-  { regex: /assertion\s*(error|fail)/i, pattern: 'AssertionError', baseConfidence: 20 },
-  { regex: /expected\s+.+\s+(but\s+)?got/i, pattern: 'AssertionError', baseConfidence: 20 },
-  { regex: /expect.*to\s+(be|equal|have|contain)/i, pattern: 'AssertionError', baseConfidence: 25 },
-  { regex: /assert.*fail/i, pattern: 'AssertionError', baseConfidence: 20 },
-  { regex: /mismatch/i, pattern: 'AssertionError', baseConfidence: 25 },
-  { regex: /does\s+not\s+match/i, pattern: 'AssertionError', baseConfidence: 25 },
-  { regex: /should\s+(be|have|equal)/i, pattern: 'AssertionError', baseConfidence: 30 },
+  // Assertion patterns - INCREASED CONFIDENCE for better bug detection
+  { regex: /expected\s+.+\s+(but\s+)?got/i, pattern: 'AssertionError', baseConfidence: 65 },
+  { regex: /assertion\s*(error|fail)/i, pattern: 'AssertionError', baseConfidence: 60 },
+  { regex: /expect.*to\s+(be|equal|have|contain)/i, pattern: 'AssertionError', baseConfidence: 60 },
+  { regex: /assert.*fail/i, pattern: 'AssertionError', baseConfidence: 60 },
+  { regex: /mismatch/i, pattern: 'AssertionError', baseConfidence: 60 },
+  { regex: /does\s+not\s+match/i, pattern: 'AssertionError', baseConfidence: 60 },
+  { regex: /should\s+(be|have|equal)/i, pattern: 'AssertionError', baseConfidence: 55 },
   
   // Network patterns
   { regex: /network\s+error/i, pattern: 'Network error', baseConfidence: 80 },
@@ -58,6 +69,47 @@ const ERROR_PATTERNS: Array<{
 ];
 
 /**
+ * Extract detailed assertion information from error message
+ * Used to differentiate between clear value mismatches and unclear assertions
+ */
+export function extractAssertionDetails(errorMessage: string | undefined): AssertionDetails {
+  if (!errorMessage) {
+    return {
+      hasExpectedActual: false,
+      isValueMismatch: false,
+      isVisualAssertion: false,
+      isNullUndefinedMismatch: false,
+    };
+  }
+
+  // Pattern to extract expected/actual values
+  const expectedActualMatch = errorMessage.match(
+    /expected\s+['"]?(.+?)['"]?\s+(but\s+)?(got|received|was|to\s+be)\s+['"]?(.+?)['"]?/i
+  );
+  
+  const expectedValue = expectedActualMatch?.[1]?.trim();
+  const actualValue = expectedActualMatch?.[4]?.trim();
+  
+  // Check for null/undefined in expected or actual
+  const hasNull = /null|undefined/i.test(expectedValue || '') || /null|undefined/i.test(actualValue || '');
+  
+  // Check if it's a visual/screenshot assertion
+  const isVisualAssertion = /screenshot|visual|color|pixel|image|render|display|css|style/i.test(errorMessage);
+  
+  // Value mismatch = has expected/actual AND neither is null/undefined
+  const isValueMismatch = !!(expectedActualMatch && !hasNull && expectedValue && actualValue);
+
+  return {
+    hasExpectedActual: !!expectedActualMatch,
+    expectedValue,
+    actualValue,
+    isValueMismatch,
+    isVisualAssertion,
+    isNullUndefinedMismatch: hasNull,
+  };
+}
+
+/**
  * Detect error pattern from error message
  * Returns the detected pattern and confidence level
  */
@@ -74,6 +126,22 @@ export function detectErrorPattern(errorMessage: string | undefined): PatternMat
       if (baseConfidence > bestMatch.confidence) {
         bestMatch = { pattern, confidence: baseConfidence };
       }
+    }
+  }
+  
+  // ENHANCEMENT: Boost confidence for AssertionError with clear expected/actual
+  if (bestMatch.pattern === 'AssertionError') {
+    const assertionDetails = extractAssertionDetails(errorMessage);
+    
+    if (assertionDetails.isValueMismatch) {
+      // Clear value mismatch = strong bug signal
+      bestMatch.confidence = Math.min(bestMatch.confidence + 15, 80);
+    } else if (assertionDetails.hasExpectedActual && !assertionDetails.isNullUndefinedMismatch) {
+      // Has expected/actual but not null/undefined = moderate boost
+      bestMatch.confidence = Math.min(bestMatch.confidence + 10, 75);
+    } else if (assertionDetails.isVisualAssertion) {
+      // Visual assertions can be flaky - reduce confidence
+      bestMatch.confidence = Math.max(bestMatch.confidence - 10, 50);
     }
   }
   

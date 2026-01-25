@@ -113,6 +113,71 @@ const DECISION_FRAMEWORK = `
 - AssertionError → usually Potential bug
 - Network / infra errors → Environment / Infra Issue
 - Null / Undefined errors → Potential bug unless strong flaky signals exist
+
+## 7b. ASSERTION ERROR DIFFERENTIATION (ENHANCED)
+When error pattern is AssertionError, check assertionDetails:
+- hasExpectedActual: true + isValueMismatch: true → 75-80% confidence Potential bug
+- hasExpectedActual: true + isNullUndefinedMismatch: true → 60% confidence, could be either
+- isVisualAssertion: true → 50% confidence (visual checks can be flaky)
+- No details → 55% confidence, use other signals
+
+GUARDRAIL: AssertionError with clear expected≠actual is STRONG bug evidence.
+Only classify as Flaky if 3+ passed_locally in this regression OR explicit historical correction.
+
+## 8. CO-FAILURE DETECTION (SYSTEMIC ISSUE SIGNAL)
+When coFailureInfo is present:
+- groupSize 4+ → 85% confidence for Potential bug or Environment Issue
+- groupSize 2-3 → 70% confidence, strong supporting signal
+- sharedStep failures → likely shared component broke (Potential bug)
+- sharedErrorPattern → likely infrastructure/environment (check error type)
+
+Priority boost for co-failures:
+- Co-failure group of 4+ tests → increase priority by 1 level (P2→P1, P1→P0)
+- Add to priorityReason: "Part of co-failure group (X tests with same [step/error])"
+
+## 9. STREAK ANALYSIS (INTERMITTENT DETECTION)
+When streakInfo is present:
+- isIntermittent: true (2+ alternations in 4+ runs) → 80-85% confidence Likely Flaky
+- isConsistentFailure: true (3+ consecutive fails, no local pass) → 85% confidence Potential bug
+- streakLength < 3 → Low history, reduce confidence by 10%
+
+Add to priorityReason when applicable:
+- "Intermittent pattern (X alternations) - strong flaky signal"
+- "Failed X times consecutively - consistent failure pattern"
+`;
+
+// Enhanced assertion rules
+const ASSERTION_RULES = `
+## ASSERTION ERROR RULE (CRITICAL FOR BUG DETECTION)
+
+AssertionError with clear expected≠actual is STRONG evidence for Potential bug:
+- Value mismatch (neither null/undefined) → 80% base confidence
+- Has expected/actual but with null/undefined → 60% confidence
+- Visual assertion (screenshot/pixel) → 50% confidence (may be rendering flake)
+
+Only override to Likely Flaky if:
+• 3+ passed_locally occurrences in this regression
+• OR explicit historical correction to Flaky exists
+• OR visual assertion in element known to be unstable
+`;
+
+// Co-failure detection rules
+const CO_FAILURE_RULES = `
+## CO-FAILURE DETECTION RULES (SYSTEMIC ISSUES)
+
+When multiple tests fail with the SAME shared step or error pattern:
+- This indicates a systemic issue, not individual test problems
+- Treat the GROUP as a single investigation item
+
+Classification logic:
+- Same shared step failing → Potential bug (shared component broke)
+- Same infrastructure error → Environment / Infra Issue
+- Co-failure + AssertionError → VERY strong Potential bug signal
+
+Priority and confidence:
+- Group size 4+ → 85% confidence, boost priority by 1
+- Group size 2-3 → 70% confidence, strong signal
+- Always mention in priorityReason
 `;
 
 const GUARDRAILS = `
@@ -177,11 +242,31 @@ Do NOT invent new labels or variations.
 - requiresRerun
 - rerunReason
 - flakyKBMatch
+- signalBreakdown (NEW - for transparency)
+
+### signalBreakdown Object (REQUIRED):
+Return signal scores to explain the decision:
+{
+  "bugScore": 0-100,           // Weighted contribution of bug signals
+  "flakyScore": 0-100,         // Weighted contribution of flaky signals
+  "environmentScore": 0-100,   // Weighted contribution of env signals
+  "investigateScore": 0-100,   // Weighted contribution of investigate signals
+  "activeSignals": ["SIGNAL_NAME_1", "SIGNAL_NAME_2", ...]
+}
+
+Available signal names:
+- ASSERTION_WITH_VALUES, ASSERTION_VALUE_MISMATCH, CO_FAILURE_GROUP_4_PLUS, CO_FAILURE_GROUP_2_3
+- CONSISTENT_FAILURE_STREAK, HISTORICAL_BUG_CORRECTION, NULL_UNDEFINED_ERROR
+- FLAKY_KB_MATCH, INTERMITTENT_STREAK, PASSED_LOCALLY_3_PLUS, PASSED_LOCALLY_1_2
+- ELEMENT_NOT_FOUND, VISUAL_ASSERTION, HISTORICAL_FLAKY_CORRECTION
+- NETWORK_ERROR, TIMEOUT_SHORT, TIMEOUT_LONG, INFRA_PATTERN, CO_FAILURE_INFRA
+- FIRST_SEEN_GLOBALLY, FIRST_SEEN_IN_REGRESSION, CONFLICTING_SIGNALS, MANUAL_CHANGE_DETECTED, LOW_HISTORY
 
 ### Field Alignment Rules:
 - errorPattern: Use the provided error pattern as-is
 - requiresRerun: Keep consistent with classification and confidence
 - priorityReason: Include bullet points explaining which signals were used
+- signalBreakdown: Must sum to ~100% across scores
 
 ### Output Rules:
 - Return ONLY a valid JSON array
@@ -199,6 +284,8 @@ ${INVESTIGATE_FALLBACK}
 ${REGRESSION_LEARNING}
 ${FIRST_SEEN_HANDLING}
 ${DECISION_FRAMEWORK}
+${ASSERTION_RULES}
+${CO_FAILURE_RULES}
 ${GUARDRAILS}
 ${OUTPUT_REQUIREMENTS}`;
 
@@ -212,6 +299,8 @@ ${INVESTIGATE_FALLBACK}
 ${REGRESSION_LEARNING}
 ${FIRST_SEEN_HANDLING}
 ${DECISION_FRAMEWORK}
+${ASSERTION_RULES}
+${CO_FAILURE_RULES}
 ${GUARDRAILS}
 ${OUTPUT_REQUIREMENTS}`;
 
