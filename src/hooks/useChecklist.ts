@@ -2,8 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult, ReportMode, SortOption, REGRESSION_BUCKETS, RegressionBucket } from '@/types/testim';
 import { parseFailuresCSV, hasPreClassifiedColumns, getPreClassifiedStats } from '@/lib/csvParsers';
-import { detectErrorPattern, getPatternFlakiness } from '@/lib/errorPatternDetection';
+import { detectErrorPattern, getPatternFlakiness, extractAssertionDetails } from '@/lib/errorPatternDetection';
 import { convertPreClassifiedToFeedback, convertPreClassifiedToAnalysis } from '@/lib/testimClassificationMapper';
+import { detectCoFailures, createFailureToGroupMap, getCoFailureInfo } from '@/lib/coFailureDetection';
 import { useFlakyKB } from './useFlakyKB';
 import { useSessionPersistence } from './useSessionPersistence';
 
@@ -147,9 +148,18 @@ export function useChecklist() {
     })));
     
     try {
-      // Prepare only unclassified failures for AI
+      // Detect co-failure groups for systemic issue detection
+      const coFailureGroups = detectCoFailures(needsAnalysis);
+      const failureToGroup = createFailureToGroupMap(needsAnalysis, coFailureGroups);
+      
+      console.log(`Detected ${coFailureGroups.length} co-failure groups`);
+      
+      // Prepare failures for AI with enhanced signals
       const failuresForAI: FailureForAI[] = needsAnalysis.map(f => {
         const patternResult = detectErrorPattern(f.errorMessage);
+        const assertionDetails = extractAssertionDetails(f.errorMessage);
+        const coFailureInfo = getCoFailureInfo(f, needsAnalysis, failureToGroup);
+        
         return {
           testName: f.testName,
           testNameNormalized: f.testNameNormalized,
@@ -160,6 +170,21 @@ export function useChecklist() {
           durationMs: f.durationMs,
           detectedErrorPattern: patternResult.pattern,
           patternConfidence: patternResult.confidence,
+          // Enhanced signals
+          assertionDetails: patternResult.pattern === 'AssertionError' ? {
+            hasExpectedActual: assertionDetails.hasExpectedActual,
+            isValueMismatch: assertionDetails.isValueMismatch,
+            isVisualAssertion: assertionDetails.isVisualAssertion,
+            isNullUndefinedMismatch: assertionDetails.isNullUndefinedMismatch,
+          } : undefined,
+          coFailureInfo: coFailureInfo ? {
+            isPartOfGroup: coFailureInfo.isPartOfGroup,
+            groupSize: coFailureInfo.groupSize,
+            sharedStep: coFailureInfo.sharedStep,
+            sharedErrorPattern: coFailureInfo.sharedErrorPattern,
+            otherTestsInGroup: coFailureInfo.otherTestsInGroup,
+            groupConfidence: coFailureInfo.groupConfidence,
+          } : undefined,
         };
       });
       

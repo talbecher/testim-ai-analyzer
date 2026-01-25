@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
 import { BugConfirmationFlow } from './BugConfirmationFlow';
+import { SignalBreakdownCompact } from './SignalBreakdownBar';
 
 interface FailureReviewCardProps {
   failure: AnalyzedFailureWithFeedback;
@@ -167,6 +168,10 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
               </span>
               {!failure.analysis.isFromTestim && (
                 <span className="text-xs text-muted-foreground">{failure.analysis.confidence}%</span>
+              )}
+              {/* Signal Breakdown Bar */}
+              {failure.analysis.signalBreakdown && (
+                <SignalBreakdownCompact breakdown={failure.analysis.signalBreakdown} />
               )}
               {failure.analysis.flakyKBMatch && <Database className="h-4 w-4 text-primary" />}
               {failure.analysis.requiresRerun ? (
