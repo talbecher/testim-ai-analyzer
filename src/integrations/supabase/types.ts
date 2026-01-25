@@ -17,6 +17,7 @@ export type Database = {
       analysis_reports: {
         Row: {
           accuracy_percentage: number | null
+          classification_stability_score: number | null
           common_mistakes: Json | null
           correct_count: number
           created_at: string
@@ -24,6 +25,7 @@ export type Database = {
           is_feature_rollout: boolean | null
           mode: string
           notes: string | null
+          regression_bucket: string | null
           run_date: string
           run_name: string
           total_analyzed: number
@@ -31,6 +33,7 @@ export type Database = {
         }
         Insert: {
           accuracy_percentage?: number | null
+          classification_stability_score?: number | null
           common_mistakes?: Json | null
           correct_count?: number
           created_at?: string
@@ -38,6 +41,7 @@ export type Database = {
           is_feature_rollout?: boolean | null
           mode?: string
           notes?: string | null
+          regression_bucket?: string | null
           run_date: string
           run_name: string
           total_analyzed?: number
@@ -45,6 +49,7 @@ export type Database = {
         }
         Update: {
           accuracy_percentage?: number | null
+          classification_stability_score?: number | null
           common_mistakes?: Json | null
           correct_count?: number
           created_at?: string
@@ -52,6 +57,7 @@ export type Database = {
           is_feature_rollout?: boolean | null
           mode?: string
           notes?: string | null
+          regression_bucket?: string | null
           run_date?: string
           run_name?: string
           total_analyzed?: number
@@ -65,6 +71,7 @@ export type Database = {
           ai_classification: string
           ai_confidence: number
           ai_priority: string
+          ai_priority_original: string | null
           bug_category: string | null
           bug_link: string | null
           created_at: string
@@ -87,12 +94,14 @@ export type Database = {
           user_notes: string | null
           user_priority: string | null
           was_correct: boolean | null
+          was_downgraded: boolean | null
         }
         Insert: {
           ai_action?: string | null
           ai_classification: string
           ai_confidence: number
           ai_priority: string
+          ai_priority_original?: string | null
           bug_category?: string | null
           bug_link?: string | null
           created_at?: string
@@ -115,12 +124,14 @@ export type Database = {
           user_notes?: string | null
           user_priority?: string | null
           was_correct?: boolean | null
+          was_downgraded?: boolean | null
         }
         Update: {
           ai_action?: string | null
           ai_classification?: string
           ai_confidence?: number
           ai_priority?: string
+          ai_priority_original?: string | null
           bug_category?: string | null
           bug_link?: string | null
           created_at?: string
@@ -143,6 +154,7 @@ export type Database = {
           user_notes?: string | null
           user_priority?: string | null
           was_correct?: boolean | null
+          was_downgraded?: boolean | null
         }
         Relationships: [
           {

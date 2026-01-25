@@ -20,7 +20,8 @@ const classifications: Classification[] = [
   'Potential bug',
   'Likely Flaky',
   'Environment / Infra Issue',
-  'Expected Change'
+  'Expected Change',
+  'Investigate'
 ];
 
 const priorities: Priority[] = ['P0', 'P1', 'P2', 'P3'];
@@ -29,7 +30,8 @@ const actions: SuggestedAction[] = [
   'Open bug',
   'Update shared step',
   'Rerun only',
-  'Ignore today / monitor'
+  'Ignore today / monitor',
+  'Verify manually'
 ];
 
 export function ProductionModeCard({ failure, onFeedback, classColors, priorityColors }: ProductionModeCardProps) {

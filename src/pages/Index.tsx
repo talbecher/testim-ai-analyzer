@@ -24,7 +24,7 @@ import { ReviewProgress } from '@/components/ReviewProgress';
 import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
 import { toast } from 'sonner';
 import { RunDetails } from '@/types/feedback';
-import { Classification, SortOption } from '@/types/testim';
+import { Classification, SortOption, REGRESSION_BUCKETS, RegressionBucket } from '@/types/testim';
 
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -114,7 +114,7 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterClassification, setFilterClassification] = useState<string>('all');
   const [filterReviewStatus, setFilterReviewStatus] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
-  const classifications: Classification[] = ['Potential bug', 'Likely Flaky', 'Environment / Infra Issue', 'Expected Change'];
+  const classifications: Classification[] = ['Potential bug', 'Likely Flaky', 'Environment / Infra Issue', 'Expected Change', 'Investigate'];
 
   // Initialize feedback when analysis completes
   useEffect(() => {
@@ -162,7 +162,8 @@ const Index = () => {
     'Potential bug': 'bg-bug text-bug-foreground',
     'Likely Flaky': 'bg-flaky text-flaky-foreground',
     'Environment / Infra Issue': 'bg-environment text-environment-foreground',
-    'Expected Change': 'bg-expected text-expected-foreground'
+    'Expected Change': 'bg-expected text-expected-foreground',
+    'Investigate': 'bg-amber-500/20 text-amber-700 dark:text-amber-400'
   };
   const priorityColors: Record<string, string> = {
     P0: 'bg-p0',
@@ -260,13 +261,27 @@ const Index = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Run Name */}
+              {/* Regression Bucket Dropdown */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Run Name</label>
-                <Input placeholder="e.g., Regression 1, Nightly Build" value={runDetails.name} onChange={e => setRunDetails(prev => ({
-                ...prev,
-                name: e.target.value
-              }))} className="bg-background/50" />
+                <label className="text-sm font-medium text-foreground">
+                  Regression Bucket
+                  <span className="text-destructive ml-1">*</span>
+                </label>
+                <Select 
+                  value={runDetails.name} 
+                  onValueChange={(val) => setRunDetails(prev => ({ ...prev, name: val }))}
+                >
+                  <SelectTrigger className="bg-background/50">
+                    <SelectValue placeholder="Select regression bucket" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border z-50">
+                    {REGRESSION_BUCKETS.map(bucket => (
+                      <SelectItem key={bucket} value={bucket}>
+                        {bucket}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Date Picker */}
@@ -442,7 +457,12 @@ const Index = () => {
 
             {/* Actions */}
             <div className="flex gap-3">
-              <Button onClick={analyzeFailures} disabled={isAnalyzing} size="lg" className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25">
+              <Button 
+                onClick={() => analyzeFailures(runDetails.name)} 
+                disabled={isAnalyzing || !runDetails.name} 
+                size="lg" 
+                className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
+              >
                 <Zap className="mr-2 h-5 w-5" />
                 {isAnalyzing ? 'Analyzing...' : 'Analyze with AI'}
               </Button>
