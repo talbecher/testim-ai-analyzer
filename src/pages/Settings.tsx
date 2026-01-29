@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Settings as SettingsIcon, ArrowLeft, Plus, Trash2, GripVertical, Tag, TestTube, Wrench } from 'lucide-react';
+import { Settings as SettingsIcon, ArrowLeft, Plus, Trash2, GripVertical, Tag, TestTube, Wrench, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { BugCategory, CategoryType } from '@/types/bugCategory';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { toast } from 'sonner';
+import { getVersionInfo } from '@/version';
+import { ChangelogDialog } from '@/components/ChangelogDialog';
 
 interface CategorySectionProps {
   type: CategoryType;
@@ -284,6 +286,31 @@ const Settings = () => {
           onDelete={handleDelete}
           onToggle={handleToggle}
         />
+
+        {/* About / Version Info */}
+        <Card className="border-border/50 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" />
+              About This App
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Version</span>
+              <span className="font-mono font-medium">{getVersionInfo().version}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Last Updated</span>
+              <span className="text-sm">{getVersionInfo().formattedDate}</span>
+            </div>
+            <ChangelogDialog>
+              <Button variant="outline" className="w-full mt-2">
+                View Changelog
+              </Button>
+            </ChangelogDialog>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
