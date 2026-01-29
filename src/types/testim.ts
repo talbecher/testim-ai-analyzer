@@ -172,9 +172,10 @@ export interface FailureForAI {
   detectedErrorPattern: ErrorPattern;
   patternConfidence: number;
   
-  // NEW: Enhanced signals for AI analysis
+  // Enhanced signals for AI analysis (client sends assertionDetails, coFailureInfo; edge may add streakInfo)
   assertionDetails?: AssertionDetailsForAI;
   coFailureInfo?: CoFailureInfoForAI;
+  streakInfo?: TestStreakInfo;
 }
 
 export interface FlakyTestForAI {

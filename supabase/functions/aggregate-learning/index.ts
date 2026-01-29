@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface AggregatedPattern {
-  pattern_type: 'correction' | 'passed_locally' | 'manual_fix' | 'notes_analysis';
+  pattern_type: 'correction' | 'passed_locally' | 'manual_fix' | 'notes_analysis' | 'confirmed';
   error_pattern: string | null;
   test_name_pattern: string | null;
   ai_classification: string | null;
@@ -199,7 +199,17 @@ serve(async (req) => {
     // Filter out results from feature rollout runs
     const manualFixes = allManualFixes?.filter(c => !excludeReportIds.has(c.report_id)) || [];
 
-    console.log(`Found: ${corrections?.length || 0} corrections, ${passedLocally?.length || 0} passed locally, ${manualFixes?.length || 0} manual fixes (excluding ${excludeReportIds.size} feature rollout reports)`);
+    // 4. Fetch confirmed patterns (was_correct === true) - EXCLUDING feature rollouts
+    const { data: allConfirmed, error: confError } = await supabase
+      .from('analysis_results')
+      .select('report_id, test_name_normalized, error_pattern, ai_classification')
+      .eq('was_correct', true)
+      .not('ai_classification', 'is', null);
+
+    if (confError) console.log('Error fetching confirmed:', confError);
+    const confirmed = allConfirmed?.filter(c => !excludeReportIds.has(c.report_id)) || [];
+
+    console.log(`Found: ${corrections?.length || 0} corrections, ${passedLocally?.length || 0} passed locally, ${manualFixes?.length || 0} manual fixes, ${confirmed?.length || 0} confirmed (excluding ${excludeReportIds.size} feature rollout reports)`);
 
     // Collect all notes for AI analysis
     const allNotes: string[] = [];
@@ -303,6 +313,28 @@ serve(async (req) => {
           occurrence_count: 1,
           importance: 'normal',
           user_notes_pattern: row.manual_fix_notes || null,
+          extracted_keywords: null
+        });
+      }
+    });
+
+    // Process confirmed (was_correct === true) – lower importance, reinforce correct classifications
+    confirmed?.forEach(row => {
+      const key = `confirmed|${row.error_pattern || 'general'}|${row.ai_classification}`;
+      const existing = patternMap.get(key);
+      if (existing) {
+        existing.occurrence_count++;
+        existing.importance = existing.occurrence_count >= 5 ? 'high' : existing.occurrence_count >= 3 ? 'normal' : 'normal';
+      } else {
+        patternMap.set(key, {
+          pattern_type: 'confirmed',
+          error_pattern: row.error_pattern,
+          test_name_pattern: row.test_name_normalized,
+          ai_classification: row.ai_classification,
+          correct_classification: row.ai_classification,
+          occurrence_count: 1,
+          importance: 'normal',
+          user_notes_pattern: null,
           extracted_keywords: null
         });
       }

@@ -1,0 +1,7 @@
+-- Allow 'confirmed' (and 'notes_analysis' if not already) in learning_patterns.pattern_type
+ALTER TABLE public.learning_patterns
+  DROP CONSTRAINT IF EXISTS learning_patterns_pattern_type_check;
+
+ALTER TABLE public.learning_patterns
+  ADD CONSTRAINT learning_patterns_pattern_type_check
+  CHECK (pattern_type IN ('correction', 'passed_locally', 'manual_fix', 'notes_analysis', 'confirmed'));

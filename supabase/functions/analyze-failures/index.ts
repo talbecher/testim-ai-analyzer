@@ -213,6 +213,109 @@ const GUARDRAILS = `
 ✅ Explain reasoning using existing fields only
 `;
 
+// Streak info shape (matches TestStreakInfo from frontend types)
+interface StreakInfo {
+  totalRuns: number;
+  failedRuns: number;
+  passedLocallyRuns: number;
+  currentStreak: 'pass' | 'fail' | 'alternating';
+  streakLength: number;
+  alternationCount: number;
+  isIntermittent: boolean;
+  isConsistentFailure: boolean;
+  lastClassifications: string[];
+}
+
+function computeStreakInfo(
+  rows: Array<{ report_id: string; passed_locally: boolean | null; ai_classification: string }>,
+  reportIdToDate: Map<string, string>
+): StreakInfo {
+  if (rows.length === 0) {
+    return {
+      totalRuns: 0,
+      failedRuns: 0,
+      passedLocallyRuns: 0,
+      currentStreak: 'fail',
+      streakLength: 0,
+      alternationCount: 0,
+      isIntermittent: false,
+      isConsistentFailure: false,
+      lastClassifications: [],
+    };
+  }
+  const sorted = [...rows].sort(
+    (a, b) => (reportIdToDate.get(a.report_id) || '').localeCompare(reportIdToDate.get(b.report_id) || '')
+  );
+  const totalRuns = sorted.length;
+  const failedRuns = sorted.filter((r) => r.passed_locally !== true).length;
+  const passedLocallyRuns = sorted.filter((r) => r.passed_locally === true).length;
+  const outcomes = sorted.map((r) => (r.passed_locally === true ? 'pass' : 'fail'));
+  let alternationCount = 0;
+  for (let i = 1; i < outcomes.length; i++) {
+    if (outcomes[i] !== outcomes[i - 1]) alternationCount++;
+  }
+  const rev = [...outcomes].reverse();
+  let streakLength = 0;
+  const firstOutcome = rev[0];
+  for (const o of rev) {
+    if (o !== firstOutcome) break;
+    streakLength++;
+  }
+  const currentStreak: 'pass' | 'fail' | 'alternating' =
+    rev.length >= 2 && rev[0] !== rev[1] ? 'alternating' : firstOutcome === 'pass' ? 'pass' : 'fail';
+  const isIntermittent = totalRuns >= 4 && alternationCount >= 2;
+  const consecutiveFailsFromEnd = rev.findIndex((o) => o === 'pass');
+  const failStreak = consecutiveFailsFromEnd < 0 ? rev.length : consecutiveFailsFromEnd;
+  const isConsistentFailure = failStreak >= 3;
+  const lastClassifications = [...sorted]
+    .reverse()
+    .slice(0, 5)
+    .map((r) => r.ai_classification || '');
+  return {
+    totalRuns,
+    failedRuns,
+    passedLocallyRuns,
+    currentStreak,
+    streakLength,
+    alternationCount,
+    isIntermittent,
+    isConsistentFailure,
+    lastClassifications,
+  };
+}
+
+// Map dominant signal direction to expected classification (for signalBreakdown alignment)
+function getClassificationFromDominant(bugScore: number, flakyScore: number, environmentScore: number, investigateScore: number): string {
+  const scores = [
+    ['Potential bug', bugScore],
+    ['Likely Flaky', flakyScore],
+    ['Environment / Infra Issue', environmentScore],
+    ['Investigate', investigateScore],
+  ] as [string, number][];
+  const dominant = scores.reduce((a, b) => (a[1] >= b[1] ? a : b));
+  return dominant[0];
+}
+
+// Align classification with signalBreakdown dominant direction; if mismatch, reduce confidence and set Investigate
+function alignSignalBreakdownWithClassification(analysis: Record<string, unknown>): void {
+  const sb = analysis.signalBreakdown as { bugScore?: number; flakyScore?: number; environmentScore?: number; investigateScore?: number } | undefined;
+  if (!sb || typeof sb.bugScore !== 'number' && typeof sb.flakyScore !== 'number') return;
+  const bug = typeof sb.bugScore === 'number' ? sb.bugScore : 0;
+  const flaky = typeof sb.flakyScore === 'number' ? sb.flakyScore : 0;
+  const env = typeof sb.environmentScore === 'number' ? sb.environmentScore : 0;
+  const inv = typeof sb.investigateScore === 'number' ? sb.investigateScore : 0;
+  const expected = getClassificationFromDominant(bug, flaky, env, inv);
+  const current = analysis.classification as string;
+  if (current !== expected) {
+    analysis.confidence = Math.min(Number(analysis.confidence) || 70, 65);
+    analysis.classification = 'Investigate';
+    analysis.suggestedAction = 'Verify manually';
+    if (typeof analysis.priorityReason === 'string') {
+      analysis.priorityReason = `• Signals conflicted with classification (dominant: ${expected}); reduced confidence.\n${analysis.priorityReason}`;
+    }
+  }
+}
+
 const OUTPUT_REQUIREMENTS = `
 ## OUTPUT REQUIREMENTS (CRITICAL)
 
@@ -328,19 +431,24 @@ serve(async (req) => {
     // Build regression-specific context
     let regressionContext = '';
     let historicalCorrections = '';
+    let confirmedPatterns = '';
     let passedLocallyPatterns = '';
     let learningPatternsPrompt = '';
     let globalFamiliarityInfo = '';
+    let fewShotExamples = '';
+    const streakMap = new Map<string, StreakInfo>();
 
     try {
-      // Step 1: Get report IDs for THIS regression bucket only
+      // Step 1: Get report IDs and run_date for THIS regression bucket (for streak ordering)
       const { data: regressionReports, error: reportsError } = await supabase
         .from('analysis_reports')
-        .select('id')
+        .select('id, run_date')
         .eq('regression_bucket', regressionBucket);
 
-      const reportIds = regressionReports?.map(r => r.id) || [];
-      
+      const reportIds = regressionReports?.map((r: { id: string }) => r.id) || [];
+      const reportIdToDate = new Map<string, string>(
+        (regressionReports || []).map((r: { id: string; run_date: string }) => [r.id, r.run_date])
+      );
       console.log(`Found ${reportIds.length} historical reports for "${regressionBucket}"`);
 
       if (reportIds.length > 0) {
@@ -413,6 +521,52 @@ ${normalCorrections.length > 0
     `📝 Error "${c.pattern || 'general'}": "${c.from}" → "${c.to}" (1x)`
   ).join('\n')
   : 'None'}`;
+            // Few-shot: 2–3 examples from corrections for this regression
+            const forFewShot = [...criticalCorrections, ...highCorrections].slice(0, 3);
+            if (forFewShot.length > 0) {
+              fewShotExamples = `
+
+## FEW-SHOT EXAMPLES (from this regression – follow these patterns):
+${forFewShot.map((c, i) => `Example ${i + 1}: For failures with error_pattern "${c.pattern || 'general'}", users in "${regressionBucket}" corrected AI "${c.from}" to "${c.to}" (${c.count}x). Prefer classification "${c.to}" and mention the correction in priorityReason.`).join('\n')}
+`;
+            }
+          }
+        }
+
+        // Step 2b: Confirmed patterns (was_correct === true) – positive feedback for same regression
+        const { data: confirmed, error: confError } = await supabase
+          .from('analysis_results')
+          .select('test_name_normalized, error_pattern, ai_classification')
+          .in('report_id', reportIds)
+          .eq('was_correct', true)
+          .not('ai_classification', 'is', null)
+          .limit(200);
+
+        if (!confError && confirmed && confirmed.length > 0) {
+          const confMap = new Map<string, { pattern: string | null; classification: string; count: number; examples: string[] }>();
+          confirmed.forEach((row: { test_name_normalized: string; error_pattern: string | null; ai_classification: string }) => {
+            const key = `${row.error_pattern || 'general'}|${row.ai_classification}`;
+            const existing = confMap.get(key);
+            if (existing) {
+              existing.count++;
+              if (existing.examples.length < 2) existing.examples.push(row.test_name_normalized);
+            } else {
+              confMap.set(key, {
+                pattern: row.error_pattern,
+                classification: row.ai_classification,
+                count: 1,
+                examples: [row.test_name_normalized],
+              });
+            }
+          });
+          const topConfirmed = Array.from(confMap.values())
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 20);
+          if (topConfirmed.length > 0) {
+            confirmedPatterns = `
+
+## Confirmed Patterns for "${regressionBucket}" (user agreed with AI):
+${topConfirmed.map((c) => `• Error "${c.pattern || 'general'}": AI said "${c.classification}" → user confirmed (${c.count}x). Examples: ${c.examples.slice(0, 2).join(', ')}`).join('\n')}`;
           }
         }
 
@@ -510,6 +664,28 @@ ${firstSeenGlobally.length > 0
         }
       }
 
+      // Step 5: Streak history for current failures (for DECISION_FRAMEWORK §9)
+      if (reportIds.length > 0 && testNames.length > 0) {
+        const { data: streakRows, error: streakErr } = await supabase
+          .from('analysis_results')
+          .select('report_id, test_name_normalized, passed_locally, ai_classification')
+          .in('report_id', reportIds)
+          .in('test_name_normalized', testNames);
+
+        if (!streakErr && streakRows && streakRows.length > 0) {
+          const byTest = new Map<string, typeof streakRows>();
+          streakRows.forEach((row: { report_id: string; test_name_normalized: string; passed_locally: boolean | null; ai_classification: string }) => {
+            const list = byTest.get(row.test_name_normalized) || [];
+            list.push(row);
+            byTest.set(row.test_name_normalized, list);
+          });
+          byTest.forEach((rows, testName) => {
+            streakMap.set(testName, computeStreakInfo(rows, reportIdToDate));
+          });
+          console.log(`Computed streakInfo for ${streakMap.size} tests`);
+        }
+      }
+
       // Fetch aggregated learning patterns (global, from Boost)
       const { data: learningPatterns } = await supabase
         .from('learning_patterns')
@@ -552,7 +728,15 @@ ${notesPatterns.map(p => {
 }).join('\n')}
 `;
         }
-        
+        const confirmedLearning = learningPatterns.filter((p: { pattern_type: string }) => p.pattern_type === 'confirmed');
+        if (confirmedLearning.length > 0) {
+          patternsSection += `
+## CONFIRMED PATTERNS (user agreed with AI - reinforce these):
+${confirmedLearning.slice(0, 15).map((p: { error_pattern: string | null; ai_classification: string | null; occurrence_count: number }) =>
+  `✓ Error "${p.error_pattern || 'general'}": "${p.ai_classification}" confirmed (${p.occurrence_count}x)`
+).join('\n')}
+`;
+        }
         if (patternsSection) {
           learningPatternsPrompt = patternsSection;
         }
@@ -570,9 +754,16 @@ All historical data below is ONLY from previous runs of "${regressionBucket}".
 Do NOT apply patterns from other regressions.
 ${globalFamiliarityInfo}
 ${historicalCorrections}
+${confirmedPatterns}
 ${passedLocallyPatterns}
 ${learningPatternsPrompt}
 `;
+
+    // Enrich failures with streakInfo (computed from DB) for DECISION_FRAMEWORK §9
+    const failuresForPrompt = failures.map((f: any) => ({
+      ...f,
+      streakInfo: streakMap.get(f.testNameNormalized) ?? undefined,
+    }));
 
     // Select prompt based on mode
     const basePrompt = mode === 'learning' ? LEARNING_PROMPT : PRODUCTION_PROMPT;
@@ -588,7 +779,8 @@ If a test matches Flaky KB (even fuzzy match), note it in your response.
 IMPORTANT: Flaky KB is a supporting signal, not a hard rule.
 
 ## Failures to Analyze:
-${JSON.stringify(failures, null, 2)}
+When streakInfo is present on a failure, use it: isIntermittent → Likely Flaky; isConsistentFailure → Potential bug.
+${JSON.stringify(failuresForPrompt, null, 2)}
 
 For EACH failure, respond with JSON array containing objects with:
 - classification: "Potential bug" | "Likely Flaky" | "Environment / Infra Issue" | "Expected Change" | "Investigate"
@@ -603,8 +795,10 @@ For EACH failure, respond with JSON array containing objects with:
 
 CRITICAL REMINDERS:
 1. "Investigate" MUST use "Verify manually" or "Rerun only" - NEVER "Open bug"
-2. Check first-seen status for confidence adjustments
-3. Prioritize regression-specific data over global patterns
+2. Recommend Investigate only when classification is Potential bug or priority is P0/P1; otherwise recommend Skip (when classification is Investigate, suggest Verify manually).
+3. Check first-seen status for confidence adjustments
+4. Prioritize regression-specific data over global patterns
+${fewShotExamples}
 
 Return ONLY valid JSON array, no markdown.`;
 
@@ -650,12 +844,14 @@ Return ONLY valid JSON array, no markdown.`;
     
     const analyses = JSON.parse(content);
     
-    // Post-process to enforce Investigate guardrails
+    // Post-process: enforce Investigate guardrails and align signalBreakdown with classification
     const processedAnalyses = analyses.map((analysis: any) => {
       // Enforce: Investigate NEVER uses "Open bug"
       if (analysis.classification === 'Investigate' && analysis.suggestedAction === 'Open bug') {
         analysis.suggestedAction = 'Verify manually';
       }
+      // Align classification with dominant direction in signalBreakdown; if mismatch, reduce confidence and set Investigate
+      alignSignalBreakdownWithClassification(analysis);
       return analysis;
     });
     
