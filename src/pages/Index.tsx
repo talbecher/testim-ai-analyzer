@@ -24,7 +24,8 @@ import { ReviewProgress } from '@/components/ReviewProgress';
 import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
 import { toast } from 'sonner';
 import { RunDetails } from '@/types/feedback';
-import { Classification, SortOption, REGRESSION_BUCKETS, RegressionBucket } from '@/types/testim';
+import { Classification, SortOption } from '@/types/testim';
+import { useRegressionBuckets } from '@/hooks/useRegressionBuckets';
 
 const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,7 +48,9 @@ const Index = () => {
     restoreSession,
     hasSessionToRestore,
   } = useChecklist();
-  
+
+  const { buckets, isLoading: bucketsLoading } = useRegressionBuckets();
+
   // Get sorted failures based on current sort option
   const sortedFailures = getSortedFailures(sortOption);
   const {
@@ -270,14 +273,15 @@ const Index = () => {
                 <Select 
                   value={runDetails.name} 
                   onValueChange={(val) => setRunDetails(prev => ({ ...prev, name: val }))}
+                  disabled={bucketsLoading}
                 >
                   <SelectTrigger className="bg-background/50">
-                    <SelectValue placeholder="Select regression bucket" />
+                    <SelectValue placeholder={bucketsLoading ? "Loading buckets..." : "Select regression bucket"} />
                   </SelectTrigger>
                   <SelectContent className="bg-background border z-50">
-                    {REGRESSION_BUCKETS.map(bucket => (
-                      <SelectItem key={bucket} value={bucket}>
-                        {bucket}
+                    {buckets.map((b) => (
+                      <SelectItem key={b.id} value={b.name}>
+                        {b.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

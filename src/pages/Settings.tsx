@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Settings as SettingsIcon, ArrowLeft, Plus, Trash2, GripVertical, Tag, TestTube, Wrench, Info } from 'lucide-react';
+import { Settings as SettingsIcon, ArrowLeft, Plus, Trash2, GripVertical, Tag, TestTube, Wrench, Info, FolderOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { BugCategory, CategoryType } from '@/types/bugCategory';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { toast } from 'sonner';
 import { getVersionInfo } from '@/version';
 import { ChangelogDialog } from '@/components/ChangelogDialog';
+import { useRegressionBuckets, type RegressionBucketRow } from '@/hooks/useRegressionBuckets';
 
 interface CategorySectionProps {
   type: CategoryType;
@@ -159,6 +160,10 @@ function CategorySection({
 const Settings = () => {
   const [categories, setCategories] = useState<BugCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { buckets: regressionBuckets, isLoading: bucketsLoading, refetch: refetchBuckets } = useRegressionBuckets(false);
+  const [newBucketName, setNewBucketName] = useState('');
+  const [editingBucketId, setEditingBucketId] = useState<string | null>(null);
+  const [editingBucketName, setEditingBucketName] = useState('');
 
   const fetchAllCategories = useCallback(async () => {
     setIsLoading(true);
@@ -224,6 +229,53 @@ const Settings = () => {
     toast.success(currentState ? 'Category disabled' : 'Category enabled');
   };
 
+  // Regression Buckets: add, update (name), toggle is_active (hide/show) – no delete
+  const handleAddBucket = async () => {
+    if (!newBucketName.trim()) return;
+    const maxOrder = regressionBuckets.length > 0
+      ? Math.max(...regressionBuckets.map((b) => b.sort_order), 0)
+      : 0;
+    const { error } = await supabase
+      .from('regression_buckets')
+      .insert([{ name: newBucketName.trim(), sort_order: maxOrder + 1, is_active: true }]);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setNewBucketName('');
+    refetchBuckets();
+    toast.success('Regression bucket added');
+  };
+
+  const handleUpdateBucket = async (id: string) => {
+    if (!editingBucketName.trim()) return;
+    const { error } = await supabase
+      .from('regression_buckets')
+      .update({ name: editingBucketName.trim() })
+      .eq('id', id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setEditingBucketId(null);
+    setEditingBucketName('');
+    refetchBuckets();
+    toast.success('Bucket updated');
+  };
+
+  const handleToggleBucket = async (id: string, currentState: boolean) => {
+    const { error } = await supabase
+      .from('regression_buckets')
+      .update({ is_active: !currentState })
+      .eq('id', id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    refetchBuckets();
+    toast.success(currentState ? 'Bucket hidden' : 'Bucket visible');
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -244,6 +296,90 @@ const Settings = () => {
           </div>
           <ThemeToggle />
         </header>
+
+        {/* Regression Buckets */}
+        <Card className="border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FolderOpen className="h-5 w-5 text-primary" />
+              Regression Buckets
+            </CardTitle>
+            <CardDescription>
+              Buckets for grouping regression runs. Hidden buckets are not shown in the run selector but existing reports keep their bucket name.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="New bucket name..."
+                value={newBucketName}
+                onChange={(e) => setNewBucketName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddBucket()}
+                className="flex-1"
+              />
+              <Button onClick={handleAddBucket} disabled={!newBucketName.trim() || bucketsLoading}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            </div>
+            {bucketsLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            ) : (
+              <div className="space-y-2">
+                {regressionBuckets.map((bucket: RegressionBucketRow) => (
+                  <div
+                    key={bucket.id}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-card/80 transition-colors",
+                      !bucket.is_active && "opacity-60"
+                    )}
+                  >
+                    {editingBucketId === bucket.id ? (
+                      <Input
+                        value={editingBucketName}
+                        onChange={(e) => setEditingBucketName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleUpdateBucket(bucket.id);
+                          if (e.key === 'Escape') setEditingBucketId(null);
+                        }}
+                        onBlur={() => handleUpdateBucket(bucket.id)}
+                        className="flex-1 h-8"
+                        autoFocus
+                      />
+                    ) : (
+                      <span
+                        className="flex-1 cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => {
+                          setEditingBucketId(bucket.id);
+                          setEditingBucketName(bucket.name);
+                        }}
+                      >
+                        {bucket.name}
+                        {bucket.description && (
+                          <span className="text-muted-foreground text-sm ml-2">— {bucket.description}</span>
+                        )}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {bucket.is_active ? 'Visible' : 'Hidden'}
+                      </span>
+                      <Switch
+                        checked={bucket.is_active}
+                        onCheckedChange={() => handleToggleBucket(bucket.id, bucket.is_active)}
+                      />
+                    </div>
+                  </div>
+                ))}
+                {regressionBuckets.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No regression buckets yet. Add your first bucket above.
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Bug Categories */}
         <CategorySection

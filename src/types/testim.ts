@@ -28,13 +28,8 @@ export type SuggestedAction =
   | 'Ignore today / monitor'
   | 'Verify manually';
 
-// Regression buckets for isolated learning
-export const REGRESSION_BUCKETS = [
-  'Regression 1', 'Regression 2', 'Regression 3', 'Regression 4',
-  'Regression 5', 'Regression 6', 'Regression 7', 'Regression 8'
-] as const;
-
-export type RegressionBucket = typeof REGRESSION_BUCKETS[number];
+// Regression bucket name (list is dynamic from DB; see useRegressionBuckets)
+export type RegressionBucket = string;
 
 // Regression test history for run-to-run comparison
 export interface RegressionTestHistory {

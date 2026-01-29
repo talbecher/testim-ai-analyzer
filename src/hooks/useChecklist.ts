@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult, ReportMode, SortOption, REGRESSION_BUCKETS, RegressionBucket } from '@/types/testim';
+import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult, ReportMode, SortOption } from '@/types/testim';
+import { useRegressionBuckets } from './useRegressionBuckets';
 import { parseFailuresCSV, hasPreClassifiedColumns, getPreClassifiedStats } from '@/lib/csvParsers';
 import { detectErrorPattern, getPatternFlakiness, extractAssertionDetails } from '@/lib/errorPatternDetection';
 import { convertPreClassifiedToFeedback, convertPreClassifiedToAnalysis } from '@/lib/testimClassificationMapper';
@@ -27,8 +28,9 @@ export function useChecklist() {
   const [reportMode, setReportMode] = useState<ReportMode>('production');
   
   // Regression bucket for isolated learning
-  const [regressionBucket, setRegressionBucket] = useState<RegressionBucket | null>(null);
-  
+  const [regressionBucket, setRegressionBucket] = useState<string | null>(null);
+
+  const { buckets: regressionBuckets } = useRegressionBuckets();
   const flakyKB = useFlakyKB();
   const { saveAnalysisSession, loadAnalysisSession } = useSessionPersistence();
 
@@ -106,17 +108,17 @@ export function useChecklist() {
   const analyzeFailures = useCallback(async (selectedRegressionBucket?: string) => {
     if (failures.length === 0) return;
     
-    // Validate regression bucket selection
-    if (!selectedRegressionBucket || !REGRESSION_BUCKETS.includes(selectedRegressionBucket as RegressionBucket)) {
+    // Validate regression bucket selection (must be in active buckets from DB)
+    if (!selectedRegressionBucket || !regressionBuckets.some((b) => b.name === selectedRegressionBucket)) {
       setError('Please select a valid regression bucket before analyzing');
       return;
     }
-    
+
     setIsAnalyzing(true);
     setError(null);
-    
+
     // Store the selected regression bucket
-    setRegressionBucket(selectedRegressionBucket as RegressionBucket);
+    setRegressionBucket(selectedRegressionBucket);
     
     // In learning mode: AI runs on ALL failures for prediction evaluation
     // In production mode: AI runs only on unclassified failures
@@ -286,7 +288,7 @@ export function useChecklist() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [failures, flakyKB, reportMode]);
+  }, [failures, flakyKB, reportMode, regressionBuckets]);
 
   // Clear all failures
   const clearFailures = useCallback(() => {
