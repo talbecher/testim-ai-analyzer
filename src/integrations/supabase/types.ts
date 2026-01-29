@@ -196,33 +196,6 @@ export type Database = {
         }
         Relationships: []
       }
-      regression_buckets: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          is_active: boolean | null
-          sort_order: number | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          is_active?: boolean | null
-          sort_order?: number | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          is_active?: boolean | null
-          sort_order?: number | null
-          created_at?: string | null
-        }
-        Relationships: []
-      }
       learning_patterns: {
         Row: {
           ai_classification: string | null
