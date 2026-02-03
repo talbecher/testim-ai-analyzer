@@ -1,58 +1,46 @@
 
 
-# תיקון Regression Buckets - שתי בעיות לתיקון
+# תיקון עקביות הניתוח
 
-## הבעיות שזיהיתי
+## שינויים
 
-### בעיה 1: המיגרציה לא הורצה
-קובץ המיגרציה `supabase/migrations/20260127130000_regression_buckets.sql` **קיים** בקוד, אבל הטבלה `regression_buckets` **לא קיימת** ב-Database.
+### 1. איפוס File Input ב-Clear All
 
-כשאתה שואל "למה הרשימה ריקה?" - הסיבה היא שה-Hook מנסה לשלוף מטבלה שלא קיימת.
-
-### בעיה 2: חסר import ב-Settings.tsx
-בשורה 332 יש שימוש ב-`cn()` אבל הפונקציה לא מיובאת.
-
----
-
-## תיקונים נדרשים
-
-### תיקון 1: הרצת המיגרציה
-
-אריץ את המיגרציה ליצירת הטבלה `regression_buckets` עם:
-- 8 רשומות ראשוניות (Regression 1-8)
-- הגדרות RLS לגישה ציבורית
-
-```text
-SQL שירוץ:
-- CREATE TABLE regression_buckets
-- 4 RLS policies (SELECT/INSERT/UPDATE/DELETE)
-- INSERT 8 seed records
-```
-
-### תיקון 2: הוספת import ב-Settings.tsx
-
-הוספת `cn` מ-`@/lib/utils` בראש הקובץ:
+**קובץ:** `src/pages/Index.tsx` (שורות 140-144)
 
 ```typescript
-// שורה 1 - יעודכן ל:
-import { cn } from '@/lib/utils';
+const handleClearAll = () => {
+  clearFailures();
+  resetFeedback();
+  clearAllSessions();
+  // חדש: איפוס file input לאפשר העלאה חוזרת של אותו קובץ
+  if (fileInputRef.current) {
+    fileInputRef.current.value = '';
+  }
+};
 ```
 
----
+### 2. הורדת Temperature ל-0.1
 
-## קבצים שיעודכנו
+**קובץ:** `supabase/functions/analyze-failures/index.ts` (שורה 815)
 
-| קובץ | פעולה |
+```typescript
+// מ:
+temperature: 0.3,
+
+// ל:
+temperature: 0.1, // Lower for more consistent results
+```
+
+## סיכום
+
+| קובץ | שינוי |
 |------|-------|
-| Database | יצירת טבלת `regression_buckets` + seed data |
-| `src/pages/Settings.tsx` | הוספת import של `cn` |
-
----
+| `src/pages/Index.tsx` | איפוס file input ב-handleClearAll |
+| `supabase/functions/analyze-failures/index.ts` | temperature: 0.3 → 0.1 |
 
 ## תוצאה צפויה
 
-אחרי התיקונים:
-1. ה-Dropdown יציג 8 regression buckets (Regression 1-8)
-2. עמוד Settings יעבוד בלי שגיאות build
-3. תוכל להוסיף regression buckets חדשים דרך Settings
+- **Clear All + Upload** יעבוד תמיד
+- **תוצאות עקביות יותר** בין ריצות על אותו קובץ
 
