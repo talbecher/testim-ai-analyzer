@@ -812,7 +812,7 @@ Return ONLY valid JSON array, no markdown.`;
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        temperature: 0.3, // CRITICAL: Ensures consistent, deterministic output
+        temperature: 0.1, // CRITICAL: Lower temperature for more consistent, deterministic results
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: "Analyze these failures and return the JSON array." }

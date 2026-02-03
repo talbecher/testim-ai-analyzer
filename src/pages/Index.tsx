@@ -141,6 +141,10 @@ const Index = () => {
     clearFailures();
     resetFeedback();
     clearAllSessions();
+    // Reset file input to allow re-uploading the same file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
   const handleCompleteReview = () => {
     setShowSummaryDialog(true);
