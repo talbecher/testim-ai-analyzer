@@ -104,7 +104,10 @@ Focus on actionable patterns that can help classify future failures. Look for:
   try {
     const response = await fetch(gatewayUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
+      },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
