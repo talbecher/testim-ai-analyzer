@@ -819,8 +819,9 @@ Return ONLY valid JSON array, no markdown.`;
       ? "https://api.openai.com/v1/chat/completions"
       : "https://ai.gateway.lovable.dev/v1/chat/completions";
     const aiKey = useOpenAI ? OPENAI_API_KEY! : LOVABLE_API_KEY!;
+    const modelName = useOpenAI ? "gpt-4o-mini" : "google/gemini-2.5-flash";
     const aiBody: Record<string, unknown> = {
-      model: useOpenAI ? "gpt-4o-mini" : "google/gemini-2.5-flash",
+      model: modelName,
       temperature: 0.1,
       messages: [
         { role: "system" as const, content: systemPrompt },
@@ -831,7 +832,8 @@ Return ONLY valid JSON array, no markdown.`;
       aiBody.response_format = { type: "json_object" };
     }
 
-    console.log(`Sending to AI (${useOpenAI ? 'OpenAI' : 'Lovable'} ${mode} mode) for "${regressionBucket}"`);
+    console.log(`QA Audit: Sending to AI (${useOpenAI ? 'OpenAI' : 'Lovable'} ${mode} mode, model: ${modelName}) for "${regressionBucket}"`);
+    console.log('QA Audit: Target model is:', modelName);
 
     let analyses: unknown[];
     try {
@@ -846,6 +848,7 @@ Return ONLY valid JSON array, no markdown.`;
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('QA Audit: AI call failed. Attempted model:', modelName, '| Status:', response.status, '| Body:', errorText);
         console.error("AI gateway error:", response.status, errorText);
         if (response.status === 429) {
           return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
@@ -861,6 +864,12 @@ Return ONLY valid JSON array, no markdown.`;
       }
 
       const data = await response.json();
+
+      const usage = data.usage;
+      if (usage) {
+        console.log('QA Audit: AI Usage Metrics:', usage);
+      }
+
       let content = data.choices?.[0]?.message?.content || (useOpenAI ? "{}" : "[]");
 
       content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -876,6 +885,7 @@ Return ONLY valid JSON array, no markdown.`;
         analyses = JSON.parse(content) as unknown[];
       }
     } catch (err) {
+      console.error('QA Audit: AI call failed. Attempted model:', modelName, '| Error:', err);
       console.error("AI classification failed:", err);
       return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "AI classification failed" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
