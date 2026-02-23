@@ -414,8 +414,17 @@ serve(async (req) => {
 
   try {
     const { failures, flakyTests, mode = 'production', regressionBucket } = await req.json();
+
+    // Feature toggle: OpenAI if key exists and is valid; else Lovable fallback
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY is not configured');
+    const useOpenAI = Boolean(
+      OPENAI_API_KEY?.trim() &&
+      !OPENAI_API_KEY.toLowerCase().includes('waiting_for_token')
+    );
+    if (!useOpenAI && !LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured (required when OPENAI_API_KEY is not set)');
+    }
 
     // Validate regression bucket
     if (!regressionBucket) {
@@ -802,47 +811,76 @@ ${fewShotExamples}
 
 Return ONLY valid JSON array, no markdown.`;
 
-    console.log(`Sending to AI (${mode} mode) for "${regressionBucket}"`);
+    const userMessage = useOpenAI
+      ? "Analyze these failures. Output a JSON object with a single key 'analyses' containing an array of classification objects. Each object must have: classification, confidence, suggestedAction, priority, priorityReason, errorPattern, requiresRerun, rerunReason, flakyKBMatch, signalBreakdown."
+      : "Analyze these failures and return the JSON array.";
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        temperature: 0.1, // CRITICAL: Lower temperature for more consistent, deterministic results
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: "Analyze these failures and return the JSON array." }
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required, please add credits" }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`AI gateway error: ${response.status}`);
+    const aiUrl = useOpenAI
+      ? "https://api.openai.com/v1/chat/completions"
+      : "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const aiKey = useOpenAI ? OPENAI_API_KEY! : LOVABLE_API_KEY!;
+    const aiBody: Record<string, unknown> = {
+      model: useOpenAI ? "gpt-4o-mini" : "google/gemini-2.5-flash",
+      temperature: 0.1,
+      messages: [
+        { role: "system" as const, content: systemPrompt },
+        { role: "user" as const, content: userMessage },
+      ],
+    };
+    if (useOpenAI) {
+      aiBody.response_format = { type: "json_object" };
     }
 
-    const data = await response.json();
-    let content = data.choices?.[0]?.message?.content || "[]";
-    
-    // Clean up response
-    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    const analyses = JSON.parse(content);
+    console.log(`Sending to AI (${useOpenAI ? 'OpenAI' : 'Lovable'} ${mode} mode) for "${regressionBucket}"`);
+
+    let analyses: unknown[];
+    try {
+      const response = await fetch(aiUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${aiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(aiBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("AI gateway error:", response.status, errorText);
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "Payment required, please add credits" }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        throw new Error(`AI gateway error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      let content = data.choices?.[0]?.message?.content || (useOpenAI ? "{}" : "[]");
+
+      content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      if (useOpenAI) {
+        const parsed = JSON.parse(content) as Record<string, unknown> | unknown[];
+        analyses = Array.isArray(parsed)
+          ? parsed
+          : Array.isArray((parsed as Record<string, unknown>).analyses)
+            ? (parsed as Record<string, unknown>).analyses as unknown[]
+            : [];
+      } else {
+        analyses = JSON.parse(content) as unknown[];
+      }
+    } catch (err) {
+      console.error("AI classification failed:", err);
+      return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "AI classification failed" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     
     // Post-process: enforce Investigate guardrails and align signalBreakdown with classification
     const processedAnalyses = analyses.map((analysis: any) => {

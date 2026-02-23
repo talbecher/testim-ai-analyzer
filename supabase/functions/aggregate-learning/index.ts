@@ -62,19 +62,26 @@ function extractKeywordsFromNotes(notes: string[]): Map<string, number> {
   return keywordCounts;
 }
 
-async function analyzeNotesWithAI(notes: string[], gatewayUrl: string): Promise<NotesAnalysis | null> {
-  if (notes.length === 0) {
+interface AIConfig {
+  url: string;
+  apiKey: string;
+  model: string;
+  temperature: number;
+  useJsonFormat?: boolean;
+}
+
+async function analyzeNotesWithAI(notes: string[], config: AIConfig): Promise<NotesAnalysis | null> {
+  if (notes.length === 0 || !config.apiKey) {
     return null;
   }
-  
-  // Take unique notes and limit to avoid token limits
+
   const uniqueNotes = [...new Set(notes.filter(n => n && n.trim().length > 0))];
   const limitedNotes = uniqueNotes.slice(0, 100);
-  
+
   if (limitedNotes.length === 0) {
     return null;
   }
-  
+
   const prompt = `Analyze these QA user notes from test failure reviews. These notes describe what the user did to fix or investigate failed tests.
 
 USER NOTES:
@@ -102,20 +109,25 @@ Focus on actionable patterns that can help classify future failures. Look for:
 - Environment/infrastructure related terms`;
 
   try {
-    const response = await fetch(gatewayUrl, {
+    const body: Record<string, unknown> = {
+      model: config.model,
+      temperature: config.temperature,
+      messages: [
+        { role: 'system', content: 'You are a QA patterns analyst. Return only valid JSON.' },
+        { role: 'user', content: prompt },
+      ],
+    };
+    if (config.useJsonFormat) {
+      body.response_format = { type: 'json_object' };
+    }
+
+    const response = await fetch(config.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,
+        Authorization: `Bearer ${config.apiKey}`,
       },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: 'You are a QA patterns analyst. Return only valid JSON.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.3
-      })
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -125,8 +137,7 @@ Focus on actionable patterns that can help classify future failures. Look for:
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
-    
-    // Clean and parse JSON
+
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]) as NotesAnalysis;
@@ -134,7 +145,7 @@ Focus on actionable patterns that can help classify future failures. Look for:
   } catch (error) {
     console.error('Error analyzing notes with AI:', error);
   }
-  
+
   return null;
 }
 
@@ -147,8 +158,29 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    const gatewayUrl = 'https://ai.gateway.lovable.dev/v1/chat/completions';
+
+    // Feature toggle: OpenAI if key exists and is valid; else Lovable fallback
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const useOpenAI = Boolean(
+      OPENAI_API_KEY?.trim() &&
+      !OPENAI_API_KEY.toLowerCase().includes('waiting_for_token')
+    );
+    const aiConfig: AIConfig = useOpenAI
+      ? {
+          url: 'https://api.openai.com/v1/chat/completions',
+          apiKey: OPENAI_API_KEY!,
+          model: 'gpt-4o-mini',
+          temperature: 0.3,
+          useJsonFormat: true,
+        }
+      : {
+          url: 'https://ai.gateway.lovable.dev/v1/chat/completions',
+          apiKey: LOVABLE_API_KEY || '',
+          model: 'google/gemini-2.5-flash',
+          temperature: 0.3,
+          useJsonFormat: false,
+        };
 
     console.log('Starting learning aggregation with notes analysis...');
 
@@ -228,9 +260,9 @@ serve(async (req) => {
 
     // Analyze notes with AI if we have enough data
     let aiNotesAnalysis: NotesAnalysis | null = null;
-    if (allNotes.length >= 3) {
-      console.log('Sending notes to AI for pattern analysis...');
-      aiNotesAnalysis = await analyzeNotesWithAI(allNotes, gatewayUrl);
+    if (allNotes.length >= 3 && aiConfig.apiKey) {
+      console.log(`Sending notes to AI (${useOpenAI ? 'OpenAI' : 'Lovable'}) for pattern analysis...`);
+      aiNotesAnalysis = await analyzeNotesWithAI(allNotes, aiConfig);
       if (aiNotesAnalysis) {
         console.log(`AI found ${aiNotesAnalysis.patterns.length} patterns and ${aiNotesAnalysis.insights.length} insights`);
       }
