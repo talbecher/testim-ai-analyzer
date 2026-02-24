@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { LearningModeCard } from '@/components/LearningModeCard';
 import { ProductionModeCard } from '@/components/ProductionModeCard';
+import { Progress } from '@/components/ui/progress';
 import { ReviewProgress } from '@/components/ReviewProgress';
 import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
 import { toast } from 'sonner';
@@ -38,6 +39,7 @@ const Index = () => {
     stats,
     isLoading,
     isAnalyzing,
+    analysisProgress,
     error,
     isPreClassifiedMode,
     preClassifiedStats,
@@ -464,20 +466,37 @@ const Index = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3">
-              <Button 
-                onClick={() => analyzeFailures(runDetails.name)} 
-                disabled={isAnalyzing || !runDetails.name} 
-                size="lg" 
-                className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
-              >
-                <Zap className="mr-2 h-5 w-5" />
-                {isAnalyzing ? 'Analyzing...' : 'Analyze with AI'}
-              </Button>
-              <Button variant="outline" onClick={handleClearAll} size="lg">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Clear All
-              </Button>
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => analyzeFailures(runDetails.name)} 
+                  disabled={isAnalyzing || !runDetails.name} 
+                  size="lg" 
+                  className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
+                >
+                  <Zap className="mr-2 h-5 w-5" />
+                  {isAnalyzing
+                    ? (analysisProgress ? `Analyzing... ${analysisProgress.completed}/${analysisProgress.total}` : 'Analyzing...')
+                    : 'Analyze with AI'}
+                </Button>
+                <Button variant="outline" onClick={handleClearAll} size="lg" disabled={isAnalyzing}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Clear All
+                </Button>
+              </div>
+              {/* Analysis progress bar: table fills up in real time as each row completes */}
+              {isAnalyzing && analysisProgress && analysisProgress.total > 0 && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Analyzed rows</span>
+                    <span>{analysisProgress.completed} / {analysisProgress.total}</span>
+                  </div>
+                  <Progress
+                    value={(analysisProgress.completed / analysisProgress.total) * 100}
+                    className="h-2"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Review Progress Bar */}

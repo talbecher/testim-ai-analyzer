@@ -9,6 +9,38 @@ import { detectCoFailures, createFailureToGroupMap, getCoFailureInfo } from '@/l
 import { useFlakyKB } from './useFlakyKB';
 import { useSessionPersistence } from './useSessionPersistence';
 
+/** Post-process a single AI analysis (flaky KB, priority, requiresRerun). */
+function applyPostProcessing(
+  failure: AnalyzedFailure,
+  analysis: AIAnalysisResult,
+  flakyKB: ReturnType<typeof useFlakyKB>
+): AIAnalysisResult {
+  const flakyMatch = flakyKB.findFlakyTestMatch(failure.testName);
+  const isInFlakyKB = flakyMatch.matched;
+  let result: AIAnalysisResult = {
+    ...analysis,
+    flakyKBMatch: isInFlakyKB,
+    matchedFlakyTestName: flakyMatch.matchedTest?.testName,
+    matchedFlakyReason: flakyMatch.matchedTest?.reason,
+  };
+  if (isInFlakyKB) {
+    if (result.priority === 'P0') result = { ...result, priority: 'P1' };
+    else if (result.priority === 'P1') result = { ...result, priority: 'P2' };
+    else if (result.priority === 'P2') result = { ...result, priority: 'P3' };
+    result = { ...result, priorityReason: `• Known flaky test (Flaky KB)\n${result.priorityReason}` };
+  }
+  if (result.classification === 'Likely Flaky' && result.confidence >= 80) {
+    result = { ...result, requiresRerun: false, rerunReason: 'High confidence flaky - no rerun needed' };
+  } else if (result.classification === 'Likely Flaky' && result.confidence < 70) {
+    result = { ...result, requiresRerun: true, rerunReason: 'Lower confidence - verify with rerun' };
+  } else if (result.classification === 'Potential bug') {
+    result = { ...result, requiresRerun: false, rerunReason: 'Potential bug - needs code fix, not rerun' };
+  } else if (result.classification === 'Environment / Infra Issue') {
+    result = { ...result, requiresRerun: true, rerunReason: 'Environment issue - rerun when stable' };
+  }
+  return result;
+}
+
 export interface PreClassifiedUploadStats {
   total: number;
   classified: number;
@@ -16,10 +48,16 @@ export interface PreClassifiedUploadStats {
   withBugLink: number;
 }
 
+export interface AnalysisProgress {
+  completed: number;
+  total: number;
+}
+
 export function useChecklist() {
   const [failures, setFailures] = useState<AnalyzedFailure[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPreClassifiedMode, setIsPreClassifiedMode] = useState(false);
   const [preClassifiedStats, setPreClassifiedStats] = useState<PreClassifiedUploadStats | null>(null);
@@ -143,151 +181,103 @@ export function useChecklist() {
       return;
     }
     
-    // Mark only the ones needing analysis as analyzing
-    setFailures(prev => prev.map(f => ({ 
-      ...f, 
-      isAnalyzing: !f.preClassified?.failureType 
-    })));
-    
-    try {
-      // Detect co-failure groups for systemic issue detection
-      const coFailureGroups = detectCoFailures(needsAnalysis);
-      const failureToGroup = createFailureToGroupMap(needsAnalysis, coFailureGroups);
-      
-      console.log(`Detected ${coFailureGroups.length} co-failure groups`);
-      
-      // Prepare failures for AI with enhanced signals
-      const failuresForAI: FailureForAI[] = needsAnalysis.map(f => {
-        const patternResult = detectErrorPattern(f.errorMessage);
-        const assertionDetails = extractAssertionDetails(f.errorMessage);
-        const coFailureInfo = getCoFailureInfo(f, needsAnalysis, failureToGroup);
-        
-        return {
-          testName: f.testName,
-          testNameNormalized: f.testNameNormalized,
-          folder: f.folder,
-          failureStep: f.failureStep,
-          errorMessage: f.errorMessage,
-          duration: f.duration,
-          durationMs: f.durationMs,
-          detectedErrorPattern: patternResult.pattern,
-          patternConfidence: patternResult.confidence,
-          // Enhanced signals
-          assertionDetails: patternResult.pattern === 'AssertionError' ? {
-            hasExpectedActual: assertionDetails.hasExpectedActual,
-            isValueMismatch: assertionDetails.isValueMismatch,
-            isVisualAssertion: assertionDetails.isVisualAssertion,
-            isNullUndefinedMismatch: assertionDetails.isNullUndefinedMismatch,
-          } : undefined,
-          coFailureInfo: coFailureInfo ? {
-            isPartOfGroup: coFailureInfo.isPartOfGroup,
-            groupSize: coFailureInfo.groupSize,
-            sharedStep: coFailureInfo.sharedStep,
-            sharedErrorPattern: coFailureInfo.sharedErrorPattern,
-            otherTestsInGroup: coFailureInfo.otherTestsInGroup,
-            groupConfidence: coFailureInfo.groupConfidence,
-          } : undefined,
-        };
-      });
-      
-      // Get flaky tests for AI
-      const flakyTestsForAI: FlakyTestForAI[] = flakyKB.tests.map(t => ({
-        testName: t.testName,
-        testNameNormalized: t.testNameNormalized,
-        reason: t.reason,
-        notes: t.notes,
-      }));
-      
-      // Call edge function with mode and regression bucket
-      const { data, error: fnError } = await supabase.functions.invoke('analyze-failures', {
-        body: {
-          failures: failuresForAI,
-          flakyTests: flakyTestsForAI,
-          mode: reportMode,
-          regressionBucket: selectedRegressionBucket, // Pass regression bucket for isolated learning
-        },
-      });
-      
-      if (fnError) throw fnError;
-      
-      const results = data.results as Array<{ failureId: number; analysis: AIAnalysisResult }>;
-      
-      // Process AI results
-      const aiAnalyzedResults: AnalyzedFailure[] = needsAnalysis.map((f, idx) => {
-        const result = results.find(r => r.failureId === idx);
-        
-        // Post-processing: check Flaky KB match and set is_in_flaky_kb
-        const flakyMatch = flakyKB.findFlakyTestMatch(f.testName);
-        const isInFlakyKB = flakyMatch.matched;
-        
-        let analysis = result?.analysis;
-        if (analysis) {
-          // Add flaky KB match info
-          analysis = {
-            ...analysis,
-            flakyKBMatch: isInFlakyKB,
-            matchedFlakyTestName: flakyMatch.matchedTest?.testName,
-            matchedFlakyReason: flakyMatch.matchedTest?.reason,
-          };
-          
-          // If in Flaky KB, adjust priority down one level (as confidence signal)
-          if (isInFlakyKB) {
-            if (analysis.priority === 'P0') analysis.priority = 'P1';
-            else if (analysis.priority === 'P1') analysis.priority = 'P2';
-            else if (analysis.priority === 'P2') analysis.priority = 'P3';
-            
-            // Add KB match to priority reason
-            analysis.priorityReason = `• Known flaky test (Flaky KB)\n${analysis.priorityReason}`;
-          }
-          
-          // Post-processing: adjust requiresRerun based on classification and confidence
-          if (analysis.classification === 'Likely Flaky' && analysis.confidence >= 80) {
-            analysis.requiresRerun = false;
-            analysis.rerunReason = 'High confidence flaky - no rerun needed';
-          } else if (analysis.classification === 'Likely Flaky' && analysis.confidence < 70) {
-            analysis.requiresRerun = true;
-            analysis.rerunReason = 'Lower confidence - verify with rerun';
-          } else if (analysis.classification === 'Potential bug') {
-            analysis.requiresRerun = false;
-            analysis.rerunReason = 'Potential bug - needs code fix, not rerun';
-          } else if (analysis.classification === 'Environment / Infra Issue') {
-            analysis.requiresRerun = true;
-            analysis.rerunReason = 'Environment issue - rerun when stable';
-          }
-        }
-        
-        return {
-          ...f,
-          analysis,
-          isAnalyzing: false,
-        };
-      });
-      
-      // In learning mode: merge AI predictions with human classifications
-      // The human classification comes from preClassified data
-      if (reportMode === 'learning') {
-        const learningResults = aiAnalyzedResults.map(f => {
-          // Keep the preClassified data - AI prediction is separate
-          return f;
+    // Set classified results and mark unclassified as analyzing
+    setFailures(prev =>
+      prev.map(f =>
+        f.preClassified?.failureType
+          ? { ...f, analysis: convertPreClassifiedToAnalysis(f.preClassified!) || undefined, isAnalyzing: false }
+          : { ...f, isAnalyzing: true }
+      )
+    );
+
+    // Co-failure and flaky context (computed once, used per row)
+    const coFailureGroups = detectCoFailures(needsAnalysis);
+    const failureToGroup = createFailureToGroupMap(needsAnalysis, coFailureGroups);
+    const flakyTestsForAI: FlakyTestForAI[] = flakyKB.tests.map(t => ({
+      testName: t.testName,
+      testNameNormalized: t.testNameNormalized,
+      reason: t.reason,
+      notes: t.notes,
+    }));
+
+    setAnalysisProgress({ completed: 0, total: needsAnalysis.length });
+
+    // Process each row separately to avoid EarlyDrop timeout; append results incrementally
+    for (let i = 0; i < needsAnalysis.length; i++) {
+      const failure = needsAnalysis[i];
+      const patternResult = detectErrorPattern(failure.errorMessage);
+      const assertionDetails = extractAssertionDetails(failure.errorMessage);
+      const coFailureInfo = getCoFailureInfo(failure, needsAnalysis, failureToGroup);
+      const singleForAI: FailureForAI = {
+        testName: failure.testName,
+        testNameNormalized: failure.testNameNormalized,
+        folder: failure.folder,
+        failureStep: failure.failureStep,
+        errorMessage: failure.errorMessage,
+        duration: failure.duration,
+        durationMs: failure.durationMs,
+        detectedErrorPattern: patternResult.pattern,
+        patternConfidence: patternResult.confidence,
+        assertionDetails: patternResult.pattern === 'AssertionError' ? {
+          hasExpectedActual: assertionDetails.hasExpectedActual,
+          isValueMismatch: assertionDetails.isValueMismatch,
+          isVisualAssertion: assertionDetails.isVisualAssertion,
+          isNullUndefinedMismatch: assertionDetails.isNullUndefinedMismatch,
+        } : undefined,
+        coFailureInfo: coFailureInfo ? {
+          isPartOfGroup: coFailureInfo.isPartOfGroup,
+          groupSize: coFailureInfo.groupSize,
+          sharedStep: coFailureInfo.sharedStep,
+          sharedErrorPattern: coFailureInfo.sharedErrorPattern,
+          otherTestsInGroup: coFailureInfo.otherTestsInGroup,
+          groupConfidence: coFailureInfo.groupConfidence,
+        } : undefined,
+      };
+
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke('analyze-failures', {
+          body: {
+            failures: [singleForAI],
+            flakyTests: flakyTestsForAI,
+            mode: reportMode,
+            regressionBucket: selectedRegressionBucket,
+          },
         });
-        setFailures(learningResults);
-      } else {
-        // In production mode: merge both classified and AI-analyzed results
-        setFailures([...classifiedResults, ...aiAnalyzedResults]);
+
+        if (fnError) throw fnError;
+
+        const results = (data?.results ?? []) as Array<{ failureId: number; analysis: AIAnalysisResult }>;
+        const rawAnalysis = results[0]?.analysis;
+
+        if (rawAnalysis) {
+          const analysis = applyPostProcessing(failure, rawAnalysis, flakyKB);
+          setFailures(prev =>
+            prev.map(f =>
+              f.originalIndex === failure.originalIndex
+                ? { ...f, analysis, isAnalyzing: false, error: undefined }
+                : f
+            )
+          );
+        } else {
+          throw new Error('No analysis in response');
+        }
+      } catch (e) {
+        console.warn(`Analysis failed for row ${failure.originalIndex + 1} (${failure.testName}):`, e);
+        setFailures(prev =>
+          prev.map(f =>
+            f.originalIndex === failure.originalIndex
+              ? { ...f, isAnalyzing: false, error: e instanceof Error ? e.message : 'Analysis failed' }
+              : f
+          )
+        );
+        // Don't set global error so other rows continue
       }
-    } catch (e) {
-      console.error('Analysis failed:', e);
-      setError(e instanceof Error ? e.message : 'Analysis failed');
-      // On error, still keep the classified results
-      setFailures(prev => prev.map(f => ({ 
-        ...f, 
-        isAnalyzing: false, 
-        error: f.preClassified?.failureType ? undefined : 'Analysis failed',
-        analysis: f.preClassified?.failureType ? convertPreClassifiedToAnalysis(f.preClassified!) || undefined : f.analysis
-      })));
-    } finally {
-      setIsAnalyzing(false);
+
+      setAnalysisProgress(prev => (prev ? { ...prev, completed: prev.completed + 1 } : null));
     }
+
+    setAnalysisProgress(null);
+    setIsAnalyzing(false);
   }, [failures, flakyKB, reportMode, regressionBuckets]);
 
   // Clear all failures
@@ -347,6 +337,7 @@ export function useChecklist() {
     stats: getStats(),
     isLoading,
     isAnalyzing,
+    analysisProgress,
     error,
     isPreClassifiedMode,
     preClassifiedStats,
