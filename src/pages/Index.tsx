@@ -121,13 +121,6 @@ const Index = () => {
   const [filterReviewStatus, setFilterReviewStatus] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
   const classifications: Classification[] = ['Potential bug', 'Likely Flaky', 'Environment / Infra Issue', 'Expected Change', 'Investigate'];
 
-  // Initialize feedback when analysis completes
-  useEffect(() => {
-    const analyzedFailures = sortedFailures.filter(f => f.analysis);
-    if (analyzedFailures.length > 0 && failuresWithFeedback.length === 0) {
-      initializeFeedback(analyzedFailures);
-    }
-  }, [sortedFailures, initializeFeedback, failuresWithFeedback.length]);
   const handleFileUpload = (file: File) => {
     const reader = new FileReader();
     reader.onload = e => uploadFailures(e.target?.result as string);
@@ -180,7 +173,8 @@ const Index = () => {
     P2: 'bg-p2',
     P3: 'bg-p3'
   };
-  const hasAnalyzedResults = failuresWithFeedback.length > 0;
+  const hasAnalyzedResults = failures.length > 0 && (failuresWithFeedback.length > 0 || isAnalyzing);
+  const analyzedCount = failuresWithFeedback.length;
   const reviewedCount = failuresWithFeedback.filter(f => f.isReviewed).length;
 
   // Recommendation stats (Investigate vs Skip)
@@ -194,15 +188,18 @@ const Index = () => {
     };
   }, [sortedFailures]);
 
-  // Filter failures based on search and filters
+  // Filter: include analyzing rows; for analyzed rows apply search/classification/review
   const filteredFailures = useMemo(() => {
-    return failuresWithFeedback.filter(f => {
-      const matchesSearch = !searchQuery || f.testName.toLowerCase().includes(searchQuery.toLowerCase()) || f.errorMessage?.toLowerCase().includes(searchQuery.toLowerCase());
+    return sortedFailures.filter(f => {
+      if (!f.analysis) return true;
+      const withFb = failuresWithFeedback.find(x => x.id === f.id);
+      if (!withFb) return true;
+      const matchesSearch = !searchQuery || f.testName.toLowerCase().includes(searchQuery.toLowerCase()) || (f.errorMessage?.toLowerCase() ?? '').includes(searchQuery.toLowerCase());
       const matchesClassification = filterClassification === 'all' || f.analysis?.classification === filterClassification;
-      const matchesStatus = filterReviewStatus === 'all' || filterReviewStatus === 'reviewed' && f.isReviewed || filterReviewStatus === 'unreviewed' && !f.isReviewed;
+      const matchesStatus = filterReviewStatus === 'all' || (filterReviewStatus === 'reviewed' && withFb.isReviewed) || (filterReviewStatus === 'unreviewed' && !withFb.isReviewed);
       return matchesSearch && matchesClassification && matchesStatus;
     });
-  }, [failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus]);
+  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus]);
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Session Restore Banner */}
@@ -499,8 +496,8 @@ const Index = () => {
               )}
             </div>
 
-            {/* Review Progress Bar */}
-            {hasAnalyzedResults && <ReviewProgress reviewed={reviewedCount} total={failuresWithFeedback.length} onComplete={handleCompleteReview} />}
+            {/* Review Progress Bar: X = reviewed (user action), Y = analyzed (grows as AI completes) */}
+            {hasAnalyzedResults && <ReviewProgress reviewed={reviewedCount} total={analyzedCount} onComplete={handleCompleteReview} />}
 
             {/* Search and Filters */}
             {hasAnalyzedResults && <Card className="border-border/50 bg-card/50">
@@ -551,14 +548,28 @@ const Index = () => {
                   
                   {/* Results count */}
                   <div className="mt-3 text-xs text-muted-foreground">
-                    Showing {filteredFailures.length} of {failuresWithFeedback.length} results
+                    Showing {filteredFailures.length} of {sortedFailures.length} rows
                   </div>
                 </CardContent>
               </Card>}
 
-            {/* Results - Row-level card selection based on pre-classification */}
-            <div className="space-y-3">
-              {hasAnalyzedResults ? filteredFailures.map(f => f.preClassified?.failureType ? <LearningModeCard key={f.id} failure={f} classColors={classColors} priorityColors={priorityColors} /> : <ProductionModeCard key={f.id} failure={f} onFeedback={handleFeedback} classColors={classColors} priorityColors={priorityColors} />) : sortedFailures.map(f => <Card key={f.id} className="animate-fade-in border-border/50 hover:border-border transition-colors">
+            {/* Results - scrollable list; Flex with gap-4 so cards don't shrink or hide */}
+            <div className="overflow-y-auto min-h-0 flex flex-col gap-4">
+              {filteredFailures.map(f => {
+                if (f.analysis) {
+                  const withFb = failuresWithFeedback.find(x => x.id === f.id) || f;
+                  return (
+                    <div key={f.id} className="flex-shrink-0">
+                      {withFb.preClassified?.failureType ? (
+                        <LearningModeCard failure={withFb} classColors={classColors} priorityColors={priorityColors} />
+                      ) : (
+                        <ProductionModeCard failure={withFb} onFeedback={handleFeedback} classColors={classColors} priorityColors={priorityColors} />
+                      )}
+                    </div>
+                  );
+                }
+                return (
+                  <Card key={f.id} className="flex-shrink-0 animate-fade-in border-border/50 hover:border-border transition-colors">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
@@ -568,7 +579,9 @@ const Index = () => {
                         {f.isAnalyzing && <div className="animate-pulse text-muted-foreground text-sm">Analyzing...</div>}
                       </div>
                     </CardContent>
-                  </Card>)}
+                  </Card>
+                );
+              })}
             </div>
           </>}
       </div>

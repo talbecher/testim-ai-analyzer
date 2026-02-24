@@ -202,13 +202,13 @@ export function useChecklist() {
 
     setAnalysisProgress({ completed: 0, total: needsAnalysis.length });
 
-    // Process each row separately to avoid EarlyDrop timeout; append results incrementally
-    for (let i = 0; i < needsAnalysis.length; i++) {
-      const failure = needsAnalysis[i];
+    const BATCH_SIZE = 3;
+
+    const buildFailureForAI = (failure: AnalyzedFailure): FailureForAI => {
       const patternResult = detectErrorPattern(failure.errorMessage);
       const assertionDetails = extractAssertionDetails(failure.errorMessage);
       const coFailureInfo = getCoFailureInfo(failure, needsAnalysis, failureToGroup);
-      const singleForAI: FailureForAI = {
+      return {
         testName: failure.testName,
         testNameNormalized: failure.testNameNormalized,
         folder: failure.folder,
@@ -233,47 +233,63 @@ export function useChecklist() {
           groupConfidence: coFailureInfo.groupConfidence,
         } : undefined,
       };
+    };
 
-      try {
-        const { data, error: fnError } = await supabase.functions.invoke('analyze-failures', {
-          body: {
-            failures: [singleForAI],
-            flakyTests: flakyTestsForAI,
-            mode: reportMode,
-            regressionBucket: selectedRegressionBucket,
-          },
-        });
+    for (let start = 0; start < needsAnalysis.length; start += BATCH_SIZE) {
+      const batch = needsAnalysis.slice(start, start + BATCH_SIZE);
+      const batchPayloads = batch.map(f => ({ failure: f, forAI: buildFailureForAI(f) }));
 
-        if (fnError) throw fnError;
+      const settled = await Promise.allSettled(
+        batchPayloads.map(({ forAI }) =>
+          supabase.functions.invoke('analyze-failures', {
+            body: {
+              failures: [forAI],
+              flakyTests: flakyTestsForAI,
+              mode: reportMode,
+              regressionBucket: selectedRegressionBucket,
+            },
+          })
+        )
+      );
 
-        const results = (data?.results ?? []) as Array<{ failureId: number; analysis: AIAnalysisResult }>;
-        const rawAnalysis = results[0]?.analysis;
-
-        if (rawAnalysis) {
-          const analysis = applyPostProcessing(failure, rawAnalysis, flakyKB);
+      for (let j = 0; j < batch.length; j++) {
+        const failure = batch[j];
+        const result = settled[j];
+        if (result.status === 'fulfilled' && !result.value.error) {
+          const results = (result.value.data?.results ?? []) as Array<{ failureId: number; analysis: AIAnalysisResult }>;
+          const rawAnalysis = results[0]?.analysis;
+          if (rawAnalysis) {
+            const analysis = applyPostProcessing(failure, rawAnalysis, flakyKB);
+            setFailures(prev =>
+              prev.map(f =>
+                f.originalIndex === failure.originalIndex
+                  ? { ...f, analysis, isAnalyzing: false, error: undefined }
+                  : f
+              )
+            );
+          } else {
+            setFailures(prev =>
+              prev.map(f =>
+                f.originalIndex === failure.originalIndex
+                  ? { ...f, isAnalyzing: false, error: 'No analysis in response' }
+                  : f
+              )
+            );
+          }
+        } else {
+          const err = result.status === 'rejected' ? result.reason : result.value?.error;
+          console.warn(`Analysis failed for row ${failure.originalIndex + 1} (${failure.testName}):`, err);
           setFailures(prev =>
             prev.map(f =>
               f.originalIndex === failure.originalIndex
-                ? { ...f, analysis, isAnalyzing: false, error: undefined }
+                ? { ...f, isAnalyzing: false, error: err instanceof Error ? err.message : 'Analysis failed' }
                 : f
             )
           );
-        } else {
-          throw new Error('No analysis in response');
         }
-      } catch (e) {
-        console.warn(`Analysis failed for row ${failure.originalIndex + 1} (${failure.testName}):`, e);
-        setFailures(prev =>
-          prev.map(f =>
-            f.originalIndex === failure.originalIndex
-              ? { ...f, isAnalyzing: false, error: e instanceof Error ? e.message : 'Analysis failed' }
-              : f
-          )
-        );
-        // Don't set global error so other rows continue
       }
 
-      setAnalysisProgress(prev => (prev ? { ...prev, completed: prev.completed + 1 } : null));
+      setAnalysisProgress(prev => (prev ? { ...prev, completed: Math.min(prev.completed + batch.length, prev.total) } : null));
     }
 
     setAnalysisProgress(null);

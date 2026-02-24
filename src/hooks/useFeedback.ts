@@ -76,7 +76,37 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
     return loadFeedbackSession() !== null;
   }, [loadFeedbackSession]);
 
-  // Initialize failures with feedback state, auto-populating pre-classified entries
+  // Sync failures with analysis into failuresWithFeedback so the list grows as AI completes (dynamic Review Progress denominator)
+  useEffect(() => {
+    const withAnalysis = failures.filter(f => f.analysis);
+    if (withAnalysis.length === 0) {
+      setFailuresWithFeedback([]);
+      return;
+    }
+    setFailuresWithFeedback(prev =>
+      withAnalysis.map(f => {
+        const existing = prev.find(x => x.id === f.id);
+        if (existing) return { ...f, isReviewed: existing.isReviewed, feedback: existing.feedback };
+        if (f.preClassified?.failureType) {
+          const mapped = convertPreClassifiedToFeedback(f.preClassified);
+          const autoFeedback: UserFeedback = {
+            wasCorrect: aiRecommendedInvestigate(f.analysis) === requiredManualWork(f.preClassified),
+            userClassification: mapped.classification || f.analysis?.classification,
+            userPriority: mapped.priority || f.analysis?.priority,
+            userAction: mapped.suggestedAction || f.analysis?.suggestedAction,
+            passedLocally: mapped.passedLocally,
+            passedLocallyReason: mapped.passedLocallyReason,
+            passedLocallyNotes: mapped.passedLocallyNotes,
+            bugLink: mapped.bugLink,
+          };
+          return { ...f, isReviewed: true, feedback: autoFeedback };
+        }
+        return { ...f, isReviewed: false, feedback: undefined };
+      })
+    );
+  }, [failures]);
+
+  // Initialize failures with feedback state, auto-populating pre-classified entries (legacy / when restoring session)
   const initializeFeedback = useCallback((analyzedFailures: AnalyzedFailure[]) => {
     setFailuresWithFeedback(
       analyzedFailures
