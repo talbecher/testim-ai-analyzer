@@ -599,7 +599,29 @@ const Index = () => {
                       <ToggleGroupItem value="reviewed" className="text-xs px-3">Reviewed</ToggleGroupItem>
                       <ToggleGroupItem value="unreviewed" className="text-xs px-3">Unreviewed</ToggleGroupItem>
                     </ToggleGroup>
+
+                    {/* Bulk Select Toggle */}
+                    <Button
+                      size="sm"
+                      variant={bulkMode ? "default" : "outline"}
+                      onClick={() => {
+                        setBulkMode(prev => !prev);
+                        if (bulkMode) setSelectedIds(new Set());
+                      }}
+                    >
+                      <ListChecks className="h-4 w-4 mr-1" />
+                      {bulkMode ? 'Exit Select' : 'Select Multiple'}
+                    </Button>
                   </div>
+
+                  {/* Bulk select actions row */}
+                  {bulkMode && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <Button size="sm" variant="ghost" onClick={handleSelectAll}>Select All</Button>
+                      <Button size="sm" variant="ghost" onClick={handleDeselectAll}>Deselect All</Button>
+                      <span className="text-xs text-muted-foreground ml-2">{selectedIds.size} selected</span>
+                    </div>
+                  )}
                   
                   {/* Results count */}
                   <div className="mt-3 text-xs text-muted-foreground">
@@ -652,6 +674,15 @@ const Index = () => {
 
       {/* Feedback Summary Dialog */}
       <FeedbackSummaryDialog open={showSummaryDialog} onOpenChange={setShowSummaryDialog} summary={summary} onSave={handleSaveReport} onDiscard={handleDiscardReport} isSaving={isSaving} />
+
+      {/* Bulk Action Panel */}
+      <BulkActionPanel
+        selectedCount={selectedIds.size}
+        selectedFailures={failuresWithFeedback.filter(f => selectedIds.has(f.id))}
+        onBulkFeedback={handleBulkAction}
+        onConfirmAI={handleConfirmAIBulk}
+        onClearSelection={() => { setSelectedIds(new Set()); setBulkMode(false); }}
+      />
     </div>;
 };
 export default Index;
