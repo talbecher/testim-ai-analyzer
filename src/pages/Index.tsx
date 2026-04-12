@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useChecklist } from '@/hooks/useChecklist';
 import { useFeedback } from '@/hooks/useFeedback';
@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug, Rocket, Info, RotateCcw, X } from 'lucide-react';
+import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug, Rocket, Info, RotateCcw, X, ListChecks } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -23,8 +23,9 @@ import { ProductionModeCard } from '@/components/ProductionModeCard';
 import { Progress } from '@/components/ui/progress';
 import { ReviewProgress } from '@/components/ReviewProgress';
 import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
+import { BulkActionPanel } from '@/components/BulkActionPanel';
 import { toast } from 'sonner';
-import { RunDetails } from '@/types/feedback';
+import { RunDetails, UserFeedback } from '@/types/feedback';
 import { Classification, SortOption } from '@/types/testim';
 import { useRegressionBuckets } from '@/hooks/useRegressionBuckets';
 
@@ -63,6 +64,7 @@ const Index = () => {
     saveError,
     initializeFeedback,
     handleFeedback,
+    handleBulkFeedback,
     saveReport,
     resetFeedback,
     restoreFeedbackSession,
@@ -72,12 +74,65 @@ const Index = () => {
   
   const [dragOver, setDragOver] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [runDetails, setRunDetails] = useState<RunDetails>({
     name: '',
     date: new Date(),
     notes: '',
     isFeatureRollout: false
   });
+
+  // Escape key exits bulk mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && bulkMode) {
+        setBulkMode(false);
+        setSelectedIds(new Set());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [bulkMode]);
+
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    const analyzedIds = sortedFailures.filter(f => f.analysis).map(f => f.id);
+    setSelectedIds(new Set(analyzedIds));
+  }, [sortedFailures]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleConfirmAIBulk = useCallback(() => {
+    const selected = failuresWithFeedback.filter(f => selectedIds.has(f.id));
+    selected.forEach(f => {
+      const feedback: UserFeedback = {
+        wasCorrect: true,
+        userClassification: f.analysis?.classification,
+        userPriority: f.analysis?.priority,
+        userAction: f.analysis?.suggestedAction,
+      };
+      handleFeedback(f.id, feedback);
+    });
+    setSelectedIds(new Set());
+    setBulkMode(false);
+    toast.success(`Confirmed AI for ${selected.length} items`);
+  }, [selectedIds, failuresWithFeedback, handleFeedback]);
+
+  const handleBulkAction = useCallback((ids: string[], feedback: UserFeedback) => {
+    handleBulkFeedback(ids, feedback);
+    toast.success(`Applied action to ${ids.length} items`);
+  }, [handleBulkFeedback]);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -544,7 +599,29 @@ const Index = () => {
                       <ToggleGroupItem value="reviewed" className="text-xs px-3">Reviewed</ToggleGroupItem>
                       <ToggleGroupItem value="unreviewed" className="text-xs px-3">Unreviewed</ToggleGroupItem>
                     </ToggleGroup>
+
+                    {/* Bulk Select Toggle */}
+                    <Button
+                      size="sm"
+                      variant={bulkMode ? "default" : "outline"}
+                      onClick={() => {
+                        setBulkMode(prev => !prev);
+                        if (bulkMode) setSelectedIds(new Set());
+                      }}
+                    >
+                      <ListChecks className="h-4 w-4 mr-1" />
+                      {bulkMode ? 'Exit Select' : 'Select Multiple'}
+                    </Button>
                   </div>
+
+                  {/* Bulk select actions row */}
+                  {bulkMode && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <Button size="sm" variant="ghost" onClick={handleSelectAll}>Select All</Button>
+                      <Button size="sm" variant="ghost" onClick={handleDeselectAll}>Deselect All</Button>
+                      <span className="text-xs text-muted-foreground ml-2">{selectedIds.size} selected</span>
+                    </div>
+                  )}
                   
                   {/* Results count */}
                   <div className="mt-3 text-xs text-muted-foreground">
@@ -557,14 +634,23 @@ const Index = () => {
             <div className="overflow-y-auto min-h-0 flex flex-col gap-4">
               {filteredFailures.map(f => {
                 if (f.analysis) {
-                  const withFb = failuresWithFeedback.find(x => x.id === f.id) || f;
+                  const withFb = failuresWithFeedback.find(x => x.id === f.id) || { ...f, isReviewed: false as const };
                   return (
-                    <div key={f.id} className="flex-shrink-0">
-                      {withFb.preClassified?.failureType ? (
-                        <LearningModeCard failure={withFb} classColors={classColors} priorityColors={priorityColors} />
-                      ) : (
-                        <ProductionModeCard failure={withFb} onFeedback={handleFeedback} classColors={classColors} priorityColors={priorityColors} />
+                    <div key={f.id} className="flex-shrink-0 flex items-start gap-3">
+                      {bulkMode && (
+                        <Checkbox
+                          checked={selectedIds.has(f.id)}
+                          onCheckedChange={() => toggleSelection(f.id)}
+                          className="mt-5"
+                        />
                       )}
+                      <div className="flex-1">
+                        {withFb.preClassified?.failureType ? (
+                          <LearningModeCard failure={withFb} classColors={classColors} priorityColors={priorityColors} />
+                        ) : (
+                          <ProductionModeCard failure={withFb} onFeedback={handleFeedback} classColors={classColors} priorityColors={priorityColors} />
+                        )}
+                      </div>
                     </div>
                   );
                 }
@@ -588,6 +674,15 @@ const Index = () => {
 
       {/* Feedback Summary Dialog */}
       <FeedbackSummaryDialog open={showSummaryDialog} onOpenChange={setShowSummaryDialog} summary={summary} onSave={handleSaveReport} onDiscard={handleDiscardReport} isSaving={isSaving} />
+
+      {/* Bulk Action Panel */}
+      <BulkActionPanel
+        selectedCount={selectedIds.size}
+        selectedFailures={failuresWithFeedback.filter(f => selectedIds.has(f.id))}
+        onBulkFeedback={handleBulkAction}
+        onConfirmAI={handleConfirmAIBulk}
+        onClearSelection={() => { setSelectedIds(new Set()); setBulkMode(false); }}
+      />
     </div>;
 };
 export default Index;

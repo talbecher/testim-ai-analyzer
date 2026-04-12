@@ -155,6 +155,14 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
     }));
   }, []);
 
+  // Handle bulk feedback – atomic single-pass update
+  const handleBulkFeedback = useCallback((ids: string[], feedback: UserFeedback) => {
+    const idSet = new Set(ids);
+    setFailuresWithFeedback(prev => prev.map(f =>
+      idSet.has(f.id) ? { ...f, feedback, isReviewed: true } : f
+    ));
+  }, []);
+
   // Calculate summary statistics
   const summary = useMemo((): FeedbackSummary => {
     const reviewed = failuresWithFeedback.filter(f => f.isReviewed);
@@ -288,6 +296,7 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
     saveError,
     initializeFeedback,
     handleFeedback,
+    handleBulkFeedback,
     saveReport,
     resetFeedback,
     restoreFeedbackSession,
