@@ -296,6 +296,7 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
     saveError,
     initializeFeedback,
     handleFeedback,
+    handleBulkFeedback,
     saveReport,
     resetFeedback,
     restoreFeedbackSession,

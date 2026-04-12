@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useChecklist } from '@/hooks/useChecklist';
 import { useFeedback } from '@/hooks/useFeedback';
@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug, Rocket, Info, RotateCcw, X } from 'lucide-react';
+import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug, Rocket, Info, RotateCcw, X, ListChecks } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -23,8 +23,9 @@ import { ProductionModeCard } from '@/components/ProductionModeCard';
 import { Progress } from '@/components/ui/progress';
 import { ReviewProgress } from '@/components/ReviewProgress';
 import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
+import { BulkActionPanel } from '@/components/BulkActionPanel';
 import { toast } from 'sonner';
-import { RunDetails } from '@/types/feedback';
+import { RunDetails, UserFeedback } from '@/types/feedback';
 import { Classification, SortOption } from '@/types/testim';
 import { useRegressionBuckets } from '@/hooks/useRegressionBuckets';
 
