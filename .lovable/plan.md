@@ -1,47 +1,50 @@
 
 
-# תיקון באג ב-Boost AI Learning
+# Bulk Selection & Actions + Build Error Fix
 
-## הבעיה
+## תיקונים לפי ההערות שלך
 
-שתי שגיאות ב-edge function `aggregate-learning`:
+1. **אטומיות** – `handleBulkFeedback` יעדכן את ה-state פעם אחת עם `map` על כל ה-array, לא לופ של `handleFeedback`
+2. **ללא `showBulkActions` state** – נגזור מ-`selectedIds.size > 0` + `bulkMode` toggle
+3. **"Confirm AI ✓"** – יחיל ישירות ללא dialog (ה-AI כבר הציע סיבה)
+4. **Escape** + לחיצה חוזרת על "Select Multiple" – שניהם יוצאים ממצב בחירה
+5. **אנימציה** – כשכרטיסים עוברים ל-reviewed עם פילטר unreviewed, הסרה חלקה
 
-1. **שגיאת Database**: הקוד מנסה להכניס רשומות עם `pattern_type: 'confirmed'` אבל הטבלה מאפשרת רק: `correction`, `passed_locally`, `manual_fix`, `notes_analysis`.
-2. **API Key חסר**: הקריאה ל-AI Gateway לא שולחת את ה-Authorization header.
+## שינויים
 
-## תיקונים
-
-### קובץ: `supabase/functions/aggregate-learning/index.ts`
-
-**תיקון 1 - הוספת Authorization header** (שורות 105-116):
-
+### 1. Build Error Fix – `src/pages/Index.tsx` (שורה 560)
 ```typescript
-const response = await fetch(gatewayUrl, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY')}`,  // <-- חסר
-  },
-  body: JSON.stringify({ ... })
-});
+const withFb = failuresWithFeedback.find(x => x.id === f.id) || { ...f, isReviewed: false };
 ```
 
-**תיקון 2 - טיפול ב-confirmed patterns** (שורות 322-341):
+### 2. Bulk Selection State – `src/pages/Index.tsx`
+- `bulkMode: boolean` – toggle למצב בחירה
+- `selectedIds: Set<string>` – פריטים מסומנים
+- Escape listener לביטול מצב בחירה
+- Checkbox ליד כל כרטיס במצב בחירה
+- "Select All" / "Deselect All" בסרגל פילטרים
 
-שתי אפשרויות:
-- **אפשרות א'**: להוסיף `confirmed` ל-check constraint בטבלה (migration)
-- **אפשרות ב'** (מומלצת): לסנן את ה-confirmed patterns לפני INSERT, כי הם פחות חשובים ללמידה
+### 3. `handleBulkFeedback` – `src/hooks/useFeedback.ts`
+עדכון אטומי אחד:
+```typescript
+const handleBulkFeedback = useCallback((ids: string[], feedback: UserFeedback) => {
+  setFailuresWithFeedback(prev => prev.map(f => 
+    ids.includes(f.id) ? { ...f, feedback, isReviewed: true } : f
+  ));
+}, []);
+```
 
-הגישה המומלצת: נוסיף migration שמרחיבה את ה-check constraint לכלול `confirmed`, כי יש ערך בשמירת תבניות מאושרות.
+### 4. `BulkActionPanel.tsx` – קומפוננטה חדשה
+- Sticky bar בתחתית: "N selected" + כפתורים
+- **Confirm AI ✓** – ישירות, ללא dialog
+- **Passed Locally / Bug / Manual Fix** – dialog קטן לבחירת סיבה/קטגוריה
+- כפתור "Cancel Selection" לביטול
 
-### שינויים
+## קבצים
 
 | קובץ | שינוי |
 |------|-------|
-| `supabase/functions/aggregate-learning/index.ts` | הוספת Authorization header לקריאת AI |
-| Database migration | הוספת `confirmed` ל-pattern_type check constraint |
-
-## תוצאה צפויה
-
-לחיצה על "Boost Now" תעבוד ללא שגיאות ותחזיר סטטיסטיקות מלאות.
+| `src/pages/Index.tsx` | Fix build error + bulk mode state + checkboxes + Escape handler |
+| `src/hooks/useFeedback.ts` | הוספת `handleBulkFeedback` |
+| `src/components/BulkActionPanel.tsx` | קומפוננטה חדשה |
 
