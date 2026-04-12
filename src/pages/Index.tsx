@@ -105,9 +105,9 @@ const Index = () => {
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    const analyzedIds = filteredFailures.filter(f => f.analysis).map(f => f.id);
+    const analyzedIds = sortedFailures.filter(f => f.analysis).map(f => f.id);
     setSelectedIds(new Set(analyzedIds));
-  }, [filteredFailures]);
+  }, [sortedFailures]);
 
   const handleDeselectAll = useCallback(() => {
     setSelectedIds(new Set());
@@ -612,14 +612,23 @@ const Index = () => {
             <div className="overflow-y-auto min-h-0 flex flex-col gap-4">
               {filteredFailures.map(f => {
                 if (f.analysis) {
-                  const withFb = failuresWithFeedback.find(x => x.id === f.id) || f;
+                  const withFb = failuresWithFeedback.find(x => x.id === f.id) || { ...f, isReviewed: false as const };
                   return (
-                    <div key={f.id} className="flex-shrink-0">
-                      {withFb.preClassified?.failureType ? (
-                        <LearningModeCard failure={withFb} classColors={classColors} priorityColors={priorityColors} />
-                      ) : (
-                        <ProductionModeCard failure={withFb} onFeedback={handleFeedback} classColors={classColors} priorityColors={priorityColors} />
+                    <div key={f.id} className="flex-shrink-0 flex items-start gap-3">
+                      {bulkMode && (
+                        <Checkbox
+                          checked={selectedIds.has(f.id)}
+                          onCheckedChange={() => toggleSelection(f.id)}
+                          className="mt-5"
+                        />
                       )}
+                      <div className="flex-1">
+                        {withFb.preClassified?.failureType ? (
+                          <LearningModeCard failure={withFb} classColors={classColors} priorityColors={priorityColors} />
+                        ) : (
+                          <ProductionModeCard failure={withFb} onFeedback={handleFeedback} classColors={classColors} priorityColors={priorityColors} />
+                        )}
+                      </div>
                     </div>
                   );
                 }
