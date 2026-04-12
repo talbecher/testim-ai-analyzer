@@ -91,7 +91,7 @@ export function BulkActionPanel({
         userClassification: 'Potential bug',
         bugCategory: selectedValue,
         bugLink: bugLink || undefined,
-        notes: notes || undefined,
+        userNotes: notes || undefined,
       };
       onBulkFeedback(ids, feedback);
     } else if (flowType === 'manual-fix') {
