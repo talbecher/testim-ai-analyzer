@@ -64,6 +64,7 @@ const Index = () => {
     saveError,
     initializeFeedback,
     handleFeedback,
+    handleBulkFeedback,
     saveReport,
     resetFeedback,
     restoreFeedbackSession,
