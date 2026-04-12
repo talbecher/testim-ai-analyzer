@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle, X, Bug, Wrench, PlayCircle } from 'lucide-react';
+import { CheckCircle, X, Bug, PlayCircle, Wrench, ListChecks } from 'lucide-react';
 import { UserFeedback } from '@/types/feedback';
 import { AnalyzedFailureWithFeedback } from '@/types/feedback';
 import { useBugCategories } from '@/hooks/useBugCategories';
 
-type BulkAction = 'passed-locally' | 'bug' | 'manual-fix' | null;
+type DialogStep = 'question' | 'category';
+type FlowType = 'bug' | 'passed-locally' | 'manual-fix';
 
 interface BulkActionPanelProps {
   selectedCount: number;
@@ -19,22 +20,6 @@ interface BulkActionPanelProps {
   onClearSelection: () => void;
 }
 
-const passedLocallyReasons = [
-  'Flaky test – passes on retry',
-  'Environment issue – works locally',
-  'Timing issue – test too fast',
-  'Data dependency – stale test data',
-  'Other',
-];
-
-const manualFixTypes = [
-  'Test update needed',
-  'Shared step update',
-  'Test reassignment',
-  'Environment fix',
-  'Other',
-];
-
 export function BulkActionPanel({
   selectedCount,
   selectedFailures,
@@ -42,28 +27,57 @@ export function BulkActionPanel({
   onConfirmAI,
   onClearSelection,
 }: BulkActionPanelProps) {
-  const [activeAction, setActiveAction] = useState<BulkAction>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [step, setStep] = useState<DialogStep>('question');
+  const [flowType, setFlowType] = useState<FlowType | null>(null);
   const [selectedValue, setSelectedValue] = useState('');
   const [notes, setNotes] = useState('');
   const [bugLink, setBugLink] = useState('');
-  const { categories, fetchCategoriesByType } = useBugCategories();
-  const [bugCategories, setBugCategories] = useState<{ id: string; name: string }[]>([]);
+  const [cachedCategories, setCachedCategories] = useState<Record<string, { id: string; name: string }[]>>({});
+  const [loadingCategories, setLoadingCategories] = useState(false);
 
-  const openAction = async (action: BulkAction) => {
-    setActiveAction(action);
+  const { fetchCategoriesByType } = useBugCategories();
+
+  const getCategoryType = (flow: FlowType) => {
+    if (flow === 'bug') return 'bug' as const;
+    if (flow === 'passed-locally') return 'passed_locally' as const;
+    return 'manual_fix' as const;
+  };
+
+  const loadCategories = useCallback(async (flow: FlowType) => {
+    const type = getCategoryType(flow);
+    if (cachedCategories[type]) return;
+    setLoadingCategories(true);
+    try {
+      const cats = await fetchCategoriesByType(type);
+      setCachedCategories(prev => ({ ...prev, [type]: cats || [] }));
+    } catch (e) {
+      console.error('Failed to load categories:', e);
+    }
+    setLoadingCategories(false);
+  }, [cachedCategories, fetchCategoriesByType]);
+
+  const openDialog = () => {
+    setDialogOpen(true);
+    setStep('question');
+    setFlowType(null);
     setSelectedValue('');
     setNotes('');
     setBugLink('');
-    if (action === 'bug') {
-      const cats = await fetchCategoriesByType('bug');
-      setBugCategories(cats || []);
-    }
   };
+
+  const handleFlowChoice = async (flow: FlowType) => {
+    setFlowType(flow);
+    setStep('category');
+    await loadCategories(flow);
+  };
+
+  const currentCategories = flowType ? cachedCategories[getCategoryType(flowType)] || [] : [];
 
   const handleConfirm = () => {
     const ids = selectedFailures.map(f => f.id);
 
-    if (activeAction === 'passed-locally') {
+    if (flowType === 'passed-locally') {
       const feedback: UserFeedback = {
         wasCorrect: true,
         passedLocally: true,
@@ -71,15 +85,16 @@ export function BulkActionPanel({
         passedLocallyNotes: notes || undefined,
       };
       onBulkFeedback(ids, feedback);
-    } else if (activeAction === 'bug') {
+    } else if (flowType === 'bug') {
       const feedback: UserFeedback = {
         wasCorrect: false,
         userClassification: 'Potential bug',
         bugCategory: selectedValue,
         bugLink: bugLink || undefined,
+        notes: notes || undefined,
       };
       onBulkFeedback(ids, feedback);
-    } else if (activeAction === 'manual-fix') {
+    } else if (flowType === 'manual-fix') {
       const feedback: UserFeedback = {
         wasCorrect: false,
         requiredManualFix: true,
@@ -89,11 +104,17 @@ export function BulkActionPanel({
       onBulkFeedback(ids, feedback);
     }
 
-    setActiveAction(null);
+    setDialogOpen(false);
     onClearSelection();
   };
 
   if (selectedCount === 0) return null;
+
+  const stepTitle = step === 'question'
+    ? 'Classify Selected Items'
+    : flowType === 'bug' ? 'Select Bug Category'
+    : flowType === 'passed-locally' ? 'Select Reason'
+    : 'Select Fix Type';
 
   return (
     <>
@@ -115,31 +136,19 @@ export function BulkActionPanel({
               <CheckCircle className="h-4 w-4 mr-1" />
               Confirm AI ✓
             </Button>
-            <Button size="sm" variant="outline" onClick={() => openAction('passed-locally')}>
-              <PlayCircle className="h-4 w-4 mr-1" />
-              Passed Locally
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => openAction('bug')} className="text-bug border-bug/30">
-              <Bug className="h-4 w-4 mr-1" />
-              Bug
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => openAction('manual-fix')}>
-              <Wrench className="h-4 w-4 mr-1" />
-              Manual Fix
+            <Button size="sm" variant="outline" onClick={openDialog}>
+              <ListChecks className="h-4 w-4 mr-1" />
+              Classify...
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Action Dialog */}
-      <Dialog open={activeAction !== null} onOpenChange={(open) => !open && setActiveAction(null)}>
+      {/* Multi-step Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => !open && setDialogOpen(false)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>
-              {activeAction === 'passed-locally' && 'Passed Locally'}
-              {activeAction === 'bug' && 'Report Bug'}
-              {activeAction === 'manual-fix' && 'Manual Fix Required'}
-            </DialogTitle>
+            <DialogTitle>{stepTitle}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -147,67 +156,74 @@ export function BulkActionPanel({
               Applying to <span className="font-medium text-foreground">{selectedCount}</span> selected items
             </p>
 
-            {activeAction === 'passed-locally' && (
-              <Select value={selectedValue} onValueChange={setSelectedValue}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select reason..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {passedLocallyReasons.map(r => (
-                    <SelectItem key={r} value={r}>{r}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {step === 'question' && (
+              <div className="flex flex-col gap-2">
+                <Button variant="outline" className="justify-start text-bug border-bug/30" onClick={() => handleFlowChoice('bug')}>
+                  <Bug className="h-4 w-4 mr-2" />
+                  Yes, it was a bug
+                </Button>
+                <Button variant="outline" className="justify-start" onClick={() => handleFlowChoice('passed-locally')}>
+                  <PlayCircle className="h-4 w-4 mr-2" />
+                  No, passed locally
+                </Button>
+                <Button variant="outline" className="justify-start" onClick={() => handleFlowChoice('manual-fix')}>
+                  <Wrench className="h-4 w-4 mr-2" />
+                  Required manual fix
+                </Button>
+              </div>
             )}
 
-            {activeAction === 'bug' && (
+            {step === 'category' && (
               <>
-                <Select value={selectedValue} onValueChange={setSelectedValue}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select bug category..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {bugCategories.map(c => (
-                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  placeholder="Bug link (optional)"
-                  value={bugLink}
-                  onChange={e => setBugLink(e.target.value)}
+                {loadingCategories ? (
+                  <p className="text-sm text-muted-foreground">Loading categories...</p>
+                ) : (
+                  <Select value={selectedValue} onValueChange={setSelectedValue}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={
+                        flowType === 'bug' ? 'Select bug category...'
+                        : flowType === 'passed-locally' ? 'Select reason...'
+                        : 'Select fix type...'
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currentCategories.map(c => (
+                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {flowType === 'bug' && (
+                  <Input
+                    placeholder="Bug link (optional)"
+                    value={bugLink}
+                    onChange={e => setBugLink(e.target.value)}
+                  />
+                )}
+
+                <Textarea
+                  placeholder="Notes (optional)"
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  className="min-h-[60px] resize-none"
                 />
               </>
-            )}
-
-            {activeAction === 'manual-fix' && (
-              <Select value={selectedValue} onValueChange={setSelectedValue}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select fix type..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {manualFixTypes.map(t => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {activeAction !== 'bug' && (
-              <Textarea
-                placeholder="Notes (optional)"
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                className="min-h-[60px] resize-none"
-              />
             )}
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActiveAction(null)}>Cancel</Button>
-            <Button onClick={handleConfirm} disabled={!selectedValue}>
-              Apply to {selectedCount} items
-            </Button>
+            {step === 'category' && (
+              <Button variant="outline" onClick={() => { setStep('question'); setFlowType(null); setSelectedValue(''); setNotes(''); setBugLink(''); }}>
+                Back
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            {step === 'category' && (
+              <Button onClick={handleConfirm} disabled={!selectedValue}>
+                Apply to {selectedCount} items
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
