@@ -74,12 +74,65 @@ const Index = () => {
   
   const [dragOver, setDragOver] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [runDetails, setRunDetails] = useState<RunDetails>({
     name: '',
     date: new Date(),
     notes: '',
     isFeatureRollout: false
   });
+
+  // Escape key exits bulk mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && bulkMode) {
+        setBulkMode(false);
+        setSelectedIds(new Set());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [bulkMode]);
+
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    const analyzedIds = filteredFailures.filter(f => f.analysis).map(f => f.id);
+    setSelectedIds(new Set(analyzedIds));
+  }, [filteredFailures]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleConfirmAIBulk = useCallback(() => {
+    const selected = failuresWithFeedback.filter(f => selectedIds.has(f.id));
+    selected.forEach(f => {
+      const feedback: UserFeedback = {
+        wasCorrect: true,
+        userClassification: f.analysis?.classification,
+        userPriority: f.analysis?.priority,
+        userAction: f.analysis?.suggestedAction,
+      };
+      handleFeedback(f.id, feedback);
+    });
+    setSelectedIds(new Set());
+    setBulkMode(false);
+    toast.success(`Confirmed AI for ${selected.length} items`);
+  }, [selectedIds, failuresWithFeedback, handleFeedback]);
+
+  const handleBulkAction = useCallback((ids: string[], feedback: UserFeedback) => {
+    handleBulkFeedback(ids, feedback);
+    toast.success(`Applied action to ${ids.length} items`);
+  }, [handleBulkFeedback]);
 
   // Check for existing session on mount
   useEffect(() => {
