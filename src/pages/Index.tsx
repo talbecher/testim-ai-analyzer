@@ -113,21 +113,6 @@ const Index = () => {
     setSelectedIds(new Set());
   }, []);
 
-  const handleConfirmAIBulk = useCallback(() => {
-    const selected = failuresWithFeedback.filter(f => selectedIds.has(f.id));
-    selected.forEach(f => {
-      const feedback: UserFeedback = {
-        wasCorrect: true,
-        userClassification: f.analysis?.classification,
-        userPriority: f.analysis?.priority,
-        userAction: f.analysis?.suggestedAction,
-      };
-      handleFeedback(f.id, feedback);
-    });
-    setSelectedIds(new Set());
-    setBulkMode(false);
-    toast.success(`Confirmed AI for ${selected.length} items`);
-  }, [selectedIds, failuresWithFeedback, handleFeedback]);
 
   const handleBulkAction = useCallback((ids: string[], feedback: UserFeedback) => {
     handleBulkFeedback(ids, feedback);
@@ -680,7 +665,6 @@ const Index = () => {
         selectedCount={selectedIds.size}
         selectedFailures={failuresWithFeedback.filter(f => selectedIds.has(f.id))}
         onBulkFeedback={handleBulkAction}
-        onConfirmAI={handleConfirmAIBulk}
         onClearSelection={() => { setSelectedIds(new Set()); setBulkMode(false); }}
       />
     </div>;
