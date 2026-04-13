@@ -4,19 +4,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle, X, Bug, PlayCircle, Wrench, ListChecks } from 'lucide-react';
+import { X, Bug, PlayCircle, Wrench } from 'lucide-react';
 import { UserFeedback } from '@/types/feedback';
 import { AnalyzedFailureWithFeedback } from '@/types/feedback';
 import { useBugCategories } from '@/hooks/useBugCategories';
 
-type DialogStep = 'question' | 'category';
 type FlowType = 'bug' | 'passed-locally' | 'manual-fix';
 
 interface BulkActionPanelProps {
   selectedCount: number;
   selectedFailures: AnalyzedFailureWithFeedback[];
   onBulkFeedback: (ids: string[], feedback: UserFeedback) => void;
-  onConfirmAI: () => void;
   onClearSelection: () => void;
 }
 
@@ -24,11 +22,9 @@ export function BulkActionPanel({
   selectedCount,
   selectedFailures,
   onBulkFeedback,
-  onConfirmAI,
   onClearSelection,
 }: BulkActionPanelProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [step, setStep] = useState<DialogStep>('question');
   const [flowType, setFlowType] = useState<FlowType | null>(null);
   const [selectedValue, setSelectedValue] = useState('');
   const [notes, setNotes] = useState('');
@@ -57,18 +53,12 @@ export function BulkActionPanel({
     setLoadingCategories(false);
   }, [cachedCategories, fetchCategoriesByType]);
 
-  const openDialog = () => {
-    setDialogOpen(true);
-    setStep('question');
-    setFlowType(null);
+  const openFlowDialog = async (flow: FlowType) => {
+    setFlowType(flow);
     setSelectedValue('');
     setNotes('');
     setBugLink('');
-  };
-
-  const handleFlowChoice = async (flow: FlowType) => {
-    setFlowType(flow);
-    setStep('category');
+    setDialogOpen(true);
     await loadCategories(flow);
   };
 
@@ -110,9 +100,7 @@ export function BulkActionPanel({
 
   if (selectedCount === 0) return null;
 
-  const stepTitle = step === 'question'
-    ? 'Classify Selected Items'
-    : flowType === 'bug' ? 'Select Bug Category'
+  const dialogTitle = flowType === 'bug' ? 'Select Bug Category'
     : flowType === 'passed-locally' ? 'Select Reason'
     : 'Select Fix Type';
 
@@ -132,23 +120,27 @@ export function BulkActionPanel({
           </div>
 
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={onConfirmAI} className="text-confidence-high border-confidence-high/30">
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Confirm AI ✓
+            <Button size="sm" variant="outline" className="text-bug border-bug/30" onClick={() => openFlowDialog('bug')}>
+              <Bug className="h-4 w-4 mr-1" />
+              Yes, it was a bug
             </Button>
-            <Button size="sm" variant="outline" onClick={openDialog}>
-              <ListChecks className="h-4 w-4 mr-1" />
-              Classify...
+            <Button size="sm" variant="outline" onClick={() => openFlowDialog('passed-locally')}>
+              <PlayCircle className="h-4 w-4 mr-1" />
+              No, passed locally
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => openFlowDialog('manual-fix')}>
+              <Wrench className="h-4 w-4 mr-1" />
+              Required manual fix
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Multi-step Dialog */}
+      {/* Category Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && setDialogOpen(false)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{stepTitle}</DialogTitle>
+            <DialogTitle>{dialogTitle}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -156,74 +148,46 @@ export function BulkActionPanel({
               Applying to <span className="font-medium text-foreground">{selectedCount}</span> selected items
             </p>
 
-            {step === 'question' && (
-              <div className="flex flex-col gap-2">
-                <Button variant="outline" className="justify-start text-bug border-bug/30" onClick={() => handleFlowChoice('bug')}>
-                  <Bug className="h-4 w-4 mr-2" />
-                  Yes, it was a bug
-                </Button>
-                <Button variant="outline" className="justify-start" onClick={() => handleFlowChoice('passed-locally')}>
-                  <PlayCircle className="h-4 w-4 mr-2" />
-                  No, passed locally
-                </Button>
-                <Button variant="outline" className="justify-start" onClick={() => handleFlowChoice('manual-fix')}>
-                  <Wrench className="h-4 w-4 mr-2" />
-                  Required manual fix
-                </Button>
-              </div>
+            {loadingCategories ? (
+              <p className="text-sm text-muted-foreground">Loading categories...</p>
+            ) : (
+              <Select value={selectedValue} onValueChange={setSelectedValue}>
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    flowType === 'bug' ? 'Select bug category...'
+                    : flowType === 'passed-locally' ? 'Select reason...'
+                    : 'Select fix type...'
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {currentCategories.map(c => (
+                    <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
 
-            {step === 'category' && (
-              <>
-                {loadingCategories ? (
-                  <p className="text-sm text-muted-foreground">Loading categories...</p>
-                ) : (
-                  <Select value={selectedValue} onValueChange={setSelectedValue}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={
-                        flowType === 'bug' ? 'Select bug category...'
-                        : flowType === 'passed-locally' ? 'Select reason...'
-                        : 'Select fix type...'
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {currentCategories.map(c => (
-                        <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-
-                {flowType === 'bug' && (
-                  <Input
-                    placeholder="Bug link (optional)"
-                    value={bugLink}
-                    onChange={e => setBugLink(e.target.value)}
-                  />
-                )}
-
-                <Textarea
-                  placeholder="Notes (optional)"
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  className="min-h-[60px] resize-none"
-                />
-              </>
+            {flowType === 'bug' && (
+              <Input
+                placeholder="Bug link (optional)"
+                value={bugLink}
+                onChange={e => setBugLink(e.target.value)}
+              />
             )}
+
+            <Textarea
+              placeholder="Notes (optional)"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              className="min-h-[60px] resize-none"
+            />
           </div>
 
           <DialogFooter>
-            {step === 'category' && (
-              <Button variant="outline" onClick={() => { setStep('question'); setFlowType(null); setSelectedValue(''); setNotes(''); setBugLink(''); }}>
-                Back
-              </Button>
-            )}
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            {step === 'category' && (
-              <Button onClick={handleConfirm} disabled={!selectedValue}>
-                Apply to {selectedCount} items
-              </Button>
-            )}
+            <Button onClick={handleConfirm} disabled={!selectedValue}>
+              Apply to {selectedCount} items
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
