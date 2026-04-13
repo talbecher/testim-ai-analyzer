@@ -1,25 +1,26 @@
 
 
-# התאמת Bulk Action Panel - תוכנית סופית
+# פישוט הסרגל התחתון – הצגת 3 האופציות ישירות
 
-## ניתוח: איך BugConfirmationFlow טוען קטגוריות
+## מה משתנה
+הסרת כפתור "Confirm AI ✓" וכפתור "Classify..." מהסרגל התחתון. במקומם – הצגת 3 הכפתורים ישירות בסרגל, בדיוק כמו ב-single flow:
 
-ה-single flow כבר עושה **lazy fetch עם caching מקומי** - טוען קטגוריות רק כשעוברים לשלב הרלוונטי, ושומר ב-state כדי לא לטעון שוב. יש גם auto-refresh על visibility change.
+**לפני:**
+`Cancel | Confirm AI ✓ | Classify...`
 
-**מסקנה: אופציה א׳ (fetch בשלב 2) עם caching** - בדיוק כמו ב-single flow, לעקביות מלאה.
+**אחרי:**
+`Cancel | 🐛 Yes, it was a bug | ▶ No, passed locally | 🔧 Required manual fix`
+
+לחיצה על כל כפתור פותחת ישירות את שלב הקטגוריה (בלי שלב הביניים של "question").
 
 ## שינויים ב-`src/components/BulkActionPanel.tsx`
 
-1. **הסרת רשימות hardcoded** (`passedLocallyReasons`, `manualFixTypes`)
-2. **Multi-step dialog** במקום כפתורים נפרדים:
-   - שלב 1: "Was there actually a bug?" עם 3 אופציות (Yes bug / No passed locally / Required manual fix)
-   - שלב 2: Select קטגוריה מה-DB + notes/link לפי הבחירה
-3. **Lazy fetch + cache** - אותו pattern כמו BugConfirmationFlow: `fetchCategoriesByType` כשעוברים לשלב 2, שמירה ב-state מקומי, visibility change refresh
-4. **סרגל תחתון**: "N selected" + "Confirm AI ✓" (ישיר) + "Classify..." (פותח dialog) + "Cancel"
+1. הסרת כפתור "Confirm AI ✓" ו-"Classify..." מהסרגל התחתון
+2. הצגת 3 כפתורים ישירות בסרגל: Bug / Passed Locally / Manual Fix
+3. לחיצה על כפתור → פותח dialog ישירות בשלב category (דילוג על שלב question)
+4. הסרת `onConfirmAI` מה-props (לא נדרש יותר)
 
-## קובץ אחד בלבד
-
-| קובץ | שינוי |
-|------|-------|
-| `src/components/BulkActionPanel.tsx` | שכתוב ל-multi-step flow עם קטגוריות מ-DB |
+## שינויים ב-`src/pages/Index.tsx`
+- הסרת `handleConfirmAIBulk` והעברתו ל-`BulkActionPanel`
+- הסרת prop `onConfirmAI`
 
