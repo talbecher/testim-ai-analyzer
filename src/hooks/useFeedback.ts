@@ -12,17 +12,14 @@ import {
 } from '@/types/feedback';
 import { format } from 'date-fns';
 import { convertPreClassifiedToFeedback } from '@/lib/testimClassificationMapper';
+import { aiRecommendedInvestigate as aiRecommendsInvestigate } from '@/lib/aiInvestigateRecommendation';
 import { useSessionPersistence } from './useSessionPersistence';
 
-// Did AI recommend investigation? (based on classification and priority)
-const aiRecommendedInvestigate = (analysis: AIAnalysisResult | undefined): boolean => {
-  if (!analysis) return false;
-  // Investigate classification also counts as "investigate" recommendation
-  return analysis.classification === 'Potential bug' || 
-         analysis.classification === 'Investigate' ||
-         analysis.priority === 'P0' || 
-         analysis.priority === 'P1';
-};
+const aiRecommendedInvestigate = (analysis: AIAnalysisResult | undefined): boolean =>
+  aiRecommendsInvestigate({
+    classification: analysis?.classification,
+    priority: analysis?.priority,
+  });
 
 // Did this actually require manual work? (based on human classification)
 const requiredManualWork = (preClassified: PreClassifiedData | undefined): boolean => {

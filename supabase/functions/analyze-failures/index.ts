@@ -6,6 +6,115 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/** Strip volatile noise from error text before LLM context (IDs, timestamps, URLs). */
+function sanitizeErrorMessage(raw: unknown): string {
+  if (typeof raw !== 'string' || !raw.trim()) return '';
+  let s = raw;
+  s = s.replace(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi,
+    '<id>',
+  );
+  s = s.replace(
+    /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:?\d{2,4})?/gi,
+    '<ts>',
+  );
+  s = s.replace(/\b\d{10,16}\b/g, '<num>');
+  s = s.replace(/https?:\/\/[^\s)]+/gi, '<url>');
+  s = s.replace(/\s+/g, ' ').trim();
+  const MAX = 8000;
+  if (s.length > MAX) return `${s.slice(0, MAX)}…`;
+  return s;
+}
+
+function isSessionWebDriverInfraErrorMessage(errorMessage: unknown): boolean {
+  if (typeof errorMessage !== 'string') return false;
+  const t = errorMessage.toLowerCase();
+  return t.includes('failed to create new session') || t.includes('webdrivererror');
+}
+
+function analysisHasSessionWebDriverInfraSignal(analysis: Record<string, unknown>): boolean {
+  const sb = analysis.signalBreakdown as { activeSignals?: unknown } | undefined;
+  if (!sb || !Array.isArray(sb.activeSignals)) return false;
+  return (sb.activeSignals as unknown[]).some((x) => x === 'SESSION_WEBDRIVER_INFRA');
+}
+
+function shouldEnforceSessionWebDriverInfra(analysis: Record<string, unknown>, rawErrorMessage: unknown): boolean {
+  return isSessionWebDriverInfraErrorMessage(rawErrorMessage) || analysisHasSessionWebDriverInfraSignal(analysis);
+}
+
+const SESSION_WEBDRIVER_INFRA_FIRST_SENTENCE =
+  'Infrastructure/Environment issue - Please check with testim.io support or verify local grid status.';
+
+function stripFlakyKbFromPriorityReasonEdge(text: string): string {
+  const lines = text
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  return lines
+    .filter((l) => {
+      const x = l.toLowerCase();
+      if (x.includes('matched known flaky')) return false;
+      if (x.includes('known flaky test')) return false;
+      if (x.includes('flaky kb')) return false;
+      if (x.includes('known flaky') && (x.includes('kb') || x.includes('flaky kb'))) return false;
+      return true;
+    })
+    .join('\n');
+}
+
+function priorityReasonWithInfraFirstSentenceEdge(pr: string): string {
+  const infra = SESSION_WEBDRIVER_INFRA_FIRST_SENTENCE;
+  let body = stripFlakyKbFromPriorityReasonEdge(pr)
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .filter((l) => {
+      const stripped = l.replace(/^•\s*/, '');
+      return !stripped.startsWith(infra) && !l.includes('Infrastructure/Environment issue - Please check with testim.io support');
+    })
+    .join('\n')
+    .trim();
+  return body ? `${infra}\n${body}` : infra;
+}
+
+/** After AI + alignSignal: force env/verify path; Flaky KB / history must not win (P1 → investigate headline). */
+function enforceSessionWebDriverInfraOverride(analysis: Record<string, unknown>, rawErrorMessage: unknown): void {
+  if (!shouldEnforceSessionWebDriverInfra(analysis, rawErrorMessage)) return;
+  analysis.classification = 'Environment / Infra Issue';
+  analysis.suggestedAction = 'Verify manually';
+  analysis.requiresRerun = true;
+  analysis.flakyKBMatch = false;
+  analysis.confidence = Math.max(Number(analysis.confidence) || 0, 85);
+  analysis.priority = 'P1';
+  analysis.rerunReason =
+    typeof analysis.rerunReason === 'string' && analysis.rerunReason.trim()
+      ? `Session/WebDriver infrastructure — verify grid before rerun. ${analysis.rerunReason}`
+      : 'Session/WebDriver infrastructure — verify grid/session stability before rerun';
+
+  const sb = (analysis.signalBreakdown as Record<string, unknown>) || {};
+  const prevSignals = Array.isArray(sb.activeSignals) ? (sb.activeSignals as string[]) : [];
+  const filtered = prevSignals.filter(
+    (s) =>
+      typeof s === 'string' &&
+      !/^FLAKY_KB/i.test(s) &&
+      s !== 'FLAKY_KB_MATCH' &&
+      !/^PASSED_LOCALLY/i.test(s),
+  );
+  const activeSignals = Array.from(new Set([...filtered, 'SESSION_WEBDRIVER_INFRA']));
+  analysis.signalBreakdown = {
+    ...sb,
+    bugScore: 5,
+    flakyScore: 5,
+    environmentScore: 88,
+    investigateScore: 5,
+    activeSignals,
+  };
+
+  const rawPr = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
+  analysis.priorityReason = priorityReasonWithInfraFirstSentenceEdge(rawPr);
+}
+
 // P0 Safety Rule - Absolute priority
 const P0_SAFETY_RULE = `
 ## 0. P0 SAFETY RULE (ABSOLUTE - NEVER VIOLATE)
@@ -37,6 +146,29 @@ When a failure required manual test changes BUT intent is unclear:
 → Add to priorityReason: "Manual intervention detected - root cause ambiguous"
 
 CRITICAL: "Investigate" classification MUST use "Verify manually" or "Rerun only" action - NEVER "Open bug"!
+`;
+
+// Session / WebDriver infrastructure — must not be dismissed as low-priority or skip-style triage
+const INFRASTRUCTURE_SESSION_WEBDRIVER_RULE = `
+## 1b. TESTIM SESSION / WEBDRIVER INFRASTRUCTURE (MANDATORY WHEN TRIGGERED)
+
+Apply this block when **either** is true:
+- **errorMessage** (case-insensitive) contains \`Failed to create new session\` OR \`WebDriverError\`, **OR**
+- You already set **activeSignals** to include \`SESSION_WEBDRIVER_INFRA\` for this failure.
+
+Then you MUST (STRICT OVERRIDE — beats Flaky KB, regression "passed locally" / flaky history, and dismissive triage):
+1. **Classification:** \`Environment / Infra Issue\` ONLY — never Likely Flaky, never Potential bug for this failure.
+2. **suggestedAction:** \`Verify manually\` ONLY — never "Ignore today / monitor" as the primary action.
+3. **flakyKBMatch:** \`false\` in JSON output even if the test name would match Flaky KB (do not cite Flaky KB as the driver for this row).
+4. **Confidence:** 85–95%.
+5. **priority:** \`P1\` (so triage treats this as requiring human follow-up, not skip-investigate).
+6. **requiresRerun:** \`true\`; **rerunReason** must say grid/session must be stable before rerun.
+7. **priorityReason:** The **very first sentence** (first line of text) MUST be exactly:
+   Infrastructure/Environment issue - Please check with testim.io support or verify local grid status.
+   Do NOT mention "Matched known flaky test", "Known flaky", or "Flaky KB" anywhere in priorityReason for this row.
+8. **signalBreakdown:** \`environmentScore\` ≥ 85; \`flakyScore\` ≤ 15; include \`SESSION_WEBDRIVER_INFRA\`; do NOT list FLAKY_KB_MATCH, PASSED_LOCALLY*, or other flaky-history signals for this row.
+
+**Priority:** This block **strictly overrides** §4–§6 (historical flaky, passed-locally, Flaky KB) whenever triggered — including when only \`SESSION_WEBDRIVER_INFRA\` is present in activeSignals.
 `;
 
 // Regression-specific learning framework
@@ -97,14 +229,17 @@ const DECISION_FRAMEWORK = `
 - 3+ occurrences → MUST FOLLOW (very high confidence)
 - 2 occurrences → Strong signal
 - 1 occurrence → Weak reference only
+- **IGNORE for classification/suggestedAction** when §1b applies (\`SESSION_WEBDRIVER_INFRA\` / session-WebDriver error text): do not steer toward Likely Flaky from old corrections
 
 ## 5. PASSED LOCALLY PATTERNS (THIS REGRESSION ONLY)
 - Passed locally 3+ times → Very strong signal for Likely Flaky
 - Passed locally 1-2 times → Supporting signal only
+- **IGNORE** when §1b \`SESSION_WEBDRIVER_INFRA\` applies — infrastructure failures are not disproved by local passes
 
 ## 6. FLAKY KB MATCH (GLOBAL)
 - If matched → increase probability of Likely Flaky
 - This is a supporting signal, not an absolute rule
+- **STRICT EXCEPTION (§1b):** If SESSION_WEBDRIVER_INFRA applies (\`Failed to create new session\` or \`WebDriverError\` in errorMessage), **ignore Flaky KB** for classification and suggestedAction; set flakyKBMatch false; do not prepend "Known flaky" to priorityReason
 
 ## 7. ERROR PATTERN HEURISTICS (USE ONLY IF ABOVE SIGNALS WEAK)
 - Element not found → usually Likely Flaky (UI/timing related)
@@ -213,6 +348,23 @@ const GUARDRAILS = `
 ✅ Explain reasoning using existing fields only
 `;
 
+const HIERARCHY_OF_EVIDENCE = `
+## HIERARCHY OF EVIDENCE (TRIAGE vs CLASSIFICATION)
+
+Apply signals in this order when they conflict:
+1) Regression-specific corrections and passed-locally history (this bucket only)
+2) Co-failure / systemic signals and streak behavior (intermittent vs consistent)
+3) Flaky KB and environment-style error families
+4) Heuristic error-pattern hints (use last)
+
+### Assertions vs "Expected Change" (UI copy / data only)
+- Assertion failures still warrant **human triage**: keep **suggestedAction** in the "verify" family ("Verify manually" or "Rerun only") when the failure is an assertion — QA should confirm before closing.
+- For **classification**: when the mismatch is clearly **UI text/copy**, **labels**, **cosmetic strings**, or **stale test data / fixture** (not broken product logic), prefer **"Expected Change"** over **"Potential bug"**, unless regression corrections or co-failure strongly indicate a real defect.
+- True application logic or API contract breaks → **"Potential bug"** remains appropriate.
+
+Do not use "Open bug" for "Investigate". Prefer lowering confidence over guessing when evidence is split between Expected Change and bug.
+`;
+
 // Streak info shape (matches TestStreakInfo from frontend types)
 interface StreakInfo {
   totalRuns: number;
@@ -296,23 +448,45 @@ function getClassificationFromDominant(bugScore: number, flakyScore: number, env
   return dominant[0];
 }
 
-// Align classification with signalBreakdown dominant direction; if mismatch, reduce confidence and set Investigate
+const HARD_TRIAGE_CLASSES = new Set([
+  'Potential bug',
+  'Likely Flaky',
+  'Environment / Infra Issue',
+]);
+
+/** Bug vs flaky vs env disagree — needs escalation; soft classes handled with confidence only. */
+function isCriticalSignalClassificationMismatch(current: string, expected: string): boolean {
+  if (current === expected) return false;
+  if (!HARD_TRIAGE_CLASSES.has(current) || !HARD_TRIAGE_CLASSES.has(expected)) return false;
+  return current !== expected;
+}
+
+// Critical mismatch → Investigate; minor mismatch → lower confidence only
 function alignSignalBreakdownWithClassification(analysis: Record<string, unknown>): void {
   const sb = analysis.signalBreakdown as { bugScore?: number; flakyScore?: number; environmentScore?: number; investigateScore?: number } | undefined;
-  if (!sb || typeof sb.bugScore !== 'number' && typeof sb.flakyScore !== 'number') return;
+  if (!sb || (typeof sb.bugScore !== 'number' && typeof sb.flakyScore !== 'number')) return;
   const bug = typeof sb.bugScore === 'number' ? sb.bugScore : 0;
   const flaky = typeof sb.flakyScore === 'number' ? sb.flakyScore : 0;
   const env = typeof sb.environmentScore === 'number' ? sb.environmentScore : 0;
   const inv = typeof sb.investigateScore === 'number' ? sb.investigateScore : 0;
   const expected = getClassificationFromDominant(bug, flaky, env, inv);
   const current = analysis.classification as string;
-  if (current !== expected) {
+  if (current === expected) return;
+
+  if (isCriticalSignalClassificationMismatch(current, expected)) {
     analysis.confidence = Math.min(Number(analysis.confidence) || 70, 65);
     analysis.classification = 'Investigate';
     analysis.suggestedAction = 'Verify manually';
     if (typeof analysis.priorityReason === 'string') {
-      analysis.priorityReason = `• Signals conflicted with classification (dominant: ${expected}); reduced confidence.\n${analysis.priorityReason}`;
+      analysis.priorityReason = `• signalBreakdown indicated "${expected}" vs classification "${current}"; escalated to Investigate.\n${analysis.priorityReason}`;
     }
+    return;
+  }
+
+  const prev = Number(analysis.confidence) || 70;
+  analysis.confidence = Math.max(0, Math.min(prev, prev - 12));
+  if (typeof analysis.priorityReason === 'string') {
+    analysis.priorityReason = `• signalBreakdown leaned "${expected}" vs classification "${current}"; lowered confidence only.\n${analysis.priorityReason}`;
   }
 }
 
@@ -362,7 +536,7 @@ Available signal names:
 - CONSISTENT_FAILURE_STREAK, HISTORICAL_BUG_CORRECTION, NULL_UNDEFINED_ERROR
 - FLAKY_KB_MATCH, INTERMITTENT_STREAK, PASSED_LOCALLY_3_PLUS, PASSED_LOCALLY_1_2
 - ELEMENT_NOT_FOUND, VISUAL_ASSERTION, HISTORICAL_FLAKY_CORRECTION
-- NETWORK_ERROR, TIMEOUT_SHORT, TIMEOUT_LONG, INFRA_PATTERN, CO_FAILURE_INFRA
+- NETWORK_ERROR, TIMEOUT_SHORT, TIMEOUT_LONG, INFRA_PATTERN, CO_FAILURE_INFRA, SESSION_WEBDRIVER_INFRA
 - FIRST_SEEN_GLOBALLY, FIRST_SEEN_IN_REGRESSION, CONFLICTING_SIGNALS, MANUAL_CHANGE_DETECTED, LOW_HISTORY
 
 ### Field Alignment Rules:
@@ -384,12 +558,14 @@ Be as accurate as possible - your predictions will be used to measure AI accurac
 
 ${P0_SAFETY_RULE}
 ${INVESTIGATE_FALLBACK}
+${INFRASTRUCTURE_SESSION_WEBDRIVER_RULE}
 ${REGRESSION_LEARNING}
 ${FIRST_SEEN_HANDLING}
 ${DECISION_FRAMEWORK}
 ${ASSERTION_RULES}
 ${CO_FAILURE_RULES}
 ${GUARDRAILS}
+${HIERARCHY_OF_EVIDENCE}
 ${OUTPUT_REQUIREMENTS}`;
 
 // Production mode prompt - focus on actionable recommendations
@@ -399,12 +575,14 @@ Be confident but acknowledge uncertainty when appropriate.
 
 ${P0_SAFETY_RULE}
 ${INVESTIGATE_FALLBACK}
+${INFRASTRUCTURE_SESSION_WEBDRIVER_RULE}
 ${REGRESSION_LEARNING}
 ${FIRST_SEEN_HANDLING}
 ${DECISION_FRAMEWORK}
 ${ASSERTION_RULES}
 ${CO_FAILURE_RULES}
 ${GUARDRAILS}
+${HIERARCHY_OF_EVIDENCE}
 ${OUTPUT_REQUIREMENTS}`;
 
 serve(async (req) => {
@@ -771,6 +949,7 @@ ${learningPatternsPrompt}
     // Enrich failures with streakInfo (computed from DB) for DECISION_FRAMEWORK §9
     const failuresForPrompt = failures.map((f: any) => ({
       ...f,
+      errorMessage: sanitizeErrorMessage(f.errorMessage),
       streakInfo: streakMap.get(f.testNameNormalized) ?? undefined,
     }));
 
@@ -804,7 +983,7 @@ For EACH failure, respond with JSON array containing objects with:
 
 CRITICAL REMINDERS:
 1. "Investigate" MUST use "Verify manually" or "Rerun only" - NEVER "Open bug"
-2. Recommend Investigate only when classification is Potential bug or priority is P0/P1; otherwise recommend Skip (when classification is Investigate, suggest Verify manually).
+2. Recommend Investigate when classification is Potential bug or Investigate, or priority is P0/P1; otherwise recommend Skip (when classification is Investigate, suggest Verify manually).
 3. Check first-seen status for confidence adjustments
 4. Prioritize regression-specific data over global patterns
 ${fewShotExamples}
@@ -893,13 +1072,15 @@ Return ONLY valid JSON array, no markdown.`;
     }
     
     // Post-process: enforce Investigate guardrails and align signalBreakdown with classification
-    const processedAnalyses = analyses.map((analysis: any) => {
+    const processedAnalyses = analyses.map((analysis: any, idx: number) => {
       // Enforce: Investigate NEVER uses "Open bug"
       if (analysis.classification === 'Investigate' && analysis.suggestedAction === 'Open bug') {
         analysis.suggestedAction = 'Verify manually';
       }
       // Align classification with dominant direction in signalBreakdown; if mismatch, reduce confidence and set Investigate
       alignSignalBreakdownWithClassification(analysis);
+      const rawFailure = failures[idx] as { errorMessage?: string } | undefined;
+      enforceSessionWebDriverInfraOverride(analysis, rawFailure?.errorMessage);
       return analysis;
     });
     

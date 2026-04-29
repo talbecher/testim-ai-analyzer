@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, X, BookOpen, ExternalLink, Search, CircleSlash } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
 import { AnalyzedFailureWithFeedback } from '@/types/feedback';
 import { PreClassifiedData } from '@/types/testim';
 import { Separator } from '@/components/ui/separator';
@@ -64,17 +65,15 @@ const getWorkDescription = (preClassified: PreClassifiedData | undefined): strin
 export function LearningModeCard({ failure }: LearningModeCardProps) {
   const bugLink = failure.preClassified?.bugLink;
   
-  // AI recommendation: would it suggest investigating?
-  const aiRecommendedInvestigate = failure.analysis?.classification === 'Potential bug' || 
-                                    failure.analysis?.priority === 'P0' || 
-                                    failure.analysis?.priority === 'P1';
+  const recommendsInvestigate = aiRecommendedInvestigate({
+    classification: failure.analysis?.classification,
+    priority: failure.analysis?.priority,
+  });
 
-  // Did this actually need manual work?
   const neededManualWork = requiredManualWork(failure.preClassified);
   const workDescription = getWorkDescription(failure.preClassified);
 
-  // AI is correct if recommendation matched actual need
-  const wasAICorrect = aiRecommendedInvestigate === neededManualWork;
+  const wasAICorrect = recommendsInvestigate === neededManualWork;
 
   return (
     <Card className={cn(
@@ -119,12 +118,12 @@ export function LearningModeCard({ failure }: LearningModeCardProps) {
         {/* AI Recommendation */}
         <div className={cn(
           "p-3 rounded-md border",
-          aiRecommendedInvestigate 
+          recommendsInvestigate 
             ? "bg-bug/10 border-bug/30" 
             : "bg-confidence-high/10 border-confidence-high/30"
         )}>
           <div className="flex items-center gap-2">
-            {aiRecommendedInvestigate ? (
+            {recommendsInvestigate ? (
               <>
                 <Search className="h-4 w-4 text-bug" />
                 <span className="font-medium text-bug text-sm">AI Recommendation: Investigate</span>

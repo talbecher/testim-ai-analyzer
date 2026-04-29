@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Check, X, Edit2, Database, Clock, CheckCircle, Bug, TestTube, ExternalLink, Search, CircleSlash, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
 import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
 import { BugConfirmationFlow } from './BugConfirmationFlow';
@@ -122,11 +123,11 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
   };
 
   const isReviewed = failure.isReviewed;
-  
-  // Determine primary recommendation: should QA investigate?
-  const shouldInvestigate = failure.analysis?.classification === 'Potential bug' || 
-                            failure.analysis?.priority === 'P0' || 
-                            failure.analysis?.priority === 'P1';
+
+  const shouldInvestigate = aiRecommendedInvestigate({
+    classification: failure.analysis?.classification,
+    priority: failure.analysis?.priority,
+  });
 
   return (
     <Card className={cn(

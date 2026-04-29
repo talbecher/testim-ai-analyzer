@@ -8,6 +8,10 @@ import { convertPreClassifiedToFeedback, convertPreClassifiedToAnalysis } from '
 import { detectCoFailures, createFailureToGroupMap, getCoFailureInfo } from '@/lib/coFailureDetection';
 import { useFlakyKB } from './useFlakyKB';
 import { useSessionPersistence } from './useSessionPersistence';
+import {
+  shouldApplySessionWebDriverInfraOverride,
+  priorityReasonWithInfraFirstSentence,
+} from '@/lib/sessionWebDriverInfra';
 
 /** Post-process a single AI analysis (flaky KB, priority, requiresRerun). */
 function applyPostProcessing(
@@ -15,6 +19,34 @@ function applyPostProcessing(
   analysis: AIAnalysisResult,
   flakyKB: ReturnType<typeof useFlakyKB>
 ): AIAnalysisResult {
+  const sessionWebDriverInfra = shouldApplySessionWebDriverInfraOverride(failure.errorMessage, analysis);
+
+  if (sessionWebDriverInfra) {
+    const pr = priorityReasonWithInfraFirstSentence(analysis.priorityReason || '');
+    let result: AIAnalysisResult = {
+      ...analysis,
+      classification: 'Environment / Infra Issue',
+      suggestedAction: 'Verify manually',
+      priority: 'P1',
+      confidence: Math.max(analysis.confidence ?? 0, 85),
+      flakyKBMatch: false,
+      matchedFlakyTestName: undefined,
+      matchedFlakyReason: undefined,
+      priorityReason: pr,
+      requiresRerun: true,
+      rerunReason:
+        'Session/WebDriver infrastructure — confirm grid/session health before rerun (Flaky KB does not apply).',
+      signalBreakdown: {
+        bugScore: 5,
+        flakyScore: 5,
+        environmentScore: 88,
+        investigateScore: 5,
+        activeSignals: ['SESSION_WEBDRIVER_INFRA'],
+      },
+    };
+    return result;
+  }
+
   const flakyMatch = flakyKB.findFlakyTestMatch(failure.testName);
   const isInFlakyKB = flakyMatch.matched;
   let result: AIAnalysisResult = {

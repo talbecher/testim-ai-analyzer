@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
 
 export type PatternType = 'correction' | 'passed_locally' | 'manual_fix' | 'notes_analysis';
 export type Importance = 'critical' | 'high' | 'normal';
@@ -31,11 +32,8 @@ export interface PatternExplanation {
   whatAILearned: string;
 }
 
-// Determine if AI would recommend "Investigate" based on classification
 function getAIRecommendation(classification: string | null): 'Investigate' | 'Skip' {
-  if (!classification) return 'Skip';
-  if (classification === 'Potential bug') return 'Investigate';
-  return 'Skip';
+  return aiRecommendedInvestigate({ classification, priority: null }) ? 'Investigate' : 'Skip';
 }
 
 // Generate human-readable explanation for a pattern

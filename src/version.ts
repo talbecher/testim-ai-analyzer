@@ -1,14 +1,15 @@
-export const VERSION = "1.0.0";
-export const RELEASE_DATE = "2025-01-29";
+// Injected at build time by Vite (from package.json + build date)
+export const VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.0.0";
+export const RELEASE_DATE = typeof __BUILD_DATE__ !== "undefined" ? __BUILD_DATE__ : new Date().toISOString().slice(0, 10);
 
 export const getVersionInfo = () => ({
   version: VERSION,
   releaseDate: RELEASE_DATE,
-  formattedDate: new Date(RELEASE_DATE).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
+  formattedDate: new Date(RELEASE_DATE + "T12:00:00Z").toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }),
 });
 
 // Changelog data structure for the dialog
@@ -49,3 +50,4 @@ export const CHANGELOG: ChangelogEntry[] = [
     ]
   }
 ];
+ 

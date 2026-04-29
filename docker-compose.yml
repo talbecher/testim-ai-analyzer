@@ -1,0 +1,35 @@
+# Local run + debug in container terminal:
+#   docker compose up --build          → http://localhost:8080
+#   docker compose exec app sh         → shell inside the running app container
+#
+# Supabase + Vite: VITE_SUPABASE_URL must stay http://127.0.0.1:54321 — the bundled client runs
+# in the browser on your machine, not inside the container, so it reaches `supabase start` on the host.
+# (host.docker.internal is only for server-side calls from this container to the host.)
+#
+# env_file order: later files override earlier ones for duplicate keys.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+      - .env.local
+    environment:
+      NODE_ENV: development
+      # HMR on Docker Desktop bind mounts (optional)
+      VITE_DOCKER_WATCH_POLL: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Hot reload: edit on host, Vite picks up changes
+      - .:/app
+      # Use Linux node_modules inside the container (not the host's)
+      - app_node_modules:/app/node_modules
+    stdin_open: true
+    tty: true
+
+volumes:
+  app_node_modules:

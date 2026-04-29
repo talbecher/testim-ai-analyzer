@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn } from '@/lib/utils';
+import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
 import { format } from 'date-fns';
 import { LearningModeCard } from '@/components/LearningModeCard';
 import { ProductionModeCard } from '@/components/ProductionModeCard';
@@ -220,7 +221,12 @@ const Index = () => {
   // Recommendation stats (Investigate vs Skip)
   const recommendationStats = useMemo(() => {
     const analyzed = sortedFailures.filter(f => f.analysis);
-    const investigate = analyzed.filter(f => f.analysis?.classification === 'Potential bug' || f.analysis?.priority === 'P0' || f.analysis?.priority === 'P1');
+    const investigate = analyzed.filter(f =>
+      aiRecommendedInvestigate({
+        classification: f.analysis?.classification,
+        priority: f.analysis?.priority,
+      }),
+    );
     return {
       total: analyzed.length,
       investigate: investigate.length,

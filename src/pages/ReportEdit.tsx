@@ -15,6 +15,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { getInvestigateTriageRecommendation } from '@/lib/aiInvestigateRecommendation';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
 
 const classifications: Classification[] = [
@@ -134,14 +135,11 @@ export default function ReportEdit() {
     }
   };
 
-  // Helper: Calculate AI recommendation based on classification and priority
-  const getAIRecommendation = (result: ReportResult) => {
-    const shouldInvestigate = 
-      result.ai_classification === 'Potential bug' || 
-      result.ai_priority === 'P0' || 
-      result.ai_priority === 'P1';
-    return shouldInvestigate ? 'Investigate' : 'Skip';
-  };
+  const getAIRecommendation = (result: ReportResult) =>
+    getInvestigateTriageRecommendation({
+      classification: result.ai_classification,
+      priority: result.ai_priority,
+    });
 
   // Helper: Calculate actual outcome based on user feedback
   const getActualOutcome = (result: ReportResult) => {

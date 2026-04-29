@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Database, Clock, CheckCircle, Check, X, Edit2, Bug, TestTube, ExternalLink, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
 import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
 import { BugConfirmationFlow } from './BugConfirmationFlow';
@@ -50,10 +51,10 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
     }
   }, [failure.analysis, failure.isReviewed, isEditing]);
 
-  // Determine primary recommendation: should QA investigate?
-  const shouldInvestigate = failure.analysis?.classification === 'Potential bug' || 
-                            failure.analysis?.priority === 'P0' || 
-                            failure.analysis?.priority === 'P1';
+  const shouldInvestigate = aiRecommendedInvestigate({
+    classification: failure.analysis?.classification,
+    priority: failure.analysis?.priority,
+  });
 
   const handleConfirmBug = (category: string, bugLink?: string) => {
     // AI is correct if it recommended investigation (bug found = investigation was right)
