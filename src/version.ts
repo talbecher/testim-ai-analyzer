@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.1.0",
+    date: "2026-04-30",
+    added: [
+      "Quick filter chips: auto-detected error patterns (e.g. \"Element not found · 8\") for one-click filtering",
+      "Sticky filter bar — search and filters stay visible while scrolling the list",
+      "Active-filter breakdown with one-click Clear filters",
+      "Keyboard shortcut: press / to focus the search box",
+      "Friendly empty state when filters return no results"
+    ]
+  },
+  {
     version: "1.0.0",
     date: "2025-01-29",
     added: [

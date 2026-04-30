@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { ErrorPatternChips } from '@/components/ErrorPatternChips';
+import { groupFailuresByPattern } from '@/lib/errorPatternGrouping';
 import { Link } from 'react-router-dom';
 import { useChecklist } from '@/hooks/useChecklist';
 import { useFeedback } from '@/hooks/useFeedback';
@@ -160,6 +162,35 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterClassification, setFilterClassification] = useState<string>('all');
   const [filterReviewStatus, setFilterReviewStatus] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
+  const [filterPattern, setFilterPattern] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // "/" focuses search input — skip when user is typing in another field
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== '/') return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+      e.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery('');
+    setFilterClassification('all');
+    setFilterReviewStatus('all');
+    setFilterPattern(null);
+  }, []);
+
+  const hasActiveFilters =
+    !!searchQuery ||
+    filterClassification !== 'all' ||
+    filterReviewStatus !== 'all' ||
+    filterPattern !== null;
   const classifications: Classification[] = ['Potential bug', 'Likely Flaky', 'Environment / Infra Issue', 'Expected Change', 'Investigate'];
 
   const handleFileUpload = (file: File) => {
@@ -234,7 +265,7 @@ const Index = () => {
     };
   }, [sortedFailures]);
 
-  // Filter: include analyzing rows; for analyzed rows apply search/classification/review
+  // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern
   const filteredFailures = useMemo(() => {
     return sortedFailures.filter(f => {
       if (!f.analysis) return true;
@@ -243,9 +274,20 @@ const Index = () => {
       const matchesSearch = !searchQuery || f.testName.toLowerCase().includes(searchQuery.toLowerCase()) || (f.errorMessage?.toLowerCase() ?? '').includes(searchQuery.toLowerCase());
       const matchesClassification = filterClassification === 'all' || f.analysis?.classification === filterClassification;
       const matchesStatus = filterReviewStatus === 'all' || (filterReviewStatus === 'reviewed' && withFb.isReviewed) || (filterReviewStatus === 'unreviewed' && !withFb.isReviewed);
-      return matchesSearch && matchesClassification && matchesStatus;
+      const matchesPattern = !filterPattern || f.analysis?.errorPattern === filterPattern;
+      return matchesSearch && matchesClassification && matchesStatus && matchesPattern;
     });
-  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus]);
+  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern]);
+
+  // Pattern groups (auto-detected error categories with counts)
+  const patternGroups = useMemo(
+    () => groupFailuresByPattern(failuresWithFeedback),
+    [failuresWithFeedback],
+  );
+  const totalAnalyzedForChips = useMemo(
+    () => failuresWithFeedback.filter(f => !!f.analysis).length,
+    [failuresWithFeedback],
+  );
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Session Restore Banner */}
@@ -545,16 +587,33 @@ const Index = () => {
             {/* Review Progress Bar: X = reviewed (user action), Y = analyzed (grows as AI completes) */}
             {hasAnalyzedResults && <ReviewProgress reviewed={reviewedCount} total={analyzedCount} onComplete={handleCompleteReview} />}
 
-            {/* Search and Filters */}
-            {hasAnalyzedResults && <Card className="border-border/50 bg-card/50">
-                <CardContent className="p-4">
+            {/* Search and Filters — sticky so it stays accessible while scrolling the list */}
+            {hasAnalyzedResults && <div className="sticky top-0 z-20 -mx-2 px-2 py-2 bg-background/85 backdrop-blur-md">
+              <Card className="border-border/50 bg-card/80">
+                <CardContent className="p-4 space-y-3">
+                  {/* Pattern chips: auto-detected error categories */}
+                  {patternGroups.length > 0 && (
+                    <ErrorPatternChips
+                      groups={patternGroups}
+                      totalCount={totalAnalyzedForChips}
+                      activePattern={filterPattern}
+                      onSelect={setFilterPattern}
+                    />
+                  )}
+
                   <div className="flex flex-col md:flex-row gap-4">
                     {/* Search Input */}
                     <div className="flex-1 relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="Search by test name or error message..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 bg-background/50" />
+                      <Input
+                        ref={searchInputRef}
+                        placeholder="Search by test name or error message…  (press / to focus)"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="pl-9 bg-background/50"
+                      />
                     </div>
-                    
+
                     {/* Classification Filter */}
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4 text-muted-foreground" />
@@ -607,19 +666,54 @@ const Index = () => {
 
                   {/* Bulk select actions row */}
                   {bulkMode && (
-                    <div className="mt-3 flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <Button size="sm" variant="ghost" onClick={handleSelectAll}>Select All</Button>
                       <Button size="sm" variant="ghost" onClick={handleDeselectAll}>Deselect All</Button>
                       <span className="text-xs text-muted-foreground ml-2">{selectedIds.size} selected</span>
                     </div>
                   )}
-                  
-                  {/* Results count */}
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    Showing {filteredFailures.length} of {sortedFailures.length} rows
+
+                  {/* Results count + active filter breakdown + clear */}
+                  <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span>
+                      Showing <span className="font-medium text-foreground">{filteredFailures.length}</span> of {sortedFailures.length} rows
+                    </span>
+                    {hasActiveFilters && (
+                      <>
+                        <span className="text-muted-foreground/60">·</span>
+                        <span>filtered by:</span>
+                        {filterPattern && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterPattern}</span>}
+                        {filterClassification !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterClassification}</span>}
+                        {filterReviewStatus !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterReviewStatus}</span>}
+                        {searchQuery && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">"{searchQuery}"</span>}
+                        <button
+                          type="button"
+                          onClick={handleClearFilters}
+                          className="ml-1 inline-flex items-center gap-1 text-primary hover:underline"
+                        >
+                          <X className="h-3 w-3" />
+                          Clear filters
+                        </button>
+                      </>
+                    )}
                   </div>
                 </CardContent>
-              </Card>}
+              </Card>
+            </div>}
+
+            {/* Empty filter state */}
+            {hasAnalyzedResults && filteredFailures.length === 0 && hasActiveFilters && (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-10 gap-3 text-center">
+                  <Filter className="h-8 w-8 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">No failures match the active filters.</p>
+                  <Button size="sm" variant="outline" onClick={handleClearFilters}>
+                    <X className="h-3 w-3 mr-1" />
+                    Clear filters
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Results - scrollable list; Flex with gap-4 so cards don't shrink or hide */}
             <div className="overflow-y-auto min-h-0 flex flex-col gap-4">
