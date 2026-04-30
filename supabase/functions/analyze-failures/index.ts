@@ -462,11 +462,19 @@ type TestHistoryPattern =
   | 'intermittent'
   | 'sporadic-failure';
 
+interface TestHistoryRunDetail {
+  outcome: 'pass' | 'fail';
+  runName?: string;
+  runDate?: string;
+  aiClassification?: string;
+}
+
 interface TestHistory {
   totalRunsKnown: number;
   failedRuns: number;
   passedRuns: number;
   lastNOutcomes: ('pass' | 'fail')[];
+  lastNRunDetails: TestHistoryRunDetail[];
   currentFailStreak: number;
   currentPassStreak: number;
   recentPassRate: number;
@@ -486,27 +494,29 @@ async function computeGlobalTestHistoryMap(
 
   const { data: recentReports } = await supabase
     .from('analysis_reports')
-    .select('id, run_date, created_at')
+    .select('id, run_date, created_at, run_name')
     .order('run_date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(30);
 
-  const reportsChrono = [...(recentReports || [])].reverse() as Array<{ id: string; run_date: string; created_at: string }>;
+  const reportsChrono = [...(recentReports || [])].reverse() as Array<{ id: string; run_date: string; created_at: string; run_name: string | null }>;
   const reportIds = reportsChrono.map((r) => r.id);
-  const failsByReport = new Map<string, Set<string>>();
+  // Per-report → per-testName → ai_classification (presence of testName == failed in that run)
+  const failsByReport = new Map<string, Map<string, string>>();
 
   if (reportIds.length > 0) {
     const { data: failRows } = await supabase
       .from('analysis_results')
-      .select('report_id, test_name_normalized')
+      .select('report_id, test_name_normalized, ai_classification')
       .in('report_id', reportIds)
       .in('test_name_normalized', unique);
 
     for (const row of failRows || []) {
       const rid = row.report_id as string;
       const tn = row.test_name_normalized as string;
-      if (!failsByReport.has(rid)) failsByReport.set(rid, new Set());
-      failsByReport.get(rid)!.add(tn);
+      const cls = (row.ai_classification as string) || '';
+      if (!failsByReport.has(rid)) failsByReport.set(rid, new Map());
+      failsByReport.get(rid)!.set(tn, cls);
     }
   }
 
