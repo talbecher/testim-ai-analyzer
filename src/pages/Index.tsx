@@ -265,7 +265,7 @@ const Index = () => {
     };
   }, [sortedFailures]);
 
-  // Filter: include analyzing rows; for analyzed rows apply search/classification/review
+  // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern
   const filteredFailures = useMemo(() => {
     return sortedFailures.filter(f => {
       if (!f.analysis) return true;
@@ -274,9 +274,20 @@ const Index = () => {
       const matchesSearch = !searchQuery || f.testName.toLowerCase().includes(searchQuery.toLowerCase()) || (f.errorMessage?.toLowerCase() ?? '').includes(searchQuery.toLowerCase());
       const matchesClassification = filterClassification === 'all' || f.analysis?.classification === filterClassification;
       const matchesStatus = filterReviewStatus === 'all' || (filterReviewStatus === 'reviewed' && withFb.isReviewed) || (filterReviewStatus === 'unreviewed' && !withFb.isReviewed);
-      return matchesSearch && matchesClassification && matchesStatus;
+      const matchesPattern = !filterPattern || f.analysis?.errorPattern === filterPattern;
+      return matchesSearch && matchesClassification && matchesStatus && matchesPattern;
     });
-  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus]);
+  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern]);
+
+  // Pattern groups (auto-detected error categories with counts)
+  const patternGroups = useMemo(
+    () => groupFailuresByPattern(failuresWithFeedback),
+    [failuresWithFeedback],
+  );
+  const totalAnalyzedForChips = useMemo(
+    () => failuresWithFeedback.filter(f => !!f.analysis).length,
+    [failuresWithFeedback],
+  );
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Session Restore Banner */}
