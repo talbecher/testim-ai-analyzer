@@ -62,6 +62,8 @@ const Dashboard = () => {
   const aggregatedMistakes: AggregatedMistake[] = [];
   reports.forEach((report) => {
     report.common_mistakes.forEach((mistake) => {
+      // Skip non-mistakes (same classification on both sides – e.g. confirmed AI)
+      if (!mistake.from || !mistake.to || mistake.from === mistake.to) return;
       const pattern = `${mistake.from} → ${mistake.to}`;
       const existing = aggregatedMistakes.find((m) => m.pattern === pattern);
       if (existing) {

@@ -28,7 +28,10 @@ export const MistakePatternChart = ({ mistakes }: MistakePatternChartProps) => {
         <CardTitle className="flex items-center gap-2">
           ⚠️ Common Mistakes
         </CardTitle>
-        <CardDescription>Most frequent AI misclassifications</CardDescription>
+        <CardDescription>
+          Cases where the AI's classification (left) was corrected by you to a different one (right).
+          The number shows how many times it happened.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {mistakes.length === 0 ? (
@@ -48,12 +51,19 @@ export const MistakePatternChart = ({ mistakes }: MistakePatternChartProps) => {
                 dataKey="pattern"
                 tickLine={false}
                 axisLine={false}
-                width={150}
+                width={180}
                 tick={{ fontSize: 11 }}
               />
               <ChartTooltip
                 content={<ChartTooltipContent />}
-                formatter={(value: number) => [`${value} times`, "Occurred"]}
+                formatter={(value: number, _name, item) => {
+                  const pattern = (item?.payload?.pattern as string) ?? "";
+                  const [from, to] = pattern.split("→").map((s) => s.trim());
+                  return [
+                    `AI said "${from}", corrected to "${to}" — ${value} time${value === 1 ? "" : "s"}`,
+                    "Mistake",
+                  ];
+                }}
               />
               <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                 {mistakes.map((_, index) => (

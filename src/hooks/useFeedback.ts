@@ -169,7 +169,11 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
     // Calculate common mistakes
     const mistakeMap = new Map<string, MistakePattern>();
     incorrect.forEach(f => {
-      if (f.analysis?.classification && f.feedback?.userClassification) {
+      if (
+        f.analysis?.classification &&
+        f.feedback?.userClassification &&
+        f.analysis.classification !== f.feedback.userClassification
+      ) {
         const key = `${f.analysis.classification}→${f.feedback.userClassification}`;
         const existing = mistakeMap.get(key);
         if (existing) {
