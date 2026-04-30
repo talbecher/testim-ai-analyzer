@@ -533,10 +533,19 @@ async function computeGlobalTestHistoryMap(
     }
 
     const priorOutcomes: ('pass' | 'fail')[] = [];
+    const priorRunDetails: TestHistoryRunDetail[] = [];
     if (firstIdx >= 0) {
       for (let i = firstIdx; i < reportsChrono.length; i++) {
-        const rid = reportsChrono[i].id;
-        priorOutcomes.push(failsByReport.get(rid)?.has(T) ? 'fail' : 'pass');
+        const r = reportsChrono[i];
+        const failMap = failsByReport.get(r.id);
+        const failedHere = failMap?.has(T) ?? false;
+        priorOutcomes.push(failedHere ? 'fail' : 'pass');
+        priorRunDetails.push({
+          outcome: failedHere ? 'fail' : 'pass',
+          runName: r.run_name || undefined,
+          runDate: r.run_date || undefined,
+          aiClassification: failedHere ? (failMap!.get(T) || undefined) : undefined,
+        });
       }
     }
 
@@ -560,6 +569,7 @@ async function computeGlobalTestHistoryMap(
     const failedRuns = priorOutcomes.filter((o) => o === 'fail').length;
     const passedRuns = priorOutcomes.filter((o) => o === 'pass').length;
     const lastNOutcomes = [...priorOutcomes].reverse().slice(0, 10) as ('pass' | 'fail')[];
+    const lastNRunDetails = [...priorRunDetails].reverse().slice(0, 10);
 
     let pattern: TestHistoryPattern;
     if (isFirstSeenGlobally) {
@@ -590,6 +600,7 @@ async function computeGlobalTestHistoryMap(
       failedRuns,
       passedRuns,
       lastNOutcomes,
+      lastNRunDetails,
       currentFailStreak,
       currentPassStreak,
       recentPassRate: Math.round(recentPassRate * 100) / 100,
