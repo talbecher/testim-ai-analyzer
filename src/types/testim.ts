@@ -65,11 +65,19 @@ export type TestHistoryPattern =
   | 'intermittent'
   | 'sporadic-failure';
 
+export interface TestHistoryRunDetail {
+  outcome: 'pass' | 'fail';
+  runName?: string;
+  runDate?: string;
+  aiClassification?: string;
+}
+
 export interface TestHistory {
   totalRunsKnown: number;
   failedRuns: number;
   passedRuns: number;
   lastNOutcomes: ('pass' | 'fail')[];
+  lastNRunDetails?: TestHistoryRunDetail[];
   currentFailStreak: number;
   currentPassStreak: number;
   recentPassRate: number;
