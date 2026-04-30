@@ -5,7 +5,7 @@ interface ErrorPatternChipsProps {
   groups: PatternGroup[];
   totalCount: number;
   activePattern: string | null;
-  onSelect: (pattern: string | null) => void;
+  onSelect: (patternKey: string | null) => void;
 }
 
 const TONE_INACTIVE: Record<PatternColorTone, string> = {
@@ -54,21 +54,21 @@ export const ErrorPatternChips = ({
       </button>
 
       {groups.map((group) => {
-        const isActive = activePattern === group.pattern;
+        const isActive = activePattern === group.key;
         return (
           <button
-            key={group.pattern}
+            key={group.key}
             type="button"
-            onClick={() => onSelect(isActive ? null : group.pattern)}
+            onClick={() => onSelect(isActive ? null : group.key)}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-all',
+              'inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-medium transition-all max-w-full',
               isActive ? TONE_ACTIVE[group.tone] : TONE_INACTIVE[group.tone],
             )}
             aria-pressed={isActive}
-            title={`Filter by ${group.pattern}`}
+            title={`Filter by: ${group.label}`}
           >
-            <span>{group.pattern}</span>
-            <span className="font-mono tabular-nums opacity-80">· {group.count}</span>
+            <span className="truncate max-w-[280px]">{group.label}</span>
+            <span className="font-mono tabular-nums opacity-80 shrink-0">· {group.count}</span>
           </button>
         );
       })}

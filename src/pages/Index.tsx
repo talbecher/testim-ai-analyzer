@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ErrorPatternChips } from '@/components/ErrorPatternChips';
-import { groupFailuresByPattern } from '@/lib/errorPatternGrouping';
+import { groupFailuresByPattern, normalizeErrorSignature } from '@/lib/errorPatternGrouping';
 import { Link } from 'react-router-dom';
 import { useChecklist } from '@/hooks/useChecklist';
 import { useFeedback } from '@/hooks/useFeedback';
@@ -265,20 +265,6 @@ const Index = () => {
     };
   }, [sortedFailures]);
 
-  // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern
-  const filteredFailures = useMemo(() => {
-    return sortedFailures.filter(f => {
-      if (!f.analysis) return true;
-      const withFb = failuresWithFeedback.find(x => x.id === f.id);
-      if (!withFb) return true;
-      const matchesSearch = !searchQuery || f.testName.toLowerCase().includes(searchQuery.toLowerCase()) || (f.errorMessage?.toLowerCase() ?? '').includes(searchQuery.toLowerCase());
-      const matchesClassification = filterClassification === 'all' || f.analysis?.classification === filterClassification;
-      const matchesStatus = filterReviewStatus === 'all' || (filterReviewStatus === 'reviewed' && withFb.isReviewed) || (filterReviewStatus === 'unreviewed' && !withFb.isReviewed);
-      const matchesPattern = !filterPattern || f.analysis?.errorPattern === filterPattern;
-      return matchesSearch && matchesClassification && matchesStatus && matchesPattern;
-    });
-  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern]);
-
   // Pattern groups (auto-detected error categories with counts)
   const patternGroups = useMemo(
     () => groupFailuresByPattern(failuresWithFeedback),
@@ -288,6 +274,25 @@ const Index = () => {
     () => failuresWithFeedback.filter(f => !!f.analysis).length,
     [failuresWithFeedback],
   );
+
+  // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern
+  const filteredFailures = useMemo(() => {
+    const knownKeys = new Set(patternGroups.filter(g => g.key !== '__other__').map(g => g.key));
+    return sortedFailures.filter(f => {
+      if (!f.analysis) return true;
+      const withFb = failuresWithFeedback.find(x => x.id === f.id);
+      if (!withFb) return true;
+      const matchesSearch = !searchQuery || f.testName.toLowerCase().includes(searchQuery.toLowerCase()) || (f.errorMessage?.toLowerCase() ?? '').includes(searchQuery.toLowerCase());
+      const matchesClassification = filterClassification === 'all' || f.analysis?.classification === filterClassification;
+      const matchesStatus = filterReviewStatus === 'all' || (filterReviewStatus === 'reviewed' && withFb.isReviewed) || (filterReviewStatus === 'unreviewed' && !withFb.isReviewed);
+      const sigKey = normalizeErrorSignature(f.errorMessage).toLowerCase();
+      const matchesPattern =
+        !filterPattern ||
+        (filterPattern === '__other__' ? !knownKeys.has(sigKey) : sigKey === filterPattern);
+      return matchesSearch && matchesClassification && matchesStatus && matchesPattern;
+    });
+  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern, patternGroups]);
+
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Session Restore Banner */}
@@ -682,7 +687,7 @@ const Index = () => {
                       <>
                         <span className="text-muted-foreground/60">·</span>
                         <span>filtered by:</span>
-                        {filterPattern && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterPattern}</span>}
+                        {filterPattern && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground max-w-[260px] truncate inline-block align-bottom">{patternGroups.find(g => g.key === filterPattern)?.label ?? filterPattern}</span>}
                         {filterClassification !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterClassification}</span>}
                         {filterReviewStatus !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterReviewStatus}</span>}
                         {searchQuery && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">"{searchQuery}"</span>}
