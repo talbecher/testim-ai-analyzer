@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-04-30
+
+### Changed
+- **TestHistoryChip** redesigned as a Datadog/Vercel-style inline timeline: small rounded squares (green pass / red fail) in chronological order in the **Context** row of `ProductionModeCard` (and inline among badges in `FailureReviewCard`).
+- The **current run** (last item) is enlarged and ringed with `ring-foreground/30` to read as a "live" health signal.
+- An amber `AlertTriangle` appears **only** for `was-passing-now-failing` (regression smell). Other patterns rely on the colored squares alone.
+- Tooltip rewritten: pattern-specific headline, `Failed X of Y prior uploads`, and a compact chronological strip.
+
 ## [1.2.1] - 2026-04-29
 
 ### Changed
