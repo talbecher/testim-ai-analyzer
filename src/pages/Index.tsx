@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ErrorPatternChips } from '@/components/ErrorPatternChips';
-import { groupFailuresByPattern } from '@/lib/errorPatternGrouping';
+import { groupFailuresByPattern, normalizeErrorSignature } from '@/lib/errorPatternGrouping';
 import { Link } from 'react-router-dom';
 import { useChecklist } from '@/hooks/useChecklist';
 import { useFeedback } from '@/hooks/useFeedback';
