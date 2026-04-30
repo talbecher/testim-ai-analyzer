@@ -587,16 +587,33 @@ const Index = () => {
             {/* Review Progress Bar: X = reviewed (user action), Y = analyzed (grows as AI completes) */}
             {hasAnalyzedResults && <ReviewProgress reviewed={reviewedCount} total={analyzedCount} onComplete={handleCompleteReview} />}
 
-            {/* Search and Filters */}
-            {hasAnalyzedResults && <Card className="border-border/50 bg-card/50">
-                <CardContent className="p-4">
+            {/* Search and Filters — sticky so it stays accessible while scrolling the list */}
+            {hasAnalyzedResults && <div className="sticky top-0 z-20 -mx-2 px-2 py-2 bg-background/85 backdrop-blur-md">
+              <Card className="border-border/50 bg-card/80">
+                <CardContent className="p-4 space-y-3">
+                  {/* Pattern chips: auto-detected error categories */}
+                  {patternGroups.length > 0 && (
+                    <ErrorPatternChips
+                      groups={patternGroups}
+                      totalCount={totalAnalyzedForChips}
+                      activePattern={filterPattern}
+                      onSelect={setFilterPattern}
+                    />
+                  )}
+
                   <div className="flex flex-col md:flex-row gap-4">
                     {/* Search Input */}
                     <div className="flex-1 relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="Search by test name or error message..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 bg-background/50" />
+                      <Input
+                        ref={searchInputRef}
+                        placeholder="Search by test name or error message…  (press / to focus)"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="pl-9 bg-background/50"
+                      />
                     </div>
-                    
+
                     {/* Classification Filter */}
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4 text-muted-foreground" />
@@ -649,19 +666,40 @@ const Index = () => {
 
                   {/* Bulk select actions row */}
                   {bulkMode && (
-                    <div className="mt-3 flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <Button size="sm" variant="ghost" onClick={handleSelectAll}>Select All</Button>
                       <Button size="sm" variant="ghost" onClick={handleDeselectAll}>Deselect All</Button>
                       <span className="text-xs text-muted-foreground ml-2">{selectedIds.size} selected</span>
                     </div>
                   )}
-                  
-                  {/* Results count */}
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    Showing {filteredFailures.length} of {sortedFailures.length} rows
+
+                  {/* Results count + active filter breakdown + clear */}
+                  <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span>
+                      Showing <span className="font-medium text-foreground">{filteredFailures.length}</span> of {sortedFailures.length} rows
+                    </span>
+                    {hasActiveFilters && (
+                      <>
+                        <span className="text-muted-foreground/60">·</span>
+                        <span>filtered by:</span>
+                        {filterPattern && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterPattern}</span>}
+                        {filterClassification !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterClassification}</span>}
+                        {filterReviewStatus !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterReviewStatus}</span>}
+                        {searchQuery && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">"{searchQuery}"</span>}
+                        <button
+                          type="button"
+                          onClick={handleClearFilters}
+                          className="ml-1 inline-flex items-center gap-1 text-primary hover:underline"
+                        >
+                          <X className="h-3 w-3" />
+                          Clear filters
+                        </button>
+                      </>
+                    )}
                   </div>
                 </CardContent>
-              </Card>}
+              </Card>
+            </div>}
 
             {/* Results - scrollable list; Flex with gap-4 so cards don't shrink or hide */}
             <div className="overflow-y-auto min-h-0 flex flex-col gap-4">
