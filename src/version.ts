@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.2.0",
+    date: "2026-04-29",
+    added: [
+      "Global cross-run test history (implicit pass/fail from last 30 uploads) computed in analyze-failures Edge and sent as history on each analysis",
+      "AI prompt §7.5 Cross-Run History + expanded evidence hierarchy; history included in failures payload for the model",
+      "TestHistoryChip on failure cards (learning + production) with tooltip for prior outcomes"
+    ]
+  },
+  {
     version: "1.1.1",
     date: "2026-04-30",
     fixed: [

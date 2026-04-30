@@ -57,6 +57,26 @@ export interface TestStreakInfo {
   lastClassifications: string[];
 }
 
+/** Global cross-run history (server-computed; implicit pass = not in failures for that upload). */
+export type TestHistoryPattern =
+  | 'first-seen'
+  | 'was-passing-now-failing'
+  | 'consistent-failure'
+  | 'intermittent'
+  | 'sporadic-failure';
+
+export interface TestHistory {
+  totalRunsKnown: number;
+  failedRuns: number;
+  passedRuns: number;
+  lastNOutcomes: ('pass' | 'fail')[];
+  currentFailStreak: number;
+  currentPassStreak: number;
+  recentPassRate: number;
+  isFirstSeenGlobally: boolean;
+  pattern: TestHistoryPattern;
+}
+
 // Co-failure information for AI analysis
 export interface CoFailureInfoForAI {
   isPartOfGroup: boolean;
@@ -146,6 +166,8 @@ export interface AIAnalysisResult {
   coFailureInfo?: CoFailureInfoForAI;
   streakInfo?: TestStreakInfo;
   assertionDetails?: AssertionDetailsForAI;
+  /** Global upload history (last ~30 runs in DB); attached by Edge, not from LLM JSON. */
+  history?: TestHistory;
 }
 
 // Combined Failure with Analysis
@@ -167,10 +189,11 @@ export interface FailureForAI {
   detectedErrorPattern: ErrorPattern;
   patternConfidence: number;
   
-  // Enhanced signals for AI analysis (client sends assertionDetails, coFailureInfo; edge may add streakInfo)
+  // Enhanced signals for AI analysis (client sends assertionDetails, coFailureInfo; edge adds streakInfo + history)
   assertionDetails?: AssertionDetailsForAI;
   coFailureInfo?: CoFailureInfoForAI;
   streakInfo?: TestStreakInfo;
+  history?: TestHistory;
 }
 
 export interface FlakyTestForAI {

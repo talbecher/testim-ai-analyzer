@@ -9,6 +9,7 @@ import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
 import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
 import { BugConfirmationFlow } from './BugConfirmationFlow';
+import { TestHistoryChip } from './TestHistoryChip';
 
 interface ProductionModeCardProps {
   failure: AnalyzedFailureWithFeedback;
@@ -208,6 +209,12 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
             </span>
             <span className="opacity-50">•</span>
             <span>{failure.analysis.confidence}% confidence</span>
+            {failure.analysis.history && (
+              <>
+                <span className="opacity-50">•</span>
+                <TestHistoryChip history={failure.analysis.history} />
+              </>
+            )}
             {failure.analysis.flakyKBMatch && (
               <>
                 <span className="opacity-50">•</span>

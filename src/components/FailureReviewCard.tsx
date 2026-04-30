@@ -9,6 +9,7 @@ import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
 import { BugConfirmationFlow } from './BugConfirmationFlow';
 import { SignalBreakdownCompact } from './SignalBreakdownBar';
+import { TestHistoryChip } from './TestHistoryChip';
 
 interface FailureReviewCardProps {
   failure: AnalyzedFailureWithFeedback;
@@ -174,6 +175,7 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
               {failure.analysis.signalBreakdown && (
                 <SignalBreakdownCompact breakdown={failure.analysis.signalBreakdown} />
               )}
+              {failure.analysis.history && <TestHistoryChip history={failure.analysis.history} />}
               {failure.analysis.flakyKBMatch && <Database className="h-4 w-4 text-primary" />}
               {failure.analysis.requiresRerun ? (
                 <Clock className="h-4 w-4 text-environment" />

@@ -249,6 +249,21 @@ const DECISION_FRAMEWORK = `
 - Network / infra errors → Environment / Infra Issue
 - Null / Undefined errors → Potential bug unless strong flaky signals exist
 
+## 7.5. CROSS-RUN HISTORY (GLOBAL — HIGH WEIGHT)
+
+Each failure may include a \`history\` object built from prior **uploaded** runs (all regression buckets). A run is a row in \`analysis_reports\`. A test **failed** in a run if it appears in that run's failures; **passed** implicitly if it was already "known" from an earlier failing upload and has no failure row for that run.
+
+Use \`history\` as a **HIGH-WEIGHT** narrative signal. The model may override it only when **§0 P0 safety**, **§1 Investigate fallback**, or **§1b SESSION_WEBDRIVER_INFRA** applies — history must **never** contradict those.
+
+Guidance (also nudge **signalBreakdown** scores and **priorityReason** accordingly):
+- **pattern=\`was-passing-now-failing\`** (e.g. ≥2 passes in the last 3 prior uploads): strongly lean **Investigate** (regression smell). Bump **investigateScore** by ~25; mention "passed in last N runs" in **priorityReason**.
+- **pattern=\`consistent-failure\`** (≥3 consecutive fails including this run): lean **Potential bug** when **assertion mismatch**, **real selector failure**, or other bug signals align; bump **bugScore** by ~15.
+- **pattern=\`intermittent\`**: lean **Likely Flaky**; bump **flakyScore** by ~15.
+- **pattern=\`first-seen\`**: reduce confidence by ~10–15% when ambiguous; prefer **Investigate** as tie-breaker; do **not** stack extra penalties beyond existing first-seen rules.
+- **pattern=\`sporadic-failure\`**: neutral weight; use other signals.
+
+Add to **activeSignals** when applicable: \`GLOBAL_HISTORY_REGRESSION_SMELL\`, \`GLOBAL_HISTORY_CONSISTENT_FAIL\`, \`GLOBAL_HISTORY_INTERMITTENT\`, \`GLOBAL_HISTORY_FIRST_SEEN\`.
+
 ## 7b. ASSERTION ERROR DIFFERENTIATION (ENHANCED)
 When error pattern is AssertionError, check assertionDetails:
 - hasExpectedActual: true + isValueMismatch: true → 75-80% confidence Potential bug
@@ -270,8 +285,8 @@ Priority boost for co-failures:
 - Co-failure group of 4+ tests → increase priority by 1 level (P2→P1, P1→P0)
 - Add to priorityReason: "Part of co-failure group (X tests with same [step/error])"
 
-## 9. STREAK ANALYSIS (INTERMITTENT DETECTION)
-When streakInfo is present:
+## 9. STREAK ANALYSIS (BUCKET-SCOPED — passed_locally)
+When streakInfo is present (this regression bucket only):
 - isIntermittent: true (2+ alternations in 4+ runs) → 80-85% confidence Likely Flaky
 - isConsistentFailure: true (3+ consecutive fails, no local pass) → 85% confidence Potential bug
 - streakLength < 3 → Low history, reduce confidence by 10%
@@ -279,6 +294,8 @@ When streakInfo is present:
 Add to priorityReason when applicable:
 - "Intermittent pattern (X alternations) - strong flaky signal"
 - "Failed X times consecutively - consistent failure pattern"
+
+**Note:** \`streakInfo\` is regression-scoped. \`history\` (§7.5) is **global** across uploads — use both; when they conflict, prefer **§7.5** for "was passing, now failing" regression smell, and **§9** for passed-locally flaky evidence.
 `;
 
 // Enhanced assertion rules
@@ -352,10 +369,12 @@ const HIERARCHY_OF_EVIDENCE = `
 ## HIERARCHY OF EVIDENCE (TRIAGE vs CLASSIFICATION)
 
 Apply signals in this order when they conflict:
-1) Regression-specific corrections and passed-locally history (this bucket only)
-2) Co-failure / systemic signals and streak behavior (intermittent vs consistent)
-3) Flaky KB and environment-style error families
-4) Heuristic error-pattern hints (use last)
+1) P0 safety, Investigate fallback, and §1b session/WebDriver infra (absolute)
+2) Regression-specific corrections and passed-locally history (this bucket only)
+3) **Global cross-run history** (\`history.pattern\`, §7.5) — regression smell vs intermittent vs consistent global fails
+4) Co-failure / systemic signals and bucket-scoped **streakInfo** (§9)
+5) Flaky KB and environment-style error families
+6) Heuristic error-pattern hints (use last)
 
 ### Assertions vs "Expected Change" (UI copy / data only)
 - Assertion failures still warrant **human triage**: keep **suggestedAction** in the "verify" family ("Verify manually" or "Rerun only") when the failure is an assertion — QA should confirm before closing.
@@ -434,6 +453,142 @@ function computeStreakInfo(
     isConsistentFailure,
     lastClassifications,
   };
+}
+
+type TestHistoryPattern =
+  | 'first-seen'
+  | 'was-passing-now-failing'
+  | 'consistent-failure'
+  | 'intermittent'
+  | 'sporadic-failure';
+
+interface TestHistory {
+  totalRunsKnown: number;
+  failedRuns: number;
+  passedRuns: number;
+  lastNOutcomes: ('pass' | 'fail')[];
+  currentFailStreak: number;
+  currentPassStreak: number;
+  recentPassRate: number;
+  isFirstSeenGlobally: boolean;
+  pattern: TestHistoryPattern;
+}
+
+/** Global implicit pass/fail series from last 30 uploads; current run is not in DB — streak includes this failure as +1. */
+async function computeGlobalTestHistoryMap(
+  supabase: ReturnType<typeof createClient>,
+  testNames: string[],
+  globalRowCountByTest: Map<string, number>,
+): Promise<Map<string, TestHistory>> {
+  const out = new Map<string, TestHistory>();
+  const unique = [...new Set(testNames)];
+  if (unique.length === 0) return out;
+
+  const { data: recentReports } = await supabase
+    .from('analysis_reports')
+    .select('id, run_date, created_at')
+    .order('run_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  const reportsChrono = [...(recentReports || [])].reverse() as Array<{ id: string; run_date: string; created_at: string }>;
+  const reportIds = reportsChrono.map((r) => r.id);
+  const failsByReport = new Map<string, Set<string>>();
+
+  if (reportIds.length > 0) {
+    const { data: failRows } = await supabase
+      .from('analysis_results')
+      .select('report_id, test_name_normalized')
+      .in('report_id', reportIds)
+      .in('test_name_normalized', unique);
+
+    for (const row of failRows || []) {
+      const rid = row.report_id as string;
+      const tn = row.test_name_normalized as string;
+      if (!failsByReport.has(rid)) failsByReport.set(rid, new Set());
+      failsByReport.get(rid)!.add(tn);
+    }
+  }
+
+  for (const T of unique) {
+    const globalTotal = globalRowCountByTest.get(T) ?? 0;
+    const isFirstSeenGlobally = globalTotal === 0;
+
+    let firstIdx = -1;
+    for (let i = 0; i < reportsChrono.length; i++) {
+      if (failsByReport.get(reportsChrono[i].id)?.has(T)) {
+        firstIdx = i;
+        break;
+      }
+    }
+
+    const priorOutcomes: ('pass' | 'fail')[] = [];
+    if (firstIdx >= 0) {
+      for (let i = firstIdx; i < reportsChrono.length; i++) {
+        const rid = reportsChrono[i].id;
+        priorOutcomes.push(failsByReport.get(rid)?.has(T) ? 'fail' : 'pass');
+      }
+    }
+
+    let trailingFails = 0;
+    for (let j = priorOutcomes.length - 1; j >= 0; j--) {
+      if (priorOutcomes[j] === 'fail') trailingFails++;
+      else break;
+    }
+    const currentFailStreak = 1 + trailingFails;
+
+    let trailingPasses = 0;
+    for (let j = priorOutcomes.length - 1; j >= 0; j--) {
+      if (priorOutcomes[j] === 'pass') trailingPasses++;
+      else break;
+    }
+    const currentPassStreak = trailingPasses;
+
+    const last5 = priorOutcomes.slice(-5);
+    const recentPassRate = last5.length === 0 ? 0 : last5.filter((o) => o === 'pass').length / last5.length;
+
+    const failedRuns = priorOutcomes.filter((o) => o === 'fail').length;
+    const passedRuns = priorOutcomes.filter((o) => o === 'pass').length;
+    const lastNOutcomes = [...priorOutcomes].reverse().slice(0, 10) as ('pass' | 'fail')[];
+
+    let pattern: TestHistoryPattern;
+    if (isFirstSeenGlobally) {
+      pattern = 'first-seen';
+    } else {
+      const last3 = priorOutcomes.slice(-3);
+      const passesInLast3 = last3.filter((o) => o === 'pass').length;
+      if (priorOutcomes.length >= 2 && passesInLast3 >= 2) {
+        pattern = 'was-passing-now-failing';
+      } else if (currentFailStreak >= 3) {
+        pattern = 'consistent-failure';
+      } else {
+        const last5ForAlt = priorOutcomes.slice(-5);
+        let transitions = 0;
+        for (let i = 1; i < last5ForAlt.length; i++) {
+          if (last5ForAlt[i] !== last5ForAlt[i - 1]) transitions++;
+        }
+        if (last5ForAlt.length >= 3 && transitions >= 2) {
+          pattern = 'intermittent';
+        } else {
+          pattern = 'sporadic-failure';
+        }
+      }
+    }
+
+    out.set(T, {
+      totalRunsKnown: priorOutcomes.length,
+      failedRuns,
+      passedRuns,
+      lastNOutcomes,
+      currentFailStreak,
+      currentPassStreak,
+      recentPassRate: Math.round(recentPassRate * 100) / 100,
+      isFirstSeenGlobally,
+      pattern,
+    });
+  }
+
+  return out;
 }
 
 // Map dominant signal direction to expected classification (for signalBreakdown alignment)
@@ -538,6 +693,7 @@ Available signal names:
 - ELEMENT_NOT_FOUND, VISUAL_ASSERTION, HISTORICAL_FLAKY_CORRECTION
 - NETWORK_ERROR, TIMEOUT_SHORT, TIMEOUT_LONG, INFRA_PATTERN, CO_FAILURE_INFRA, SESSION_WEBDRIVER_INFRA
 - FIRST_SEEN_GLOBALLY, FIRST_SEEN_IN_REGRESSION, CONFLICTING_SIGNALS, MANUAL_CHANGE_DETECTED, LOW_HISTORY
+- GLOBAL_HISTORY_REGRESSION_SMELL, GLOBAL_HISTORY_CONSISTENT_FAIL, GLOBAL_HISTORY_INTERMITTENT, GLOBAL_HISTORY_FIRST_SEEN
 
 ### Field Alignment Rules:
 - errorPattern: Use the provided error pattern as-is
@@ -624,8 +780,12 @@ serve(async (req) => {
     let globalFamiliarityInfo = '';
     let fewShotExamples = '';
     const streakMap = new Map<string, StreakInfo>();
+    let historyByTest = new Map<string, TestHistory>();
+    const testNames = failures.map((f: { testNameNormalized: string }) => f.testNameNormalized);
 
     try {
+      const globalTestMap = new Map<string, { total: number; inThisRegression: number }>();
+
       // Step 1: Get report IDs and run_date for THIS regression bucket (for streak ordering)
       const { data: regressionReports, error: reportsError } = await supabase
         .from('analysis_reports')
@@ -809,7 +969,6 @@ ${supporting.slice(0, 15).map(p =>
       }
 
       // Step 4: Check global familiarity for current failures
-      const testNames = failures.map((f: any) => f.testNameNormalized);
       const { data: globalOccurrences } = await supabase
         .from('analysis_results')
         .select('test_name_normalized, report_id')
@@ -817,7 +976,6 @@ ${supporting.slice(0, 15).map(p =>
         .limit(500);
 
       if (globalOccurrences && globalOccurrences.length > 0) {
-        const globalTestMap = new Map<string, { total: number; inThisRegression: number }>();
         globalOccurrences.forEach(row => {
           const existing = globalTestMap.get(row.test_name_normalized) || { total: 0, inThisRegression: 0 };
           existing.total++;
@@ -871,6 +1029,15 @@ ${firstSeenGlobally.length > 0
           });
           console.log(`Computed streakInfo for ${streakMap.size} tests`);
         }
+      }
+
+      const globalRowCountByTest = new Map<string, number>();
+      globalTestMap.forEach((v, k) => globalRowCountByTest.set(k, v.total));
+      try {
+        historyByTest = await computeGlobalTestHistoryMap(supabase, testNames, globalRowCountByTest);
+        console.log(`Computed global cross-run history for ${historyByTest.size} tests`);
+      } catch (hErr) {
+        console.log('computeGlobalTestHistoryMap failed:', hErr);
       }
 
       // Fetch aggregated learning patterns (global, from Boost)
@@ -946,11 +1113,12 @@ ${passedLocallyPatterns}
 ${learningPatternsPrompt}
 `;
 
-    // Enrich failures with streakInfo (computed from DB) for DECISION_FRAMEWORK §9
-    const failuresForPrompt = failures.map((f: any) => ({
+    // Enrich failures with streakInfo (§9) and global history (§7.5)
+    const failuresForPrompt = failures.map((f: { testNameNormalized: string; errorMessage?: string; [key: string]: unknown }) => ({
       ...f,
       errorMessage: sanitizeErrorMessage(f.errorMessage),
       streakInfo: streakMap.get(f.testNameNormalized) ?? undefined,
+      history: historyByTest.get(f.testNameNormalized) ?? undefined,
     }));
 
     // Select prompt based on mode
@@ -967,7 +1135,9 @@ If a test matches Flaky KB (even fuzzy match), note it in your response.
 IMPORTANT: Flaky KB is a supporting signal, not a hard rule.
 
 ## Failures to Analyze:
-When streakInfo is present on a failure, use it: isIntermittent → Likely Flaky; isConsistentFailure → Potential bug.
+Each failure may include **streakInfo** (this regression bucket, passed_locally) and **history** (global cross-run uploads, §7.5). Use both; **history** drives regression smell vs global intermittent/consistent failure.
+When streakInfo is present: isIntermittent → Likely Flaky; isConsistentFailure → Potential bug (bucket-scoped).
+When history is present: follow §7.5 score nudges and priorityReason cues.
 ${JSON.stringify(failuresForPrompt, null, 2)}
 
 For EACH failure, respond with JSON array containing objects with:
@@ -1084,10 +1254,14 @@ Return ONLY valid JSON array, no markdown.`;
       return analysis;
     });
     
-    const results = processedAnalyses.map((analysis: any, idx: number) => ({
-      failureId: idx,
-      analysis,
-    }));
+    const results = processedAnalyses.map((analysis: any, idx: number) => {
+      const norm = (failures[idx] as { testNameNormalized?: string })?.testNameNormalized;
+      const hist = norm ? historyByTest.get(norm) : undefined;
+      return {
+        failureId: idx,
+        analysis: hist ? { ...analysis, history: hist } : analysis,
+      };
+    });
 
     console.log(`Analysis complete for "${regressionBucket}" (${mode} mode), returning ${results.length} results`);
 
