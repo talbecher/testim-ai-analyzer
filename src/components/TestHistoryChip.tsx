@@ -1,51 +1,23 @@
+import { AlertTriangle } from 'lucide-react';
 import type { TestHistory, TestHistoryPattern } from '@/types/testim';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
-function rowToEmoji(outcomes: ('pass' | 'fail')[]): string {
-  return outcomes.map((o) => (o === 'pass' ? '✅' : '❌')).join('');
-}
+const MAX_VISIBLE = 8;
 
-function chipCopy(pattern: TestHistoryPattern, h: TestHistory): { label: string; sub?: string } {
-  const icons = rowToEmoji(h.lastNOutcomes);
+function patternHeadline(pattern: TestHistoryPattern, h: TestHistory): string {
   switch (pattern) {
     case 'was-passing-now-failing':
-      return {
-        label: icons ? `${icons}  pass → fail` : 'pass → fail',
-        sub: 'regression smell',
-      };
+      return 'Regression smell — was passing, now failing';
     case 'consistent-failure':
-      return {
-        label: `${h.currentFailStreak} fails in a row`,
-        sub: 'consistent failure',
-      };
+      return `Consistent fail for last ${h.currentFailStreak} run${h.currentFailStreak === 1 ? '' : 's'}`;
     case 'intermittent':
-      return {
-        label: icons ? `${icons}  intermittent` : 'intermittent',
-        sub: 'alternating outcomes',
-      };
+      return 'Intermittent pattern — alternating outcomes';
     case 'first-seen':
-      return { label: '★ first seen', sub: 'no prior failures in DB' };
+      return 'First failure on record for this test';
+    case 'sporadic-failure':
     default:
-      return {
-        label: icons ? `${icons}  mixed` : 'mixed history',
-        sub: 'sporadic',
-      };
-  }
-}
-
-function chipStyles(pattern: TestHistoryPattern): string {
-  switch (pattern) {
-    case 'was-passing-now-failing':
-      return 'bg-amber-500/15 text-amber-900 dark:text-amber-100 border-amber-500/40';
-    case 'consistent-failure':
-      return 'bg-destructive/15 text-destructive border-destructive/40';
-    case 'intermittent':
-      return 'bg-yellow-500/15 text-yellow-900 dark:text-yellow-100 border-yellow-500/40';
-    case 'first-seen':
-      return 'bg-muted text-muted-foreground border-border';
-    default:
-      return 'bg-muted/80 text-muted-foreground border-border/80';
+      return 'Sporadic failures across recent runs';
   }
 }
 
@@ -55,38 +27,77 @@ export interface TestHistoryChipProps {
 }
 
 export function TestHistoryChip({ history, className }: TestHistoryChipProps) {
-  const { pattern, lastNOutcomes } = history;
-  const { label, sub } = chipCopy(pattern, history);
-  const totalStrip = lastNOutcomes.length;
-  const chronoEmoji =
-    totalStrip > 0 ? rowToEmoji([...lastNOutcomes].reverse()) : '';
-  const tooltipLine1 =
-    totalStrip > 0
-      ? `Last ${totalStrip} prior upload(s), oldest→newest: ${chronoEmoji}`
-      : 'No prior uploads in the recent window';
-  const tooltipLine2 =
-    history.totalRunsKnown > 0
-      ? `Failed ${history.failedRuns} of ${history.totalRunsKnown} prior uploads globally (implicit pass if not in failure list)`
-      : 'First failure on record for this test name';
+  const { pattern, lastNOutcomes, totalRunsKnown, failedRuns } = history;
+
+  // Reverse to chronological (oldest → newest, LTR), then cap to last N visible.
+  const chrono = [...lastNOutcomes].reverse();
+  const truncated = chrono.length > MAX_VISIBLE;
+  const visible = truncated ? chrono.slice(-MAX_VISIBLE) : chrono;
+
+  const showWarning = pattern === 'was-passing-now-failing';
+  const headline = patternHeadline(pattern, history);
+  const subline =
+    totalRunsKnown > 0
+      ? `Failed ${failedRuns} of ${totalRunsKnown} prior upload${totalRunsKnown === 1 ? '' : 's'}`
+      : 'No prior uploads on record';
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
           dir="ltr"
+          aria-label={headline}
           className={cn(
-            'inline-flex max-w-[min(100%,14rem)] cursor-default items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-[10px] leading-tight',
-            chipStyles(pattern),
+            'inline-flex cursor-default items-center align-middle',
             className,
           )}
         >
-          <span className="truncate">{label}</span>
-          {sub && <span className="hidden text-[9px] opacity-70 sm:inline">({sub})</span>}
+          {visible.length === 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-[2px] bg-muted-foreground/30" />
+              <span className="text-[10px] text-muted-foreground">first seen</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-[2px]">
+              {truncated && (
+                <span className="mr-0.5 text-[10px] leading-none text-muted-foreground">…</span>
+              )}
+              {visible.map((outcome, idx) => {
+                const isCurrent = idx === visible.length - 1;
+                const isPass = outcome === 'pass';
+                return (
+                  <span
+                    key={idx}
+                    className={cn(
+                      'inline-block transition-transform',
+                      isCurrent
+                        ? 'h-2.5 w-2.5 rounded-[3px] ring-1 ring-foreground/30 ring-offset-1 ring-offset-background'
+                        : 'h-2 w-2 rounded-[2px]',
+                      isPass ? 'bg-confidence-high' : 'bg-bug',
+                    )}
+                  />
+                );
+              })}
+            </span>
+          )}
+
+          {showWarning && (
+            <AlertTriangle
+              className="ml-1 h-3 w-3 text-amber-500"
+              aria-hidden
+            />
+          )}
         </span>
       </TooltipTrigger>
-      <TooltipContent side="bottom" className="max-w-xs text-xs" dir="ltr">
-        <p className="font-medium">{tooltipLine1}</p>
-        <p className="text-muted-foreground">{tooltipLine2}</p>
+      <TooltipContent side="bottom" className="max-w-xs space-y-1 text-xs" dir="ltr">
+        <p className="font-medium">{headline}</p>
+        <p className="text-muted-foreground">{subline}</p>
+        {chrono.length > 0 && (
+          <p className="font-mono text-[11px] tracking-wider text-muted-foreground">
+            {chrono.map((o) => (o === 'pass' ? '·' : '●')).join(' ')}
+            <span className="ml-2 not-italic opacity-70">oldest → newest</span>
+          </p>
+        )}
       </TooltipContent>
     </Tooltip>
   );
