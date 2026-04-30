@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.2.3",
+    date: "2026-04-30",
+    changed: [
+      "Test History squares enlarged for readability (h-3 default, h-3.5 for current run, gap-[3px])",
+      "Hover any failed (red) square to see the run name/date and how that prior failure was classified by the AI",
+      "Green squares show \"Passed — not in the failures CSV for this run\"; an info icon at the end opens the pattern summary tooltip"
+    ],
+    fixed: [
+      "Clarified that \"first seen\" means no prior record of the test name in analysis_results (not a data/display bug)"
+    ]
+  },
+  {
     version: "1.2.2",
     date: "2026-04-30",
     changed: [

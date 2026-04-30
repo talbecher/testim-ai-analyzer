@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-04-30
+
+### Changed
+- **TestHistoryChip** squares enlarged (`h-3`/`h-3.5` for current run, `gap-[3px]`) for better readability.
+- **Per-square hover**: each square now has its own tooltip. Failed (red) squares show the run name/date and the AI classification recorded for that prior failure (`ai_classification` from `analysis_results`). Green squares show "Passed — not in the failures CSV for this run".
+- **Summary tooltip** moved to a small info icon at the end of the strip — pattern headline, counts, and chronological strip.
+
+### Fixed
+- Clarified semantics of `first seen` — no prior record of this `test_name_normalized` in `analysis_results` (not a parse/display issue).
+
+### Edge
+- `analyze-failures` `computeGlobalTestHistoryMap` now selects `run_name` from reports and `ai_classification` from results; emits `lastNRunDetails` (parallel to `lastNOutcomes`) on each `TestHistory`.
+
 ## [1.2.2] - 2026-04-30
 
 ### Changed
