@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { ErrorPatternChips } from '@/components/ErrorPatternChips';
+import { groupFailuresByPattern } from '@/lib/errorPatternGrouping';
 import { Link } from 'react-router-dom';
 import { useChecklist } from '@/hooks/useChecklist';
 import { useFeedback } from '@/hooks/useFeedback';
@@ -160,6 +162,35 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterClassification, setFilterClassification] = useState<string>('all');
   const [filterReviewStatus, setFilterReviewStatus] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
+  const [filterPattern, setFilterPattern] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // "/" focuses search input — skip when user is typing in another field
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== '/') return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+      e.preventDefault();
+      searchInputRef.current?.focus();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery('');
+    setFilterClassification('all');
+    setFilterReviewStatus('all');
+    setFilterPattern(null);
+  }, []);
+
+  const hasActiveFilters =
+    !!searchQuery ||
+    filterClassification !== 'all' ||
+    filterReviewStatus !== 'all' ||
+    filterPattern !== null;
   const classifications: Classification[] = ['Potential bug', 'Likely Flaky', 'Environment / Infra Issue', 'Expected Change', 'Investigate'];
 
   const handleFileUpload = (file: File) => {
