@@ -278,6 +278,14 @@ const Index = () => {
   );
   const totalAnalyzedForChips = analyzedSortedFailures.length;
 
+  // Set of bucket keys that earned a dedicated chip (count >= 2). Anything not
+  // in this set is part of "Other" — including singletons of canonical buckets
+  // and messages that didn't match any canonical bucket.
+  const visibleBucketKeys = useMemo(
+    () => new Set(patternGroups.filter(g => g.key !== '__other__').map(g => g.key)),
+    [patternGroups],
+  );
+
   // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern
   const filteredFailures = useMemo(() => {
     return sortedFailures.filter(f => {
@@ -288,10 +296,14 @@ const Index = () => {
       const matchesClassification = filterClassification === 'all' || f.analysis?.classification === filterClassification;
       const matchesStatus = filterReviewStatus === 'all' || (filterReviewStatus === 'reviewed' && withFb.isReviewed) || (filterReviewStatus === 'unreviewed' && !withFb.isReviewed);
       const bucketKey = getBucketKeyForMessage(f.errorMessage);
-      const matchesPattern = !filterPattern || bucketKey === filterPattern;
+      const matchesPattern =
+        !filterPattern ||
+        (filterPattern === '__other__'
+          ? !visibleBucketKeys.has(bucketKey)
+          : bucketKey === filterPattern);
       return matchesSearch && matchesClassification && matchesStatus && matchesPattern;
     });
-  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern]);
+  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern, visibleBucketKeys]);
 
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
