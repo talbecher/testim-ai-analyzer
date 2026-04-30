@@ -24,6 +24,13 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.1.1",
+    date: "2026-04-30",
+    fixed: [
+      "Quick filter chips now count and filter using the same canonical buckets, so clicking a chip always shows exactly the number of failures it advertises (e.g. \"Element is not visible · 3\" now reliably returns 3 rows)"
+    ]
+  },
+  {
     version: "1.1.0",
     date: "2026-04-30",
     added: [
