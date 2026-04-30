@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Settings as SettingsIcon, ArrowLeft, Plus, Trash2, GripVertical, Tag, TestTube, Wrench, Info, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, GripVertical, Tag, TestTube, Wrench, Info, FolderOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { BugCategory, CategoryType } from '@/types/bugCategory';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { AppLogo } from '@/components/AppLogo';
 import { toast } from 'sonner';
 import { getVersionInfo } from '@/version';
 import { ChangelogDialog } from '@/components/ChangelogDialog';
@@ -289,9 +290,7 @@ const Settings = () => {
               </Link>
             </Button>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <SettingsIcon className="h-6 w-6 text-primary" />
-              </div>
+              <AppLogo size="md" />
               <h1 className="text-2xl font-bold text-foreground">Settings</h1>
             </div>
           </div>

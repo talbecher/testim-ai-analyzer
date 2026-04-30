@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
-  ArrowLeft, Brain, TrendingUp, Zap, AlertTriangle, CheckCircle, 
+  ArrowLeft, TrendingUp, Zap, AlertTriangle, CheckCircle, 
   FileText, BarChart3, Settings as SettingsIcon, Search, SkipForward,
   Lightbulb, Wrench, MessageSquare, Tag
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { AppLogo } from '@/components/AppLogo';
 import { LearningBoostButton } from '@/components/LearningBoostButton';
 import { cn } from '@/lib/utils';
 
@@ -169,9 +170,7 @@ export default function AILearning() {
               </Link>
             </Button>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Brain className="h-6 w-6 text-primary" />
-              </div>
+              <AppLogo size="md" />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">AI Learning Insights</h1>
                 <p className="text-sm text-muted-foreground">See how the AI learns from your corrections</p>
@@ -408,7 +407,7 @@ export default function AILearning() {
           <Card className="border-border/50">
             <CardContent className="pt-6">
               <div className="text-center py-12 text-muted-foreground">
-                <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <AppLogo size="lg" className="mx-auto mb-4 opacity-90" />
                 <p className="text-lg font-medium">No learning patterns yet</p>
                 <p className="text-sm mt-1">
                   The AI will start learning once you review some test failures and provide feedback

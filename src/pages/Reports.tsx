@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, FileText, Pencil, Trash2, Brain, Search, BarChart3, Bug, Settings as SettingsIcon, Rocket } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { AppLogo } from '@/components/AppLogo';
 import { format } from 'date-fns';
 
 export default function Reports() {
@@ -71,9 +72,7 @@ export default function Reports() {
               </Link>
             </Button>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <FileText className="h-6 w-6 text-primary" />
-              </div>
+              <AppLogo size="md" />
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Saved Reports</h1>
                 <p className="text-sm text-muted-foreground">View and manage your analysis reports</p>
@@ -108,7 +107,7 @@ export default function Reports() {
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Brain className="h-8 w-8 text-primary" />
+                <AppLogo size="md" />
                 <div>
                   <h3 className="font-semibold text-foreground">AI Learning Status</h3>
                   <p className="text-sm text-muted-foreground">
@@ -155,7 +154,7 @@ export default function Reports() {
               </div>
             ) : filteredReports.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <AppLogo size="lg" className="mx-auto mb-4 opacity-90" />
                 <p className="text-lg font-medium">No reports found</p>
                 <p className="text-sm mt-1">
                   {searchQuery ? 'Try a different search term' : 'Start by analyzing some test failures'}

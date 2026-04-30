@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, TrendingUp, Target, AlertTriangle, BarChart3 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AppLogo } from "@/components/AppLogo";
 import { AccuracyTrendChart } from "@/components/dashboard/AccuracyTrendChart";
 import { MistakePatternChart } from "@/components/dashboard/MistakePatternChart";
 import { RecentReportsTable } from "@/components/dashboard/RecentReportsTable";
@@ -88,9 +89,12 @@ const Dashboard = () => {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">AI Analysis Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Track accuracy trends and common failure patterns</p>
+          <div className="flex items-center gap-4">
+            <AppLogo size="lg" />
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">AI Analysis Dashboard</h1>
+              <p className="text-muted-foreground mt-1">Track accuracy trends and common failure patterns</p>
+            </div>
           </div>
           <div className="flex gap-2">
             <ThemeToggle />
@@ -106,7 +110,7 @@ const Dashboard = () => {
         {reports.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <BarChart3 className="h-16 w-16 text-muted-foreground/50 mb-4" />
+              <AppLogo size="lg" className="mb-4 opacity-90" />
               <h3 className="text-lg font-medium text-foreground mb-2">No Reports Yet</h3>
               <p className="text-muted-foreground text-center max-w-md mb-4">
                 Start analyzing test failures and saving reports to see accuracy trends and patterns here.

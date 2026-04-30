@@ -10,8 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { ArrowLeft, Save, FileText, Search, Filter, CheckCircle2, XCircle, Edit3, Brain, SearchCheck, SkipForward, Wrench, Rocket, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Search, Filter, CheckCircle2, XCircle, Edit3, Brain, SearchCheck, SkipForward, Wrench, Rocket, AlertTriangle } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { AppLogo } from '@/components/AppLogo';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -198,7 +199,7 @@ export default function ReportEdit() {
     return (
       <div className="min-h-screen bg-background p-6 flex items-center justify-center">
         <Card className="p-8 text-center">
-          <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <AppLogo size="lg" className="mx-auto mb-4 opacity-90" />
           <h2 className="text-xl font-semibold mb-2">Report Not Found</h2>
           <p className="text-muted-foreground mb-4">The report you're looking for doesn't exist.</p>
           <Button asChild>
@@ -238,9 +239,7 @@ export default function ReportEdit() {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <FileText className="h-6 w-6 text-primary" />
-                </div>
+                <AppLogo size="md" />
                 <div>
                   <div className="flex items-center gap-2">
                     <h1 className="text-2xl font-bold text-foreground">{currentReport.run_name}</h1>
