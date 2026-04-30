@@ -701,6 +701,20 @@ const Index = () => {
               </Card>
             </div>}
 
+            {/* Empty filter state */}
+            {hasAnalyzedResults && filteredFailures.length === 0 && hasActiveFilters && (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-10 gap-3 text-center">
+                  <Filter className="h-8 w-8 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">No failures match the active filters.</p>
+                  <Button size="sm" variant="outline" onClick={handleClearFilters}>
+                    <X className="h-3 w-3 mr-1" />
+                    Clear filters
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Results - scrollable list; Flex with gap-4 so cards don't shrink or hide */}
             <div className="overflow-y-auto min-h-0 flex flex-col gap-4">
               {filteredFailures.map(f => {
