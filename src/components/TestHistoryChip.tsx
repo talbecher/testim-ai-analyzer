@@ -65,7 +65,7 @@ export function TestHistoryChip({ history, className }: TestHistoryChipProps) {
           <span className="text-[10px] text-muted-foreground">first seen</span>
         </span>
       ) : (
-        <span className="inline-flex items-center gap-[3px]">
+        <span className="inline-flex items-center gap-1">
           {truncated && (
             <span className="mr-0.5 text-[10px] leading-none text-muted-foreground">…</span>
           )}
@@ -80,8 +80,8 @@ export function TestHistoryChip({ history, className }: TestHistoryChipProps) {
                     className={cn(
                       'inline-block cursor-help transition-transform hover:scale-110',
                       isCurrent
-                        ? 'h-3.5 w-3.5 rounded-[4px] ring-1 ring-foreground/30 ring-offset-1 ring-offset-background'
-                        : 'h-3 w-3 rounded-[3px]',
+                        ? 'h-[18px] w-[18px] rounded-[5px] ring-1 ring-foreground/30 ring-offset-1 ring-offset-background'
+                        : 'h-4 w-4 rounded-[4px]',
                       isPass ? 'bg-confidence-high' : 'bg-bug',
                     )}
                   />
