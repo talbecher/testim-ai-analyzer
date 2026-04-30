@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ErrorPatternChips } from '@/components/ErrorPatternChips';
-import { groupFailuresByPattern, normalizeErrorSignature } from '@/lib/errorPatternGrouping';
+import { groupFailuresByPattern, getBucketKeyForMessage } from '@/lib/errorPatternGrouping';
 import { Link } from 'react-router-dom';
 import { useChecklist } from '@/hooks/useChecklist';
 import { useFeedback } from '@/hooks/useFeedback';
@@ -265,19 +265,21 @@ const Index = () => {
     };
   }, [sortedFailures]);
 
-  // Pattern groups (auto-detected error categories with counts)
+  // Pattern groups: count from the SAME pool the filter applies to (analyzed rows
+  // in sortedFailures), so a chip's count always equals the number of rows that
+  // appear after clicking it.
+  const analyzedSortedFailures = useMemo(
+    () => sortedFailures.filter(f => !!f.analysis),
+    [sortedFailures],
+  );
   const patternGroups = useMemo(
-    () => groupFailuresByPattern(failuresWithFeedback),
-    [failuresWithFeedback],
+    () => groupFailuresByPattern(analyzedSortedFailures),
+    [analyzedSortedFailures],
   );
-  const totalAnalyzedForChips = useMemo(
-    () => failuresWithFeedback.filter(f => !!f.analysis).length,
-    [failuresWithFeedback],
-  );
+  const totalAnalyzedForChips = analyzedSortedFailures.length;
 
   // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern
   const filteredFailures = useMemo(() => {
-    const knownKeys = new Set(patternGroups.filter(g => g.key !== '__other__').map(g => g.key));
     return sortedFailures.filter(f => {
       if (!f.analysis) return true;
       const withFb = failuresWithFeedback.find(x => x.id === f.id);
@@ -285,13 +287,11 @@ const Index = () => {
       const matchesSearch = !searchQuery || f.testName.toLowerCase().includes(searchQuery.toLowerCase()) || (f.errorMessage?.toLowerCase() ?? '').includes(searchQuery.toLowerCase());
       const matchesClassification = filterClassification === 'all' || f.analysis?.classification === filterClassification;
       const matchesStatus = filterReviewStatus === 'all' || (filterReviewStatus === 'reviewed' && withFb.isReviewed) || (filterReviewStatus === 'unreviewed' && !withFb.isReviewed);
-      const sigKey = normalizeErrorSignature(f.errorMessage).toLowerCase();
-      const matchesPattern =
-        !filterPattern ||
-        (filterPattern === '__other__' ? !knownKeys.has(sigKey) : sigKey === filterPattern);
+      const bucketKey = getBucketKeyForMessage(f.errorMessage);
+      const matchesPattern = !filterPattern || bucketKey === filterPattern;
       return matchesSearch && matchesClassification && matchesStatus && matchesPattern;
     });
-  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern, patternGroups]);
+  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern]);
 
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">

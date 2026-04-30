@@ -1,101 +1,68 @@
-## What we're building
+## הבעיה
 
-Keep the current single-list layout (no 3-column rework, no extra clicks). Add a **row of clickable filter chips** above the list that auto-detect repeating error patterns, plus small, focused improvements that save clicks and keystrokes.
+כשבוחרים את הצ׳יפ "Element is not visible" שאמור להציג 3 כשלונות, מופיעים רק 2. השלישי "נעלם" — בפועל הוא נופל לקבוצה אחרת או ל-Other.
 
-## 1. Error-pattern filter chips (the main feature)
+### למה זה קורה
 
-A horizontal strip above the search bar that auto-groups failures by their detected error pattern (already computed in `errorPatternDetection.ts`).
+הקיבוץ הנוכחי ב-`src/lib/errorPatternGrouping.ts` בונה signature לכל הודעה ע״י רגקסים שמנקים מרכאות, נתיבים, מספרים, GUIDs, וחותכים ל-60 תווים. שתי הודעות שמתארות את אותה תקלה יכולות לקבל מפתחות שונים אם:
 
-```text
-┌───────────────────────────────────────────────────────────────────┐
-│  Quick filters:                                                   │
-│  [ All · 23 ]  [ Element not found · 8 ]  [ Timeout · 6 ]         │
-│  [ AssertionError · 4 ]  [ Network error · 3 ]  [ Other · 2 ]     │
-└───────────────────────────────────────────────────────────────────┘
-```
+- אחת מכילה selector בתוך מרכאות והשנייה לא (`Element 'login-btn' is not visible` מול `Element is not visible at step 4`).
+- אחת נחתכת ב-60 תווים בנקודה שונה (`…` בסוף).
+- יש שונות בסדר המילים או בפיסוק (`is not visible.` מול `not visible -`).
+- הודעה אחת מכילה stack מקדים בלי `\n` והנרמול לא מצליח להגיע למילים המהותיות.
 
-**Behavior**
-- Auto-built from `failure.analysis.errorPattern` of all loaded failures (no AI call needed — already classified).
-- Only shows patterns with **2+ occurrences** (singletons stay in "Other").
-- Counts update live as filters/search change.
-- Click a chip → filters the list to that pattern only. Click again → toggles back to All.
-- Chip color matches the pattern's typical classification (Element not found = flaky-yellow, AssertionError = bug-red, Network = env-orange).
-- Sorted by count descending (most common first).
-- Works in combination with the existing search/classification/review-status filters.
+התוצאה: 2 הודעות מתאחדות תחת label "Element is not visible", השלישית מקבלת signature מעט שונה ונופלת ל-Other (או נעלמת אם count=1).
 
-**Where it lives:** Inside the existing filter `Card` (lines 549–622 of `src/pages/Index.tsx`), as a new row above the search input.
+בנוסף יש פער בין מקור-הספירה (`failuresWithFeedback`) למקור-הסינון (`sortedFailures`), ובין שורות עם `analysis` לבלעדיו.
 
-## 2. Small UX improvements (no extra clicks)
+## הפתרון
 
-These are tightly scoped — each one removes friction without restructuring the page.
+מעבר מ"signature מנורמל מההודעה הגולמית" ל**bucketing קנוני מבוסס מילות מפתח** — כל באקט הוא רעיון מוגדר מראש (Element not visible, Element not found, Timeout, Assertion mismatch, Network, Null/Undefined, Element score too low, וכו׳). הודעה משויכת לבאקט אם הרגקס שלו נמצא בה. אם אף באקט לא תופס — הולכים ל-Other.
 
-**a. Sticky filter bar**
-The search/filter card scrolls away once you start reviewing the list. Make it `sticky top-0` with a subtle backdrop blur so it stays accessible while scrolling through 50 cards.
+יתרונות:
+- ספירה דטרמיניסטית — אותו רעיון = אותו label = אותו count.
+- אין יותר "Other" שמוצף בגרסאות מעט שונות של אותה שגיאה.
+- ה-tone (צבע) נגזר ישירות מהבאקט.
 
-**b. Clear-filter shortcut**
-When any filter is active, show a small `× Clear filters` link next to the results count. Today the user has to reset each filter individually.
+### שינויים קונקרטיים
 
-**c. Highlight the active chip/filter visually**
-Active chip gets a filled background + ring so it's obvious what's filtered. Reduces "why am I seeing only 4 rows?" confusion.
+**`src/lib/errorPatternGrouping.ts`**
+- להוסיף מערך `CANONICAL_BUCKETS`: לכל אחד `key`, `label`, `tone`, `match: RegExp`, ו-`pattern?: ErrorPattern`.
+  - דוגמאות:
+    - `element-not-visible` · "Element is not visible" · flaky · `/element\s+(is\s+)?(not\s+visible|hidden|invisible)|not\s+displayed/i`
+    - `element-not-found` · "Element not found" · flaky · `/element\s+not\s+found|no\s+such\s+element|cannot\s+find\s+element|stale\s+element/i`
+    - `element-score-too-low` · "Element score is too low" · flaky · `/element\s+score\s+(is\s+)?too\s+low/i`
+    - `timeout` · "Timeout" · environment · `/timeout|timed\s+out|deadline\s+exceeded|wait(ing)?\s+exceeded/i`
+    - `assertion` · "Assertion mismatch" · bug · `/assert(ion)?|expected[:\s].+(actual|but\s+got|received)|data\s+is\s+not\s+equal/i`
+    - `network` · "Network error" · environment · `/network|ECONNREFUSED|fetch\s+failed|cors|connection\s+(refused|reset|failed)/i`
+    - `null-undefined` · "Null / Undefined" · bug · `/null|undefined|cannot\s+read\s+propert/i`
+    - `click-intercepted` · "Click intercepted" · flaky · `/click\s+intercepted|other\s+element\s+would\s+receive/i`
+    - `navigation` · "Navigation failed" · environment · `/navigation\s+(failed|timeout)|page\s+crash|net::ERR/i`
+- חוקי שיוך:
+  - הראשון שמתאים מנצח (סדר המערך = עדיפות; הספציפי לפני הכללי — `element-not-visible` לפני `element-not-found`).
+  - אם שום באקט לא תופס → key=`__other__`.
+- `groupFailuresByPattern(failures)`:
+  - סופר לכל `key` את כמות הכשלונות של `failures` (לא של `failuresWithFeedback`).
+  - מציג צ׳יפ לכל באקט עם `count >= 2`. באקטים עם count 1 מתקבצים ל-Other (תוספת ל-otherCount), כולל מי שלא נתפס בכלל.
+  - ממיין יורד לפי count.
+- חשיפת פונקציה חדשה: `getBucketKeyForMessage(msg: string): string` שמחזירה את ה-key הקנוני (או `__other__`). הסינון ב-Index ישתמש בה במקום לבנות signature ידנית.
 
-**d. Keyboard: `/` focuses search**
-One-key shortcut (like GitHub/Linear) to jump to the search box without reaching for the mouse.
+**`src/pages/Index.tsx`**
+- להחליף שימוש ב-`normalizeErrorSignature` בתוך `filteredFailures` ל-`getBucketKeyForMessage`.
+- ליישר את מקור הספירה לזה של הסינון:
+  - לקרוא ל-`groupFailuresByPattern(sortedFailures.filter(f => f.analysis))` — אותה רשימה שעליה הפילטר עובד בפועל. כך הספירה בצ׳יפ תהיה זהה למספר השורות שיופיעו אחרי לחיצה.
+- לוודא ששורות בלי `analysis` (עוד בעיבוד) לא נספרות בצ׳יפים, ולא משפיעות על Other.
 
-**e. Empty-filter state**
-If filters yield 0 results, show a friendly message with a one-click "Clear filters" button instead of an empty void.
+**ללא שינוי**
+- `ErrorPatternChips.tsx` — המבנה כבר תומך ב-`PatternGroup` עם `key`/`label`/`tone`.
+- שאר ה-UI (sticky bar, search, breakdown).
 
-**f. Result count with breakdown**
-Replace `Showing 12 of 47 rows` with `Showing 12 of 47 · filtered by: Element not found, Unreviewed` so the user always knows what's applied.
+## בדיקת אמת אחרי השינוי
 
-## 3. What we are NOT changing
+לאחר ההטמעה, נריץ את התרחיש: 3 כשלונות עם הודעות שונות במעט שכולן מכילות "is not visible" → צ׳יף יציג `Element is not visible · 3`, ולחיצה תציג בדיוק 3 שורות.
 
-- The current single-column card list stays exactly as is.
-- `ProductionModeCard` / `LearningModeCard` — untouched.
-- No new routes, no 3-pane layout, no command palette.
-- Bulk-select panel stays as is.
+## קבצים שיתעדכנו
 
-## Technical details
-
-**New helper** (`src/lib/errorPatternGrouping.ts`):
-```ts
-export interface PatternGroup {
-  pattern: ErrorPattern;
-  count: number;
-  color: 'bug' | 'flaky' | 'environment' | 'expected' | 'muted';
-}
-
-export function groupFailuresByPattern(
-  failures: FailureWithFeedback[]
-): PatternGroup[]
-```
-
-Maps each pattern to a color based on its typical classification (uses the same color tokens already in `tailwind.config.ts`).
-
-**New component** (`src/components/ErrorPatternChips.tsx`):
-- Receives `groups: PatternGroup[]`, `activePattern: string | null`, `onSelect: (p: string | null) => void`.
-- Renders horizontal scrollable row of `Badge`-style buttons.
-- Active chip uses `ring-2 ring-primary` and filled bg.
-
-**Wire-up in `src/pages/Index.tsx`:**
-- New state: `const [filterPattern, setFilterPattern] = useState<string | null>(null);`
-- Compute `patternGroups = useMemo(() => groupFailuresByPattern(failuresWithFeedback), [failuresWithFeedback])`.
-- Add `matchesPattern` to the existing `filteredFailures` filter (line 238).
-- Add the chips row inside the filter Card.
-
-**Sticky bar:** wrap the filter card in a `sticky top-0 z-10 bg-background/80 backdrop-blur-sm` div.
-
-**Keyboard `/`:** add a `useEffect` listener that focuses the search input when `/` is pressed and the user isn't typing in another field.
-
-## Estimated effort
-
-- Pattern chips + grouping helper: ~45 min
-- Sticky bar + clear-filter link + breakdown text: ~20 min
-- Keyboard `/` shortcut + empty state: ~15 min
-
-Total: roughly 1.5 hours of work. No DB changes, no edge function changes, no migrations.
-
-## Out of scope (saved for later)
-
-- Test history indicators (passed-yesterday-failed-today). Still a strong idea — we'll plan it separately when you're ready.
-- Triage Inbox 3-column layout — discarded per your feedback.
-- Keyboard shortcuts for classification (1/2/3/4) — we can add later if you want.
+- `src/lib/errorPatternGrouping.ts` — refactor מלא ל-bucketing קנוני + ייצוא `getBucketKeyForMessage`.
+- `src/pages/Index.tsx` — שימוש ב-`getBucketKeyForMessage` ויישור מקור הספירה.
+- `src/version.ts` + `CHANGELOG.md` — bump ל-1.1.1 עם פתק קצר על תיקון ספירת הצ׳יפים.
