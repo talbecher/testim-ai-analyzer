@@ -1,68 +1,67 @@
-## הבעיה
+## Test History Timeline (v1.2.2)
 
-כשבוחרים את הצ׳יפ "Element is not visible" שאמור להציג 3 כשלונות, מופיעים רק 2. השלישי "נעלם" — בפועל הוא נופל לקבוצה אחרת או ל-Other.
+Replace the current text-emoji chip with a compact, monitoring-tool–style timeline that lives inline in the Context row. No logic changes to the engine — only the visual component and a small placement tweak.
 
-### למה זה קורה
+### 1. Redesign `src/components/TestHistoryChip.tsx`
 
-הקיבוץ הנוכחי ב-`src/lib/errorPatternGrouping.ts` בונה signature לכל הודעה ע״י רגקסים שמנקים מרכאות, נתיבים, מספרים, GUIDs, וחותכים ל-60 תווים. שתי הודעות שמתארות את אותה תקלה יכולות לקבל מפתחות שונים אם:
+Rewrite the render layer; keep props (`history: TestHistory`) and the `chipCopy` / pattern→label logic for the tooltip.
 
-- אחת מכילה selector בתוך מרכאות והשנייה לא (`Element 'login-btn' is not visible` מול `Element is not visible at step 4`).
-- אחת נחתכת ב-60 תווים בנקודה שונה (`…` בסוף).
-- יש שונות בסדר המילים או בפיסוק (`is not visible.` מול `not visible -`).
-- הודעה אחת מכילה stack מקדים בלי `\n` והנרמול לא מצליח להגיע למילים המהותיות.
+**Visual structure** (single inline-flex element, height ~14px to match `text-xs` neighbors):
 
-התוצאה: 2 הודעות מתאחדות תחת label "Element is not visible", השלישית מקבלת signature מעט שונה ונופלת ל-Other (או נעלמת אם count=1).
+```text
+[▢ ▢ ▣ ▣ ▣]  ⚠   ← warning only when pattern === 'was-passing-now-failing'
+ oldest → newest (current = last, slightly larger + ring)
+```
 
-בנוסף יש פער בין מקור-הספירה (`failuresWithFeedback`) למקור-הסינון (`sortedFailures`), ובין שורות עם `analysis` לבלעדיו.
+- Render `lastNOutcomes` reversed (oldest → newest, LTR) as a row of squares, `gap-[2px]`.
+- Each square: `h-2 w-2 rounded-[2px]`.
+  - Pass → `bg-confidence-high` (existing token, green).
+  - Fail → `bg-bug` (existing token, red).
+- Current run (last item): `h-2.5 w-2.5 rounded-[3px] ring-1 ring-foreground/30 ring-offset-1 ring-offset-background` to lift it above the strip.
+- Empty history (`lastNOutcomes.length === 0`): render a single muted square + label "first seen" in `text-[10px] text-muted-foreground`. No ring.
+- Cap visible squares at 8 (slice from the end). If truncated, prefix with `…` in `text-muted-foreground text-[10px]`.
 
-## הפתרון
+**Warning glyph** (only `pattern === 'was-passing-now-failing'`):
+- `AlertTriangle` from lucide-react, `h-3 w-3 text-amber-500`, `ml-1`, no background, no border.
+- Skip the warning for `consistent-failure` and `intermittent` — the colored squares already convey it.
 
-מעבר מ"signature מנורמל מההודעה הגולמית" ל**bucketing קנוני מבוסס מילות מפתח** — כל באקט הוא רעיון מוגדר מראש (Element not visible, Element not found, Timeout, Assertion mismatch, Network, Null/Undefined, Element score too low, וכו׳). הודעה משויכת לבאקט אם הרגקס שלו נמצא בה. אם אף באקט לא תופס — הולכים ל-Other.
+**Tooltip** (keep existing `Tooltip` wrapper, refine copy):
+- Line 1 (font-medium): pattern-specific phrase from a small map:
+  - `was-passing-now-failing` → "Regression smell — was passing, now failing"
+  - `consistent-failure` → `Consistent fail for last ${currentFailStreak} run(s)`
+  - `intermittent` → "Intermittent pattern — alternating outcomes"
+  - `first-seen` → "First failure on record for this test"
+  - `sporadic-failure` → "Sporadic failures across recent runs"
+- Line 2 (`text-muted-foreground`): `Failed ${failedRuns} of ${totalRunsKnown} prior uploads` (or "No prior uploads" when 0).
+- Line 3 (`text-muted-foreground text-[11px]`): show the chronological strip as small dots `· · ● · ●` using bullets to mirror the squares (oldest → newest), so the tooltip reinforces the visual.
 
-יתרונות:
-- ספירה דטרמיניסטית — אותו רעיון = אותו label = אותו count.
-- אין יותר "Other" שמוצף בגרסאות מעט שונות של אותה שגיאה.
-- ה-tone (צבע) נגזר ישירות מהבאקט.
+**Wrapper:**
+- `<span dir="ltr" className="inline-flex items-center cursor-default">` — no background, no border, no padding. The chip is just dots; it visually belongs to the Context row, not as a separate pill.
 
-### שינויים קונקרטיים
+Drop the `font-mono` text label, the `(sub)` parenthetical, and `chipStyles` background classes — they're what made it feel "buttony".
 
-**`src/lib/errorPatternGrouping.ts`**
-- להוסיף מערך `CANONICAL_BUCKETS`: לכל אחד `key`, `label`, `tone`, `match: RegExp`, ו-`pattern?: ErrorPattern`.
-  - דוגמאות:
-    - `element-not-visible` · "Element is not visible" · flaky · `/element\s+(is\s+)?(not\s+visible|hidden|invisible)|not\s+displayed/i`
-    - `element-not-found` · "Element not found" · flaky · `/element\s+not\s+found|no\s+such\s+element|cannot\s+find\s+element|stale\s+element/i`
-    - `element-score-too-low` · "Element score is too low" · flaky · `/element\s+score\s+(is\s+)?too\s+low/i`
-    - `timeout` · "Timeout" · environment · `/timeout|timed\s+out|deadline\s+exceeded|wait(ing)?\s+exceeded/i`
-    - `assertion` · "Assertion mismatch" · bug · `/assert(ion)?|expected[:\s].+(actual|but\s+got|received)|data\s+is\s+not\s+equal/i`
-    - `network` · "Network error" · environment · `/network|ECONNREFUSED|fetch\s+failed|cors|connection\s+(refused|reset|failed)/i`
-    - `null-undefined` · "Null / Undefined" · bug · `/null|undefined|cannot\s+read\s+propert/i`
-    - `click-intercepted` · "Click intercepted" · flaky · `/click\s+intercepted|other\s+element\s+would\s+receive/i`
-    - `navigation` · "Navigation failed" · environment · `/navigation\s+(failed|timeout)|page\s+crash|net::ERR/i`
-- חוקי שיוך:
-  - הראשון שמתאים מנצח (סדר המערך = עדיפות; הספציפי לפני הכללי — `element-not-visible` לפני `element-not-found`).
-  - אם שום באקט לא תופס → key=`__other__`.
-- `groupFailuresByPattern(failures)`:
-  - סופר לכל `key` את כמות הכשלונות של `failures` (לא של `failuresWithFeedback`).
-  - מציג צ׳יפ לכל באקט עם `count >= 2`. באקטים עם count 1 מתקבצים ל-Other (תוספת ל-otherCount), כולל מי שלא נתפס בכלל.
-  - ממיין יורד לפי count.
-- חשיפת פונקציה חדשה: `getBucketKeyForMessage(msg: string): string` שמחזירה את ה-key הקנוני (או `__other__`). הסינון ב-Index ישתמש בה במקום לבנות signature ידנית.
+### 2. Placement in `src/components/ProductionModeCard.tsx`
 
-**`src/pages/Index.tsx`**
-- להחליף שימוש ב-`normalizeErrorSignature` בתוך `filteredFailures` ל-`getBucketKeyForMessage`.
-- ליישר את מקור הספירה לזה של הסינון:
-  - לקרוא ל-`groupFailuresByPattern(sortedFailures.filter(f => f.analysis))` — אותה רשימה שעליה הפילטר עובד בפועל. כך הספירה בצ׳יפ תהיה זהה למספר השורות שיופיעו אחרי לחיצה.
-- לוודא ששורות בלי `analysis` (עוד בעיבוד) לא נספרות בצ׳יפים, ולא משפיעות על Other.
+In the Context row (currently around the `confidence%` + chips block):
 
-**ללא שינוי**
-- `ErrorPatternChips.tsx` — המבנה כבר תומך ב-`PatternGroup` עם `key`/`label`/`tone`.
-- שאר ה-UI (sticky bar, search, breakdown).
+Reorder to:
 
-## בדיקת אמת אחרי השינוי
+```text
+Context: [Classification] • [Priority] • 87% confidence • [▢▢▣▣▣] ⚠ • Known flaky • Rerun suggested
+```
 
-לאחר ההטמעה, נריץ את התרחיש: 3 כשלונות עם הודעות שונות במעט שכולן מכילות "is not visible" → צ׳יף יציג `Element is not visible · 3`, ולחיצה תציג בדיוק 3 שורות.
+- Move the `<TestHistoryChip />` render so it sits **immediately after** the `confidence` span and **before** the `flakyKBMatch` / `requiresRerun` badges.
+- Remove the surrounding `• ` separator dots only around the chip if it ends up adjacent to another `•` (keep one separator on each side).
+- No change to `FailureReviewCard.tsx` — it already renders the chip inline among badges; the new visual is automatically picked up.
 
-## קבצים שיתעדכנו
+### 3. Version bump
 
-- `src/lib/errorPatternGrouping.ts` — refactor מלא ל-bucketing קנוני + ייצוא `getBucketKeyForMessage`.
-- `src/pages/Index.tsx` — שימוש ב-`getBucketKeyForMessage` ויישור מקור הספירה.
-- `src/version.ts` + `CHANGELOG.md` — bump ל-1.1.1 עם פתק קצר על תיקון ספירת הצ׳יפים.
+- `package.json`: `1.2.1` → `1.2.2`
+- `src/version.ts`: same.
+- `CHANGELOG.md`: add `1.2.2` entry — "UI: Test History redesigned as inline run-square timeline with current-run emphasis and minimal regression warning."
+
+### Out of scope
+
+- No changes to `analyze-failures` edge function, `TestHistory` type, decision hierarchy, or tooltip data sourcing.
+- No changes to other badges in the Context row.
+- No memory updates required — existing `Signal Breakdown UI` memory still applies.

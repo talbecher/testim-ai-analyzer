@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.2.2",
+    date: "2026-04-30",
+    changed: [
+      "Test History redesigned as an inline run-square timeline (Datadog/Vercel-style health signal) in the Context row",
+      "Current run is emphasized with a subtle ring; an amber warning glyph appears only on regression-smell patterns",
+      "Tooltip rewritten with pattern headline, prior-upload counts, and a chronological strip"
+    ]
+  },
+  {
     version: "1.2.1",
     date: "2026-04-29",
     changed: [
