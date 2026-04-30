@@ -10,6 +10,7 @@ import { Classification, Priority, SuggestedAction } from '@/types/testim';
 import { BugConfirmationFlow } from './BugConfirmationFlow';
 import { SignalBreakdownCompact } from './SignalBreakdownBar';
 import { TestHistoryChip } from './TestHistoryChip';
+import { PriorityReasonToggle } from './PriorityReasonToggle';
 
 interface FailureReviewCardProps {
   failure: AnalyzedFailureWithFeedback;
@@ -176,7 +177,15 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
                 <SignalBreakdownCompact breakdown={failure.analysis.signalBreakdown} />
               )}
               {failure.analysis.history && <TestHistoryChip history={failure.analysis.history} />}
-              {failure.analysis.flakyKBMatch && <Database className="h-4 w-4 text-primary" />}
+              {failure.analysis.flakyKBMatch && (
+                <span
+                  title="Matched known flaky test"
+                  className="inline-flex shrink-0 items-center gap-1 rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-primary"
+                >
+                  <Database className="h-3 w-3" aria-hidden />
+                  KB
+                </span>
+              )}
               {failure.analysis.requiresRerun ? (
                 <Clock className="h-4 w-4 text-environment" />
               ) : (
@@ -192,7 +201,7 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
 
         {/* Priority Reason */}
         {failure.analysis?.priorityReason && !isEditing && (
-          <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line">{failure.analysis.priorityReason}</p>
+          <PriorityReasonToggle key={failure.analysis.priorityReason} text={failure.analysis.priorityReason} />
         )}
 
         {/* Bug Confirmation Flow */}

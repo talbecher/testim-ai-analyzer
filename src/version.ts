@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.2.1",
+    date: "2026-04-29",
+    changed: [
+      "Production recommendation banner is a slim single-line strip (py-1.5, 1px border); removed italic QA subtext",
+      "priorityReason collapses to the first sentence (split after . ! ?) with a ghost “Show more / less” toggle on learning and production cards",
+      "Flaky KB match shown only as a context chip (icon + short label), not in the recommendation banner"
+    ]
+  },
+  {
     version: "1.2.0",
     date: "2026-04-29",
     added: [

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-04-29
+
+### Changed
+- **Production** recommendation row: slimmer single-line strip (`py-1.5`, 1px border); removed the italic “Based on similar failures…” line.
+- **priorityReason**: first sentence visible by default; split with `/(?<=[.!?])\s+/`; **Show more / Show less** ghost control on **ProductionModeCard** and **FailureReviewCard**.
+- **Flaky KB**: match surfaced only as a small **context chip** (database icon + short label), not inside the recommendation banner.
+
 ## [1.2.0] - 2026-04-29
 
 ### Added

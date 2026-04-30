@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Check, X, Edit2, Database, Clock, CheckCircle, Bug, TestTube, ExternalLink, Search, CircleSlash, Wrench } from 'lucide-react';
+import { Check, X, Edit2, Database, Clock, Bug, TestTube, ExternalLink, Search, CircleSlash, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
 import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
 import { BugConfirmationFlow } from './BugConfirmationFlow';
 import { TestHistoryChip } from './TestHistoryChip';
+import { PriorityReasonToggle } from './PriorityReasonToggle';
 
 interface ProductionModeCardProps {
   failure: AnalyzedFailureWithFeedback;
@@ -168,31 +168,29 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
 
         </div>
 
-        {/* PRIMARY: Investigation Recommendation */}
+        {/* PRIMARY: Investigation Recommendation (single-line strip) */}
         {failure.analysis && !isEditing && !isReviewed && (
-          <div className={cn(
-            "mt-3 p-3 rounded-lg border-2",
-            shouldInvestigate 
-              ? "bg-bug/10 border-bug/30" 
-              : "bg-confidence-high/10 border-confidence-high/30"
-          )}>
-            <div className="flex items-center gap-2">
-              {shouldInvestigate ? (
-                <>
-                  <Search className="h-5 w-5 text-bug" />
-                  <span className="font-medium text-bug">Recommended: Investigate</span>
-                </>
-              ) : (
-                <>
-                  <CircleSlash className="h-5 w-5 text-confidence-high" />
-                  <span className="font-medium text-confidence-high">Recommended: Skip investigation</span>
-                </>
+          <div
+            className={cn(
+              'mt-3 flex min-h-[2.25rem] items-center gap-2 rounded-md border py-1.5 pl-2 pr-2.5',
+              shouldInvestigate
+                ? 'border-bug/30 bg-bug/10'
+                : 'border-confidence-high/30 bg-confidence-high/10',
+            )}
+          >
+            {shouldInvestigate ? (
+              <Search className="h-4 w-4 shrink-0 text-bug" />
+            ) : (
+              <CircleSlash className="h-4 w-4 shrink-0 text-confidence-high" />
+            )}
+            <span
+              className={cn(
+                'min-w-0 truncate text-sm font-medium',
+                shouldInvestigate ? 'text-bug' : 'text-confidence-high',
               )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1 italic">
-              Based on similar failures reviewed by QA
-              {failure.analysis.flakyKBMatch && " • Matched known flaky test"}
-            </p>
+            >
+              {shouldInvestigate ? 'Recommended: Investigate' : 'Recommended: Skip investigation'}
+            </span>
           </div>
         )}
 
@@ -218,8 +216,13 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
             {failure.analysis.flakyKBMatch && (
               <>
                 <span className="opacity-50">•</span>
-                <Database className="h-3 w-3 text-flaky" />
-                <span className="text-flaky">Known flaky</span>
+                <span
+                  title="Matched known flaky test"
+                  className="inline-flex shrink-0 items-center gap-1 rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-primary"
+                >
+                  <Database className="h-3 w-3" aria-hidden />
+                  Flaky KB
+                </span>
               </>
             )}
             {failure.analysis.requiresRerun && (
@@ -234,7 +237,11 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
 
         {/* Priority Reason - secondary detail */}
         {failure.analysis?.priorityReason && !isEditing && !isReviewed && (
-          <p className="text-xs text-muted-foreground mt-2 whitespace-pre-line opacity-70">{failure.analysis.priorityReason}</p>
+          <PriorityReasonToggle
+            key={failure.analysis.priorityReason}
+            text={failure.analysis.priorityReason}
+            className="opacity-70"
+          />
         )}
 
         {/* Bug Confirmation Flow - actions for the recommendation */}
