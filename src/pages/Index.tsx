@@ -274,7 +274,11 @@ const Index = () => {
       const matchesSearch = !searchQuery || f.testName.toLowerCase().includes(searchQuery.toLowerCase()) || (f.errorMessage?.toLowerCase() ?? '').includes(searchQuery.toLowerCase());
       const matchesClassification = filterClassification === 'all' || f.analysis?.classification === filterClassification;
       const matchesStatus = filterReviewStatus === 'all' || (filterReviewStatus === 'reviewed' && withFb.isReviewed) || (filterReviewStatus === 'unreviewed' && !withFb.isReviewed);
-      const matchesPattern = !filterPattern || f.analysis?.errorPattern === filterPattern;
+      const matchesPattern =
+        !filterPattern ||
+        (filterPattern === '__other__'
+          ? !patternGroups.some(g => g.key !== '__other__' && g.key === normalizeErrorSignature(f.errorMessage).toLowerCase())
+          : normalizeErrorSignature(f.errorMessage).toLowerCase() === filterPattern);
       return matchesSearch && matchesClassification && matchesStatus && matchesPattern;
     });
   }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern]);
