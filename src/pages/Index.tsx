@@ -265,24 +265,6 @@ const Index = () => {
     };
   }, [sortedFailures]);
 
-  // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern
-  const filteredFailures = useMemo(() => {
-    return sortedFailures.filter(f => {
-      if (!f.analysis) return true;
-      const withFb = failuresWithFeedback.find(x => x.id === f.id);
-      if (!withFb) return true;
-      const matchesSearch = !searchQuery || f.testName.toLowerCase().includes(searchQuery.toLowerCase()) || (f.errorMessage?.toLowerCase() ?? '').includes(searchQuery.toLowerCase());
-      const matchesClassification = filterClassification === 'all' || f.analysis?.classification === filterClassification;
-      const matchesStatus = filterReviewStatus === 'all' || (filterReviewStatus === 'reviewed' && withFb.isReviewed) || (filterReviewStatus === 'unreviewed' && !withFb.isReviewed);
-      const matchesPattern =
-        !filterPattern ||
-        (filterPattern === '__other__'
-          ? !patternGroups.some(g => g.key !== '__other__' && g.key === normalizeErrorSignature(f.errorMessage).toLowerCase())
-          : normalizeErrorSignature(f.errorMessage).toLowerCase() === filterPattern);
-      return matchesSearch && matchesClassification && matchesStatus && matchesPattern;
-    });
-  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern]);
-
   // Pattern groups (auto-detected error categories with counts)
   const patternGroups = useMemo(
     () => groupFailuresByPattern(failuresWithFeedback),
@@ -292,6 +274,25 @@ const Index = () => {
     () => failuresWithFeedback.filter(f => !!f.analysis).length,
     [failuresWithFeedback],
   );
+
+  // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern
+  const filteredFailures = useMemo(() => {
+    const knownKeys = new Set(patternGroups.filter(g => g.key !== '__other__').map(g => g.key));
+    return sortedFailures.filter(f => {
+      if (!f.analysis) return true;
+      const withFb = failuresWithFeedback.find(x => x.id === f.id);
+      if (!withFb) return true;
+      const matchesSearch = !searchQuery || f.testName.toLowerCase().includes(searchQuery.toLowerCase()) || (f.errorMessage?.toLowerCase() ?? '').includes(searchQuery.toLowerCase());
+      const matchesClassification = filterClassification === 'all' || f.analysis?.classification === filterClassification;
+      const matchesStatus = filterReviewStatus === 'all' || (filterReviewStatus === 'reviewed' && withFb.isReviewed) || (filterReviewStatus === 'unreviewed' && !withFb.isReviewed);
+      const sigKey = normalizeErrorSignature(f.errorMessage).toLowerCase();
+      const matchesPattern =
+        !filterPattern ||
+        (filterPattern === '__other__' ? !knownKeys.has(sigKey) : sigKey === filterPattern);
+      return matchesSearch && matchesClassification && matchesStatus && matchesPattern;
+    });
+  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern, patternGroups]);
+
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Session Restore Banner */}
