@@ -11,6 +11,7 @@ import { BugConfirmationFlow } from './BugConfirmationFlow';
 import { SignalBreakdownCompact } from './SignalBreakdownBar';
 import { TestHistoryChip } from './TestHistoryChip';
 import { PriorityReasonToggle } from './PriorityReasonToggle';
+import { coercePriorityReasonText } from '@/lib/priorityReasonToggle';
 
 interface FailureReviewCardProps {
   failure: AnalyzedFailureWithFeedback;
@@ -200,8 +201,10 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
         </div>
 
         {/* Priority Reason */}
-        {failure.analysis?.priorityReason && !isEditing && (
-          <PriorityReasonToggle key={failure.analysis.priorityReason} text={failure.analysis.priorityReason} />
+        {failure.analysis?.priorityReason != null &&
+          coercePriorityReasonText(failure.analysis.priorityReason).trim() !== '' &&
+          !isEditing && (
+          <PriorityReasonToggle key={`${failure.id}-pr`} text={failure.analysis.priorityReason} />
         )}
 
         {/* Bug Confirmation Flow */}

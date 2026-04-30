@@ -12,6 +12,7 @@ import {
   shouldApplySessionWebDriverInfraOverride,
   priorityReasonWithInfraFirstSentence,
 } from '@/lib/sessionWebDriverInfra';
+import { coercePriorityReasonText } from '@/lib/priorityReasonToggle';
 
 /** Post-process a single AI analysis (flaky KB, priority, requiresRerun). */
 function applyPostProcessing(
@@ -19,12 +20,18 @@ function applyPostProcessing(
   analysis: AIAnalysisResult,
   flakyKB: ReturnType<typeof useFlakyKB>
 ): AIAnalysisResult {
-  const sessionWebDriverInfra = shouldApplySessionWebDriverInfraOverride(failure.errorMessage, analysis);
+  const analysisIn: AIAnalysisResult = {
+    ...analysis,
+    priorityReason: coercePriorityReasonText(analysis.priorityReason as unknown),
+    rerunReason: coercePriorityReasonText((analysis as { rerunReason?: unknown }).rerunReason),
+  };
+
+  const sessionWebDriverInfra = shouldApplySessionWebDriverInfraOverride(failure.errorMessage, analysisIn);
 
   if (sessionWebDriverInfra) {
-    const pr = priorityReasonWithInfraFirstSentence(analysis.priorityReason || '');
+    const pr = priorityReasonWithInfraFirstSentence(analysisIn.priorityReason || '');
     let result: AIAnalysisResult = {
-      ...analysis,
+      ...analysisIn,
       classification: 'Environment / Infra Issue',
       suggestedAction: 'Verify manually',
       priority: 'P1',
@@ -50,7 +57,7 @@ function applyPostProcessing(
   const flakyMatch = flakyKB.findFlakyTestMatch(failure.testName);
   const isInFlakyKB = flakyMatch.matched;
   let result: AIAnalysisResult = {
-    ...analysis,
+    ...analysisIn,
     flakyKBMatch: isInFlakyKB,
     matchedFlakyTestName: flakyMatch.matchedTest?.testName,
     matchedFlakyReason: flakyMatch.matchedTest?.reason,

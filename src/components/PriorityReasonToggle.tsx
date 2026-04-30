@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { splitPriorityReasonForToggle } from '@/lib/priorityReasonToggle';
+import { coercePriorityReasonText, splitPriorityReasonForToggle } from '@/lib/priorityReasonToggle';
 import { cn } from '@/lib/utils';
 
 export interface PriorityReasonToggleProps {
-  text: string;
+  text: unknown;
   className?: string;
 }
 
 export function PriorityReasonToggle({ text, className }: PriorityReasonToggleProps) {
+  const fullText = useMemo(() => coercePriorityReasonText(text).replace(/\r\n/g, '\n').trim(), [text]);
   const { first, rest } = useMemo(() => splitPriorityReasonForToggle(text), [text]);
   const [expanded, setExpanded] = useState(false);
 
@@ -18,7 +19,7 @@ export function PriorityReasonToggle({ text, className }: PriorityReasonTogglePr
 
   return (
     <div className={cn('text-xs text-muted-foreground mt-2', className)}>
-      <p className="whitespace-pre-line">{expanded ? text.replace(/\r\n/g, '\n').trim() : first}</p>
+      <p className="whitespace-pre-line">{expanded ? fullText : first}</p>
       {hasMore && (
         <Button
           type="button"

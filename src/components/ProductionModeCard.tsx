@@ -10,6 +10,7 @@ import { Classification, Priority, SuggestedAction } from '@/types/testim';
 import { BugConfirmationFlow } from './BugConfirmationFlow';
 import { TestHistoryChip } from './TestHistoryChip';
 import { PriorityReasonToggle } from './PriorityReasonToggle';
+import { coercePriorityReasonText } from '@/lib/priorityReasonToggle';
 
 interface ProductionModeCardProps {
   failure: AnalyzedFailureWithFeedback;
@@ -236,9 +237,12 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
         )}
 
         {/* Priority Reason - secondary detail */}
-        {failure.analysis?.priorityReason && !isEditing && !isReviewed && (
+        {failure.analysis?.priorityReason != null &&
+          coercePriorityReasonText(failure.analysis.priorityReason).trim() !== '' &&
+          !isEditing &&
+          !isReviewed && (
           <PriorityReasonToggle
-            key={failure.analysis.priorityReason}
+            key={`${failure.id}-pr`}
             text={failure.analysis.priorityReason}
             className="opacity-70"
           />
