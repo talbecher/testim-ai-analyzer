@@ -544,22 +544,52 @@ const Index = () => {
                 {runDetails.notes && <span className="text-sm text-muted-foreground italic truncate max-w-[300px]">{runDetails.notes}</span>}
               </div>}
 
-            {/* Stats - Recommendation based */}
+            {/* Stats - Recommendation based (clickable to filter) */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-border/50">
+              <Card
+                role="button"
+                tabIndex={0}
+                aria-pressed={filterRecommendation === 'all'}
+                onClick={() => setFilterRecommendation('all')}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilterRecommendation('all'); } }}
+                className={cn(
+                  "border-border/50 cursor-pointer transition-all hover:bg-muted/40",
+                  filterRecommendation === 'all' && "ring-2 ring-foreground/40"
+                )}
+              >
                 <CardContent className="pt-4 text-center">
                   <div className="text-3xl font-bold text-foreground">{recommendationStats.total}</div>
                   <div className="text-sm text-muted-foreground mt-1">Total Analyzed</div>
                 </CardContent>
               </Card>
-              <Card className="border-bug/30 bg-bug/5">
+              <Card
+                role="button"
+                tabIndex={0}
+                aria-pressed={filterRecommendation === 'investigate'}
+                onClick={() => setFilterRecommendation(prev => prev === 'investigate' ? 'all' : 'investigate')}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilterRecommendation(prev => prev === 'investigate' ? 'all' : 'investigate'); } }}
+                className={cn(
+                  "border-bug/30 bg-bug/5 cursor-pointer transition-all hover:bg-bug/10",
+                  filterRecommendation === 'investigate' && "ring-2 ring-bug"
+                )}
+              >
                 <CardContent className="pt-4 text-center">
                   <SearchCheck className="h-5 w-5 mx-auto text-bug mb-1" />
                   <div className="text-3xl font-bold text-bug">{recommendationStats.investigate}</div>
                   <div className="text-sm text-muted-foreground mt-1">Investigate</div>
                 </CardContent>
               </Card>
-              <Card className="border-flaky/30 bg-flaky/5">
+              <Card
+                role="button"
+                tabIndex={0}
+                aria-pressed={filterRecommendation === 'skip'}
+                onClick={() => setFilterRecommendation(prev => prev === 'skip' ? 'all' : 'skip')}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilterRecommendation(prev => prev === 'skip' ? 'all' : 'skip'); } }}
+                className={cn(
+                  "border-flaky/30 bg-flaky/5 cursor-pointer transition-all hover:bg-flaky/10",
+                  filterRecommendation === 'skip' && "ring-2 ring-flaky"
+                )}
+              >
                 <CardContent className="pt-4 text-center">
                   <CircleSlash className="h-5 w-5 mx-auto text-flaky mb-1" />
                   <div className="text-3xl font-bold text-flaky">{recommendationStats.skip}</div>
