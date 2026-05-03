@@ -466,7 +466,9 @@ interface TestHistoryRunDetail {
   outcome: 'pass' | 'fail';
   runName?: string;
   runDate?: string;
+  bucket?: string;
   aiClassification?: string;
+  aiPriority?: string;
 }
 
 interface TestHistory {
@@ -482,32 +484,49 @@ interface TestHistory {
   pattern: TestHistoryPattern;
 }
 
-/** Global implicit pass/fail series from last 30 uploads; current run is not in DB — streak includes this failure as +1. */
+/** Implicit pass/fail series from last 30 uploads in the SAME regression bucket; current run is not in DB — streak includes this failure as +1. */
 async function computeGlobalTestHistoryMap(
   supabase: ReturnType<typeof createClient>,
   testNames: string[],
   globalRowCountByTest: Map<string, number>,
+  regressionBucket?: string,
 ): Promise<Map<string, TestHistory>> {
   const out = new Map<string, TestHistory>();
   const unique = [...new Set(testNames)];
   if (unique.length === 0) return out;
 
-  const { data: recentReports } = await supabase
+  let reportsQuery = supabase
     .from('analysis_reports')
-    .select('id, run_date, created_at, run_name')
+    .select('id, run_date, created_at, run_name, regression_bucket')
     .order('run_date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(30);
 
-  const reportsChrono = [...(recentReports || [])].reverse() as Array<{ id: string; run_date: string; created_at: string; run_name: string | null }>;
+  // Scope history to the same regression bucket so the timeline is apples-to-apples.
+  if (regressionBucket) {
+    reportsQuery = reportsQuery.eq('regression_bucket', regressionBucket);
+  }
+
+  const { data: recentReports } = await reportsQuery;
+
+  const reportsChrono = [...(recentReports || [])].reverse() as Array<{
+    id: string;
+    run_date: string;
+    created_at: string;
+    run_name: string | null;
+    regression_bucket: string | null;
+  }>;
+  console.log(
+    `History scope: bucket=${regressionBucket || '<unscoped>'}, reports=${reportsChrono.length}`,
+  );
   const reportIds = reportsChrono.map((r) => r.id);
-  // Per-report → per-testName → ai_classification (presence of testName == failed in that run)
-  const failsByReport = new Map<string, Map<string, string>>();
+  // Per-report → per-testName → { classification, priority } (presence of testName == failed in that run)
+  const failsByReport = new Map<string, Map<string, { classification: string; priority: string }>>();
 
   if (reportIds.length > 0) {
     const { data: failRows } = await supabase
       .from('analysis_results')
-      .select('report_id, test_name_normalized, ai_classification')
+      .select('report_id, test_name_normalized, ai_classification, ai_priority')
       .in('report_id', reportIds)
       .in('test_name_normalized', unique);
 
@@ -515,8 +534,9 @@ async function computeGlobalTestHistoryMap(
       const rid = row.report_id as string;
       const tn = row.test_name_normalized as string;
       const cls = (row.ai_classification as string) || '';
+      const pri = (row.ai_priority as string) || '';
       if (!failsByReport.has(rid)) failsByReport.set(rid, new Map());
-      failsByReport.get(rid)!.set(tn, cls);
+      failsByReport.get(rid)!.set(tn, { classification: cls, priority: pri });
     }
   }
 
@@ -539,12 +559,15 @@ async function computeGlobalTestHistoryMap(
         const r = reportsChrono[i];
         const failMap = failsByReport.get(r.id);
         const failedHere = failMap?.has(T) ?? false;
+        const failInfo = failedHere ? failMap!.get(T)! : undefined;
         priorOutcomes.push(failedHere ? 'fail' : 'pass');
         priorRunDetails.push({
           outcome: failedHere ? 'fail' : 'pass',
           runName: r.run_name || undefined,
           runDate: r.run_date || undefined,
-          aiClassification: failedHere ? (failMap!.get(T) || undefined) : undefined,
+          bucket: r.regression_bucket || undefined,
+          aiClassification: failInfo?.classification || undefined,
+          aiPriority: failInfo?.priority || undefined,
         });
       }
     }
@@ -1055,7 +1078,7 @@ ${firstSeenGlobally.length > 0
       const globalRowCountByTest = new Map<string, number>();
       globalTestMap.forEach((v, k) => globalRowCountByTest.set(k, v.total));
       try {
-        historyByTest = await computeGlobalTestHistoryMap(supabase, testNames, globalRowCountByTest);
+        historyByTest = await computeGlobalTestHistoryMap(supabase, testNames, globalRowCountByTest, regressionBucket);
         console.log(`Computed global cross-run history for ${historyByTest.size} tests`);
       } catch (hErr) {
         console.log('computeGlobalTestHistoryMap failed:', hErr);

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-05-03
+
+### Fixed
+- **Test History scope** — the timeline previously pulled the last 30 reports across **all** regression buckets, so a test analyzed in "Regression 2" could show passes from "Regression 6"/"Regression 3". History is now scoped to the current run's `regression_bucket` (apples-to-apples).
+
+### Changed
+- **Per-square hover** rewritten with full context: run name, run date (formatted), regression bucket, outcome, and — for failed runs — the AI classification **and** AI priority recorded in that run.
+- Larger invisible hit-area around each square (4px padding) so hover always lands.
+- Local `TooltipProvider` (`delayDuration=120ms`) inside the chip — tooltips now respond instantly instead of waiting for the global 700ms delay.
+- "first seen" pill is now hoverable too and explains the empty state.
+
+### Edge
+- `computeGlobalTestHistoryMap(...)` accepts `regressionBucket` and filters `analysis_reports` with `.eq('regression_bucket', ...)` (falls back to unscoped if not provided). Selects `ai_priority` and `regression_bucket` to populate `lastNRunDetails`.
+
 ## [1.2.3] - 2026-04-30
 
 ### Changed
