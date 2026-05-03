@@ -29,7 +29,7 @@ import { ReviewProgress } from '@/components/ReviewProgress';
 import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
 import { BulkActionPanel } from '@/components/BulkActionPanel';
 import { toast } from 'sonner';
-import { RunDetails, UserFeedback } from '@/types/feedback';
+import { RunDetails, UserFeedback, AnalyzedFailureWithFeedback } from '@/types/feedback';
 import { Classification, SortOption } from '@/types/testim';
 import { useRegressionBuckets } from '@/hooks/useRegressionBuckets';
 
