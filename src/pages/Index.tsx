@@ -164,6 +164,7 @@ const Index = () => {
   const [filterClassification, setFilterClassification] = useState<string>('all');
   const [filterReviewStatus, setFilterReviewStatus] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
   const [filterPattern, setFilterPattern] = useState<string | null>(null);
+  const [filterRecommendation, setFilterRecommendation] = useState<'all' | 'investigate' | 'skip'>('all');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // "/" focuses search input — skip when user is typing in another field
@@ -185,13 +186,15 @@ const Index = () => {
     setFilterClassification('all');
     setFilterReviewStatus('all');
     setFilterPattern(null);
+    setFilterRecommendation('all');
   }, []);
 
   const hasActiveFilters =
     !!searchQuery ||
     filterClassification !== 'all' ||
     filterReviewStatus !== 'all' ||
-    filterPattern !== null;
+    filterPattern !== null ||
+    filterRecommendation !== 'all';
   const classifications: Classification[] = ['Potential bug', 'Likely Flaky', 'Environment / Infra Issue', 'Expected Change', 'Investigate'];
 
   const handleFileUpload = (file: File) => {
@@ -287,7 +290,7 @@ const Index = () => {
     [patternGroups],
   );
 
-  // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern
+  // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern/recommendation
   const filteredFailures = useMemo(() => {
     return sortedFailures.filter(f => {
       if (!f.analysis) return true;
@@ -302,9 +305,17 @@ const Index = () => {
         (filterPattern === '__other__'
           ? !visibleBucketKeys.has(bucketKey)
           : bucketKey === filterPattern);
-      return matchesSearch && matchesClassification && matchesStatus && matchesPattern;
+      const recommended = aiRecommendedInvestigate({
+        classification: f.analysis?.classification,
+        priority: f.analysis?.priority,
+      });
+      const matchesRecommendation =
+        filterRecommendation === 'all' ||
+        (filterRecommendation === 'investigate' && recommended) ||
+        (filterRecommendation === 'skip' && !recommended);
+      return matchesSearch && matchesClassification && matchesStatus && matchesPattern && matchesRecommendation;
     });
-  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern, visibleBucketKeys]);
+  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern, filterRecommendation, visibleBucketKeys]);
 
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -533,22 +544,52 @@ const Index = () => {
                 {runDetails.notes && <span className="text-sm text-muted-foreground italic truncate max-w-[300px]">{runDetails.notes}</span>}
               </div>}
 
-            {/* Stats - Recommendation based */}
+            {/* Stats - Recommendation based (clickable to filter) */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="border-border/50">
+              <Card
+                role="button"
+                tabIndex={0}
+                aria-pressed={filterRecommendation === 'all'}
+                onClick={() => setFilterRecommendation('all')}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilterRecommendation('all'); } }}
+                className={cn(
+                  "border-border/50 cursor-pointer transition-all hover:bg-muted/40",
+                  filterRecommendation === 'all' && "ring-2 ring-foreground/40"
+                )}
+              >
                 <CardContent className="pt-4 text-center">
                   <div className="text-3xl font-bold text-foreground">{recommendationStats.total}</div>
                   <div className="text-sm text-muted-foreground mt-1">Total Analyzed</div>
                 </CardContent>
               </Card>
-              <Card className="border-bug/30 bg-bug/5">
+              <Card
+                role="button"
+                tabIndex={0}
+                aria-pressed={filterRecommendation === 'investigate'}
+                onClick={() => setFilterRecommendation(prev => prev === 'investigate' ? 'all' : 'investigate')}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilterRecommendation(prev => prev === 'investigate' ? 'all' : 'investigate'); } }}
+                className={cn(
+                  "border-bug/30 bg-bug/5 cursor-pointer transition-all hover:bg-bug/10",
+                  filterRecommendation === 'investigate' && "ring-2 ring-bug"
+                )}
+              >
                 <CardContent className="pt-4 text-center">
                   <SearchCheck className="h-5 w-5 mx-auto text-bug mb-1" />
                   <div className="text-3xl font-bold text-bug">{recommendationStats.investigate}</div>
                   <div className="text-sm text-muted-foreground mt-1">Investigate</div>
                 </CardContent>
               </Card>
-              <Card className="border-flaky/30 bg-flaky/5">
+              <Card
+                role="button"
+                tabIndex={0}
+                aria-pressed={filterRecommendation === 'skip'}
+                onClick={() => setFilterRecommendation(prev => prev === 'skip' ? 'all' : 'skip')}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilterRecommendation(prev => prev === 'skip' ? 'all' : 'skip'); } }}
+                className={cn(
+                  "border-flaky/30 bg-flaky/5 cursor-pointer transition-all hover:bg-flaky/10",
+                  filterRecommendation === 'skip' && "ring-2 ring-flaky"
+                )}
+              >
                 <CardContent className="pt-4 text-center">
                   <CircleSlash className="h-5 w-5 mx-auto text-flaky mb-1" />
                   <div className="text-3xl font-bold text-flaky">{recommendationStats.skip}</div>
@@ -701,6 +742,7 @@ const Index = () => {
                         {filterPattern && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground max-w-[260px] truncate inline-block align-bottom">{patternGroups.find(g => g.key === filterPattern)?.label ?? filterPattern}</span>}
                         {filterClassification !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterClassification}</span>}
                         {filterReviewStatus !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterReviewStatus}</span>}
+                        {filterRecommendation !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground capitalize">{filterRecommendation}</span>}
                         {searchQuery && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">"{searchQuery}"</span>}
                         <button
                           type="button"
