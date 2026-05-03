@@ -290,7 +290,7 @@ const Index = () => {
     [patternGroups],
   );
 
-  // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern
+  // Filter: include analyzing rows; for analyzed rows apply search/classification/review/pattern/recommendation
   const filteredFailures = useMemo(() => {
     return sortedFailures.filter(f => {
       if (!f.analysis) return true;
@@ -305,9 +305,17 @@ const Index = () => {
         (filterPattern === '__other__'
           ? !visibleBucketKeys.has(bucketKey)
           : bucketKey === filterPattern);
-      return matchesSearch && matchesClassification && matchesStatus && matchesPattern;
+      const recommended = aiRecommendedInvestigate({
+        classification: f.analysis?.classification,
+        priority: f.analysis?.priority,
+      });
+      const matchesRecommendation =
+        filterRecommendation === 'all' ||
+        (filterRecommendation === 'investigate' && recommended) ||
+        (filterRecommendation === 'skip' && !recommended);
+      return matchesSearch && matchesClassification && matchesStatus && matchesPattern && matchesRecommendation;
     });
-  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern, visibleBucketKeys]);
+  }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern, filterRecommendation, visibleBucketKeys]);
 
   return <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
