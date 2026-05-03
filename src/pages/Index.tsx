@@ -164,6 +164,7 @@ const Index = () => {
   const [filterClassification, setFilterClassification] = useState<string>('all');
   const [filterReviewStatus, setFilterReviewStatus] = useState<'all' | 'reviewed' | 'unreviewed'>('all');
   const [filterPattern, setFilterPattern] = useState<string | null>(null);
+  const [filterRecommendation, setFilterRecommendation] = useState<'all' | 'investigate' | 'skip'>('all');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // "/" focuses search input — skip when user is typing in another field
