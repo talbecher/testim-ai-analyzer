@@ -251,7 +251,7 @@ const DECISION_FRAMEWORK = `
 
 ## 7.5. CROSS-RUN HISTORY (BUCKET-SCOPED HISTORY — HIGH WEIGHT)
 
-Each failure may include a \`history\` object built from prior **uploaded** runs in the **same regression bucket** as this analysis (last up to 30 reports for that bucket only). When no regression bucket is available (legacy), the server falls back to the last 30 uploads across all buckets (global fallback). A run is a row in \`analysis_reports\`. A test **failed** in a run if it appears in that run's failures; **passed** implicitly if it was already "known" from an earlier failing upload and has no failure row for that run.
+Each failure may include a \`history\` object built ONLY from prior **uploaded** runs where \`analysis_reports.regression_bucket\` equals the **current** regression bucket (last up to 30 such reports). There is **no** cross-bucket history and **no** global fallback — if the bucket is missing or no prior runs exist in that bucket for this test, \`history\` is omitted or empty (first-seen / no timeline). A run is a row in \`analysis_reports\`. A test **failed** in a run if it appears in that run's failures; **passed** implicitly if it was already "known" from an earlier failing upload in **this bucket** and has no failure row for that run.
 
 Use \`history\` as a **HIGH-WEIGHT** narrative signal. The model may override it only when **§0 P0 safety**, **§1 Investigate fallback**, or **§1b SESSION_WEBDRIVER_INFRA** applies — history must **never** contradict those.
 
@@ -295,7 +295,7 @@ Add to priorityReason when applicable:
 - "Intermittent pattern (X alternations) - strong flaky signal"
 - "Failed X times consecutively - consistent failure pattern"
 
-**Note:** \`streakInfo\` is regression-scoped. \`history\` (§7.5) is **bucket-scoped history** over uploads in that regression bucket — use both; when they conflict, prefer **§7.5** for "was passing, now failing" regression smell, and **§9** for passed-locally flaky evidence. When no bucket exists, treat timeline as the legacy global fallback described in §7.5.
+**Note:** \`streakInfo\` is regression-scoped. \`history\` (§7.5) is **strictly bucket-scoped** — only uploads with the same \`regression_bucket\` as the current analysis; never infer history from other buckets. Use both; when they conflict, prefer **§7.5** for "was passing, now failing" regression smell, and **§9** for passed-locally flaky evidence.
 `;
 
 // Enhanced assertion rules
@@ -371,7 +371,7 @@ const HIERARCHY_OF_EVIDENCE = `
 Apply signals in this order when they conflict:
 1) P0 safety, Investigate fallback, and §1b session/WebDriver infra (absolute)
 2) Regression-specific corrections and passed-locally history (this bucket only)
-3) **Bucket-scoped cross-run history** (\`history.pattern\`, §7.5) — regression smell vs intermittent vs consistent fails within that bucket's timeline (legacy: global fallback when no bucket)
+3) **Bucket-scoped cross-run history** (\`history.pattern\`, §7.5) — regression smell vs intermittent vs consistent fails within **that bucket only** (no cross-bucket data)
 4) Co-failure / systemic signals and bucket-scoped **streakInfo** (§9)
 5) Flaky KB and environment-style error families
 6) Heuristic error-pattern hints (use last)
@@ -484,7 +484,11 @@ interface TestHistory {
   pattern: TestHistoryPattern;
 }
 
-/** Implicit pass/fail series from last 30 uploads in the SAME regression bucket when scoped; current run is not in DB — streak includes this failure as +1. */
+/**
+ * Implicit pass/fail series from last 30 uploads in **one** regression bucket only.
+ * Mandatory filter: `regression_bucket === trimmedBucket`. No bucket → empty map (no history).
+ * Current run is not in DB — streak includes this failure as +1.
+ */
 async function computeGlobalTestHistoryMap(
   supabase: ReturnType<typeof createClient>,
   testNames: string[],
@@ -500,28 +504,56 @@ async function computeGlobalTestHistoryMap(
       ? String(currentBucket).trim()
       : undefined;
 
-  let reportsQuery = supabase
-    .from('analysis_reports')
-    .select('id, run_date, created_at, run_name, regression_bucket');
-
-  if (trimmedBucket) {
-    reportsQuery = reportsQuery.eq('regression_bucket', trimmedBucket);
+  if (!trimmedBucket) {
+    console.log(
+      'computeGlobalTestHistoryMap: empty history — regression_bucket is missing or blank (mandatory filter; no global fallback)',
+    );
+    return new Map();
   }
 
-  const { data: recentReports } = await reportsQuery
+  const queryParamsLog = {
+    table: 'analysis_reports',
+    select: 'id, run_date, created_at, run_name, regression_bucket',
+    filters: { regression_bucket: { eq: trimmedBucket } },
+    order: [
+      { column: 'run_date', ascending: false },
+      { column: 'created_at', ascending: false },
+    ],
+    limit: 30,
+  };
+  console.log('computeGlobalTestHistoryMap Supabase query params:', JSON.stringify(queryParamsLog));
+
+  const { data: recentReports, error: reportsHistoryErr } = await supabase
+    .from('analysis_reports')
+    .select('id, run_date, created_at, run_name, regression_bucket')
+    .eq('regression_bucket', trimmedBucket)
     .order('run_date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(30);
 
-  const reportsChrono = [...(recentReports || [])].reverse() as Array<{
+  if (reportsHistoryErr) {
+    console.log('computeGlobalTestHistoryMap analysis_reports error:', reportsHistoryErr);
+    return new Map();
+  }
+
+  let reportsChrono = [...(recentReports || [])].reverse() as Array<{
     id: string;
     run_date: string;
     created_at: string;
     run_name: string | null;
     regression_bucket: string | null;
   }>;
+
+  const leaked = reportsChrono.filter((r) => r.regression_bucket !== trimmedBucket);
+  if (leaked.length > 0) {
+    console.warn(
+      `computeGlobalTestHistoryMap: stripping ${leaked.length} row(s) whose regression_bucket !== "${trimmedBucket}"`,
+    );
+    reportsChrono = reportsChrono.filter((r) => r.regression_bucket === trimmedBucket);
+  }
+
   console.log(
-    `History scope: bucket=[${trimmedBucket ?? 'GLOBAL'}], reports=[${reportsChrono.length}]`,
+    `History scope: bucket=[${trimmedBucket}], reports=[${reportsChrono.length}] (eq applied before order/limit; mandatory bucket filter)`,
   );
   const reportIds = reportsChrono.map((r) => r.id);
   // Per-report → per-testName → { classification, priority } (presence of testName == failed in that run)
@@ -1084,13 +1116,16 @@ ${firstSeenGlobally.length > 0
       const globalRowCountByTest = new Map<string, number>();
       globalTestMap.forEach((v, k) => globalRowCountByTest.set(k, v.total));
       try {
+        console.log(
+          `computeGlobalTestHistoryMap call site: regressionBucketEffective=[${JSON.stringify(regressionBucketEffective)}] (length=${regressionBucketEffective.length})`,
+        );
         historyByTest = await computeGlobalTestHistoryMap(
           supabase,
           testNames,
           globalRowCountByTest,
           regressionBucketEffective || undefined,
         );
-        console.log(`Computed global cross-run history for ${historyByTest.size} tests`);
+        console.log(`Computed bucket-scoped cross-run history entries for ${historyByTest.size} test key(s)`);
       } catch (hErr) {
         console.log('computeGlobalTestHistoryMap failed:', hErr);
       }
@@ -1168,7 +1203,7 @@ ${passedLocallyPatterns}
 ${learningPatternsPrompt}
 `;
 
-    // Enrich failures with streakInfo (§9) and global history (§7.5)
+    // Enrich failures with streakInfo (§9) and bucket-scoped history (§7.5)
     const failuresForPrompt = failures.map((f: { testNameNormalized: string; errorMessage?: string; [key: string]: unknown }) => ({
       ...f,
       errorMessage: sanitizeErrorMessage(f.errorMessage),
@@ -1190,7 +1225,7 @@ If a test matches Flaky KB (even fuzzy match), note it in your response.
 IMPORTANT: Flaky KB is a supporting signal, not a hard rule.
 
 ## Failures to Analyze:
-Each failure may include **streakInfo** (this regression bucket, passed_locally) and **history** (bucket-scoped history over prior uploads in §7.5). Use both; **history** drives regression smell vs intermittent/consistent failure within that bucket timeline. When no bucket exists, history uses the global fallback described in §7.5.
+Each failure may include **streakInfo** (this regression bucket, passed_locally) and **history** (bucket-scoped history over prior uploads in **this bucket only**, §7.5 — never other buckets). Use both; **history** drives regression smell vs intermittent/consistent failure within that bucket timeline. If there is no bucket or no prior data in-bucket, **history** may be absent (no cross-bucket fallback).
 When streakInfo is present: isIntermittent → Likely Flaky; isConsistentFailure → Potential bug (bucket-scoped).
 When history is present: follow §7.5 score nudges and priorityReason cues.
 ${JSON.stringify(failuresForPrompt, null, 2)}
