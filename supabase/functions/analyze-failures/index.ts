@@ -255,6 +255,8 @@ Each failure may include a \`history\` object built ONLY from prior **uploaded**
 
 Use \`history\` as a **HIGH-WEIGHT** narrative signal. The model may override it only when **§0 P0 safety**, **§1 Investigate fallback**, or **§1b SESSION_WEBDRIVER_INFRA** applies — history must **never** contradict those.
 
+When \`historyStats\` is present on the same row, use it for **all numeric bucket history facts** in **priorityReason** (N, X, Y, Z); do not count runs manually from prose.
+
 Guidance (also nudge **signalBreakdown** scores and **priorityReason** accordingly):
 - **pattern=\`was-passing-now-failing\`** (e.g. ≥2 passes in the last 3 prior uploads): strongly lean **Investigate** (regression smell). Bump **investigateScore** by ~25; mention "passed in last N runs" in **priorityReason**.
 - **pattern=\`consistent-failure\`** (≥3 consecutive fails including this run): lean **Potential bug** when **assertion mismatch**, **real selector failure**, or other bug signals align; bump **bugScore** by ~15.
@@ -372,6 +374,7 @@ Apply signals in this order when they conflict:
 1) P0 safety, Investigate fallback, and §1b session/WebDriver infra (absolute)
 2) Regression-specific corrections and passed-locally history (this bucket only)
 3) **Bucket-scoped cross-run history** (\`history.pattern\`, §7.5) — regression smell vs intermittent vs consistent fails within **that bucket only** (no cross-bucket data)
+3a) **CONSISTENT FAILURE STREAK RULE (pre-calculated \`historyStats\`):** If \`historyStats.consecutiveFailStreakIncludingCurrentRun\` ≥ 5, you MUST classify **Potential bug**, set **priority P1**, and include the exact phrase **"Consistent Failure Pattern"** in **priorityReason**. Add **CONSISTENT_FAILURE_PATTERN_STREAK** to **activeSignals**. This overrides flaky-leaning signals and §7.5 intermittent nudges **unless** you set **flakyKBMatch: true** for this row because the test name matches the **Flaky KB** list in the system prompt (known-flaky exception — not global pattern counts). Still respects §0, §1, and §1b absolute rules.
 4) Co-failure / systemic signals and bucket-scoped **streakInfo** (§9)
 5) Flaky KB and environment-style error families
 6) Heuristic error-pattern hints (use last)
@@ -482,6 +485,39 @@ interface TestHistory {
   recentPassRate: number;
   isFirstSeenGlobally: boolean;
   pattern: TestHistoryPattern;
+}
+
+/** Pre-calculated strip stats for the AI (last N runs shown = newest-first strip). */
+interface HistoryStatsForPrompt {
+  lastWindowSize: number;
+  lastWindowFailCount: number;
+  lastWindowPassCount: number;
+  consecutiveFailsFromMostRecentInStrip: number;
+  consecutiveFailStreakIncludingCurrentRun: number;
+  bucketPriorUploadCount: number;
+}
+
+function buildHistoryStatsForPrompt(h: TestHistory): HistoryStatsForPrompt {
+  const stripOutcomes: ('pass' | 'fail')[] =
+    h.lastNRunDetails && h.lastNRunDetails.length > 0
+      ? h.lastNRunDetails.map((d) => d.outcome)
+      : [...(h.lastNOutcomes ?? [])];
+  const totalRuns = stripOutcomes.length;
+  const failCount = stripOutcomes.filter((r) => r === 'fail').length;
+  const passCount = totalRuns - failCount;
+  let consecutiveFailsFromMostRecentInStrip = 0;
+  for (let i = 0; i < stripOutcomes.length; i++) {
+    if (stripOutcomes[i] === 'fail') consecutiveFailsFromMostRecentInStrip++;
+    else break;
+  }
+  return {
+    lastWindowSize: totalRuns,
+    lastWindowFailCount: failCount,
+    lastWindowPassCount: passCount,
+    consecutiveFailsFromMostRecentInStrip,
+    consecutiveFailStreakIncludingCurrentRun: h.currentFailStreak,
+    bucketPriorUploadCount: h.totalRunsKnown,
+  };
 }
 
 /**
@@ -774,17 +810,31 @@ Available signal names:
 - NETWORK_ERROR, TIMEOUT_SHORT, TIMEOUT_LONG, INFRA_PATTERN, CO_FAILURE_INFRA, SESSION_WEBDRIVER_INFRA
 - FIRST_SEEN_GLOBALLY, FIRST_SEEN_IN_REGRESSION, CONFLICTING_SIGNALS, MANUAL_CHANGE_DETECTED, LOW_HISTORY
 - GLOBAL_HISTORY_REGRESSION_SMELL, GLOBAL_HISTORY_CONSISTENT_FAIL, GLOBAL_HISTORY_INTERMITTENT, GLOBAL_HISTORY_FIRST_SEEN
+- CONSISTENT_FAILURE_PATTERN_STREAK
 
 ### Field Alignment Rules:
 - errorPattern: Use the provided error pattern as-is
 - requiresRerun: Keep consistent with classification and confidence
-- priorityReason: Include bullet points explaining which signals were used
+- priorityReason: Include bullet points explaining which signals were used. When \`historyStats\` is present on the failure row, copy its counts **verbatim** — do not recalculate or substitute different numbers. When citing aggregate learning-pattern frequencies from the CRITICAL/HIGH learning sections (e.g. "297×"), label them exactly as **"Global KB pattern matches (not test-specific)"** so readers know that count is **error-pattern-wide**, not this test's personal run history.
 - signalBreakdown: Must sum to ~100% across scores
 
 ### Output Rules:
 - Return ONLY a valid JSON array
 - Each item MUST include ALL required keys
 - Do NOT output markdown, code fences, or explanations outside the JSON
+`;
+
+/** Injected into system prompt: hard facts for history strip + KB count wording. */
+const HISTORY_STATS_INSTRUCTION = `
+## HISTORY STATS (pre-calculated — do not recalculate)
+Each failure in **Failures to Analyze** may include \`historyStats\` (server-computed from the same bucket-scoped strip as \`history\`). These numbers are **final**:
+- **lastWindowSize** = N = count of prior runs represented in that strip (newest-first window)
+- **lastWindowFailCount** / **lastWindowPassCount** = X fails, Y passes in that strip (for that window: "Last N runs in this bucket: X fails, Y passes")
+- **consecutiveFailStreakIncludingCurrentRun** = Z = consecutive fail streak **including this failing upload** ("Current consecutive fail streak: Z")
+
+**You MUST NOT recalculate or substitute alternative counts** for those facts. When you mention run totals in **priorityReason**, copy **N, X, Y, Z** from \`historyStats\` / \`history\` exactly.
+
+When you cite aggregate occurrence counts from the **CRITICAL/HIGH learning** sections below (e.g. "297×"), describe them in **priorityReason** using the exact phrase **"Global KB pattern matches (not test-specific)"** — those counts are **error-pattern-wide**, not this test's personal history.
 `;
 
 // Learning mode prompt - focus on prediction accuracy evaluation
@@ -1146,6 +1196,7 @@ ${firstSeenGlobally.length > 0
         if (criticalPatterns.length > 0) {
           patternsSection += `
 ## CRITICAL LEARNING PATTERNS (Global - from AI Boost):
+When citing any (N×) count from this section in **priorityReason**, label it **"Global KB pattern matches (not test-specific)"** — not as this test's run history.
 ${criticalPatterns.map(p => {
   const notesInfo = p.user_notes_pattern ? ` | Notes: "${p.user_notes_pattern}"` : '';
   return `🔴 Error "${p.error_pattern || 'general'}" - "${p.ai_classification}" should be "${p.correct_classification}" (${p.occurrence_count}x)${notesInfo}`;
@@ -1156,6 +1207,7 @@ ${criticalPatterns.map(p => {
         if (highPatterns.length > 0) {
           patternsSection += `
 ## HIGH IMPORTANCE PATTERNS (Global):
+Same **priorityReason** label for (N×) counts: **"Global KB pattern matches (not test-specific)"** — not this test's own history.
 ${highPatterns.map(p => {
   const notesInfo = p.user_notes_pattern ? ` | Notes: "${p.user_notes_pattern}"` : '';
   return `⚠️ Error "${p.error_pattern || 'general'}" - "${p.ai_classification}" should be "${p.correct_classification}" (${p.occurrence_count}x)${notesInfo}`;
@@ -1203,13 +1255,17 @@ ${passedLocallyPatterns}
 ${learningPatternsPrompt}
 `;
 
-    // Enrich failures with streakInfo (§9) and bucket-scoped history (§7.5)
-    const failuresForPrompt = failures.map((f: { testNameNormalized: string; errorMessage?: string; [key: string]: unknown }) => ({
-      ...f,
-      errorMessage: sanitizeErrorMessage(f.errorMessage),
-      streakInfo: streakMap.get(f.testNameNormalized) ?? undefined,
-      history: historyByTest.get(f.testNameNormalized) ?? undefined,
-    }));
+    // Enrich failures with streakInfo (§9), bucket-scoped history (§7.5), and pre-calculated historyStats
+    const failuresForPrompt = failures.map((f: { testNameNormalized: string; errorMessage?: string; [key: string]: unknown }) => {
+      const history = historyByTest.get(f.testNameNormalized);
+      return {
+        ...f,
+        errorMessage: sanitizeErrorMessage(f.errorMessage),
+        streakInfo: streakMap.get(f.testNameNormalized) ?? undefined,
+        history: history ?? undefined,
+        ...(history ? { historyStats: buildHistoryStatsForPrompt(history) } : {}),
+      };
+    });
 
     // Select prompt based on mode
     const basePrompt = mode === 'learning' ? LEARNING_PROMPT : PRODUCTION_PROMPT;
@@ -1217,6 +1273,7 @@ ${learningPatternsPrompt}
     const systemPrompt = `${basePrompt}
 
 ${regressionContext}
+${HISTORY_STATS_INSTRUCTION}
 
 ## Flaky KB (Known Flaky Tests - Global):
 ${JSON.stringify(flakyTests, null, 2)}
@@ -1225,9 +1282,9 @@ If a test matches Flaky KB (even fuzzy match), note it in your response.
 IMPORTANT: Flaky KB is a supporting signal, not a hard rule.
 
 ## Failures to Analyze:
-Each failure may include **streakInfo** (this regression bucket, passed_locally) and **history** (bucket-scoped history over prior uploads in **this bucket only**, §7.5 — never other buckets). Use both; **history** drives regression smell vs intermittent/consistent failure within that bucket timeline. If there is no bucket or no prior data in-bucket, **history** may be absent (no cross-bucket fallback).
+Each failure may include **streakInfo** (this regression bucket, passed_locally), **history** (bucket-scoped prior uploads in **this bucket only**, §7.5), and **historyStats** (pre-calculated N/X/Y/Z for that strip + streak including this upload). Use all three; **history** drives regression smell vs intermittent/consistent failure within that bucket timeline. If there is no bucket or no prior data in-bucket, **history** / **historyStats** may be absent (no cross-bucket fallback).
 When streakInfo is present: isIntermittent → Likely Flaky; isConsistentFailure → Potential bug (bucket-scoped).
-When history is present: follow §7.5 score nudges and priorityReason cues.
+When history / historyStats is present: follow §7.5 and **HISTORY STATS** rules; copy **historyStats** numbers verbatim in **priorityReason** when citing counts.
 ${JSON.stringify(failuresForPrompt, null, 2)}
 
 For EACH failure, respond with JSON array containing objects with:
@@ -1235,7 +1292,7 @@ For EACH failure, respond with JSON array containing objects with:
 - confidence: 0-100
 - suggestedAction: "Open bug" | "Update shared step" | "Rerun only" | "Ignore today / monitor" | "Verify manually"
 - priority: "P0" | "P1" | "P2" | "P3"
-- priorityReason: bullet points explaining which signals were used (regression-specific data, global patterns, etc.)
+- priorityReason: bullet points explaining which signals were used. For bucket run counts use **historyStats** verbatim. For CRITICAL/HIGH learning (N×) counts use the label **"Global KB pattern matches (not test-specific)"** in the text.
 - errorPattern: the detected error pattern (use provided pattern as-is)
 - requiresRerun: true/false
 - rerunReason: explanation
