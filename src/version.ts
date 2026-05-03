@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.2.4",
+    date: "2026-05-03",
+    fixed: [
+      "Test History timeline is now scoped to the current regression bucket — no more pass/fail squares from other buckets (e.g. Regression 6 leaking into a Regression 2 analysis)"
+    ],
+    changed: [
+      "Hover any history square to see full context: run name, run date, bucket, outcome, and (for failed runs) the AI classification and priority from that run",
+      "Larger invisible hit-area around each square and a faster local tooltip (120ms) so hover always responds",
+      "\"first seen\" pill is now hoverable and explains why no history exists yet"
+    ]
+  },
+  {
     version: "1.2.3",
     date: "2026-04-30",
     changed: [
