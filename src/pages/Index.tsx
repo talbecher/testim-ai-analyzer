@@ -118,7 +118,10 @@ const Index = () => {
   }, []);
 
 
-  const handleBulkAction = useCallback((ids: string[], feedback: UserFeedback) => {
+  const handleBulkAction = useCallback((
+    ids: string[],
+    feedback: UserFeedback | ((failure: AnalyzedFailureWithFeedback) => UserFeedback)
+  ) => {
     handleBulkFeedback(ids, feedback);
     toast.success(`Applied action to ${ids.length} items`);
   }, [handleBulkFeedback]);
