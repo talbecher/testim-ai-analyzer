@@ -466,7 +466,9 @@ interface TestHistoryRunDetail {
   outcome: 'pass' | 'fail';
   runName?: string;
   runDate?: string;
+  bucket?: string;
   aiClassification?: string;
+  aiPriority?: string;
 }
 
 interface TestHistory {
