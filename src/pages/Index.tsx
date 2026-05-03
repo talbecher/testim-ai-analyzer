@@ -29,7 +29,7 @@ import { ReviewProgress } from '@/components/ReviewProgress';
 import { FeedbackSummaryDialog } from '@/components/FeedbackSummaryDialog';
 import { BulkActionPanel } from '@/components/BulkActionPanel';
 import { toast } from 'sonner';
-import { RunDetails, UserFeedback } from '@/types/feedback';
+import { RunDetails, UserFeedback, AnalyzedFailureWithFeedback } from '@/types/feedback';
 import { Classification, SortOption } from '@/types/testim';
 import { useRegressionBuckets } from '@/hooks/useRegressionBuckets';
 
@@ -118,7 +118,10 @@ const Index = () => {
   }, []);
 
 
-  const handleBulkAction = useCallback((ids: string[], feedback: UserFeedback) => {
+  const handleBulkAction = useCallback((
+    ids: string[],
+    feedback: UserFeedback | ((failure: AnalyzedFailureWithFeedback) => UserFeedback)
+  ) => {
     handleBulkFeedback(ids, feedback);
     toast.success(`Applied action to ${ids.length} items`);
   }, [handleBulkFeedback]);
