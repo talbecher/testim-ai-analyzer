@@ -742,6 +742,7 @@ const Index = () => {
                         {filterPattern && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground max-w-[260px] truncate inline-block align-bottom">{patternGroups.find(g => g.key === filterPattern)?.label ?? filterPattern}</span>}
                         {filterClassification !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterClassification}</span>}
                         {filterReviewStatus !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">{filterReviewStatus}</span>}
+                        {filterRecommendation !== 'all' && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground capitalize">{filterRecommendation}</span>}
                         {searchQuery && <span className="px-1.5 py-0.5 rounded bg-muted text-foreground">"{searchQuery}"</span>}
                         <button
                           type="button"
