@@ -8,13 +8,17 @@ import { X, Bug, PlayCircle, Wrench } from 'lucide-react';
 import { UserFeedback } from '@/types/feedback';
 import { AnalyzedFailureWithFeedback } from '@/types/feedback';
 import { useBugCategories } from '@/hooks/useBugCategories';
+import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
 
 type FlowType = 'bug' | 'passed-locally' | 'manual-fix';
 
 interface BulkActionPanelProps {
   selectedCount: number;
   selectedFailures: AnalyzedFailureWithFeedback[];
-  onBulkFeedback: (ids: string[], feedback: UserFeedback) => void;
+  onBulkFeedback: (
+    ids: string[],
+    feedback: UserFeedback | ((failure: AnalyzedFailureWithFeedback) => UserFeedback)
+  ) => void;
   onClearSelection: () => void;
 }
 
