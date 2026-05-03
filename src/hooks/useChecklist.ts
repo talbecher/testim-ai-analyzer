@@ -241,7 +241,7 @@ export function useChecklist() {
 
     setAnalysisProgress({ completed: 0, total: needsAnalysis.length });
 
-    const BATCH_SIZE = 3;
+    const BATCH_SIZE = 1;
 
     const buildFailureForAI = (failure: AnalyzedFailure): FailureForAI => {
       const patternResult = detectErrorPattern(failure.errorMessage);
