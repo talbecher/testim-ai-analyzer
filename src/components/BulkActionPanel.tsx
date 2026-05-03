@@ -72,30 +72,47 @@ export function BulkActionPanel({
     const ids = selectedFailures.map(f => f.id);
 
     if (flowType === 'passed-locally') {
-      const feedback: UserFeedback = {
-        wasCorrect: true,
+      // AI was correct if it recommended SKIP (passed locally = no investigation needed)
+      onBulkFeedback(ids, (f) => ({
+        wasCorrect: !aiRecommendedInvestigate({
+          classification: f.analysis?.classification,
+          priority: f.analysis?.priority,
+        }),
+        userClassification: f.analysis?.classification,
+        userPriority: f.analysis?.priority,
+        userAction: f.analysis?.suggestedAction,
         passedLocally: true,
         passedLocallyReason: selectedValue,
         passedLocallyNotes: notes || undefined,
-      };
-      onBulkFeedback(ids, feedback);
+      }));
     } else if (flowType === 'bug') {
-      const feedback: UserFeedback = {
-        wasCorrect: false,
-        userClassification: 'Potential bug',
+      // AI was correct if it recommended INVESTIGATE (real bug = investigation was right)
+      onBulkFeedback(ids, (f) => ({
+        wasCorrect: aiRecommendedInvestigate({
+          classification: f.analysis?.classification,
+          priority: f.analysis?.priority,
+        }),
+        userClassification: f.analysis?.classification,
+        userPriority: f.analysis?.priority,
+        userAction: f.analysis?.suggestedAction,
         bugCategory: selectedValue,
         bugLink: bugLink || undefined,
         userNotes: notes || undefined,
-      };
-      onBulkFeedback(ids, feedback);
+      }));
     } else if (flowType === 'manual-fix') {
-      const feedback: UserFeedback = {
-        wasCorrect: false,
+      // AI was correct if it recommended INVESTIGATE (manual fix needed = work was needed)
+      onBulkFeedback(ids, (f) => ({
+        wasCorrect: aiRecommendedInvestigate({
+          classification: f.analysis?.classification,
+          priority: f.analysis?.priority,
+        }),
+        userClassification: f.analysis?.classification,
+        userPriority: f.analysis?.priority,
+        userAction: f.analysis?.suggestedAction,
         requiredManualFix: true,
         manualFixType: selectedValue,
         manualFixNotes: notes || undefined,
-      };
-      onBulkFeedback(ids, feedback);
+      }));
     }
 
     setDialogOpen(false);
