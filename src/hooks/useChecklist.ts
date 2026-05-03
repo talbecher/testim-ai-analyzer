@@ -241,7 +241,7 @@ export function useChecklist() {
 
     setAnalysisProgress({ completed: 0, total: needsAnalysis.length });
 
-    const BATCH_SIZE = 3;
+    const BATCH_SIZE = 1;
 
     const buildFailureForAI = (failure: AnalyzedFailure): FailureForAI => {
       const patternResult = detectErrorPattern(failure.errorMessage);
@@ -294,8 +294,13 @@ export function useChecklist() {
       for (let j = 0; j < batch.length; j++) {
         const failure = batch[j];
         const result = settled[j];
-        if (result.status === 'fulfilled' && !result.value.error) {
-          const results = (result.value.data?.results ?? []) as Array<{ failureId: number; analysis: AIAnalysisResult }>;
+        const data = result.status === 'fulfilled' ? result.value.data : undefined;
+        const fallbackError = data && (data as { fallback?: boolean; error?: string }).fallback
+          ? (data as { error?: string }).error || 'AI temporarily unavailable'
+          : null;
+
+        if (result.status === 'fulfilled' && !result.value.error && !fallbackError) {
+          const results = (data?.results ?? []) as Array<{ failureId: number; analysis: AIAnalysisResult }>;
           const rawAnalysis = results[0]?.analysis;
           if (rawAnalysis) {
             const analysis = applyPostProcessing(failure, rawAnalysis, flakyKB);
@@ -316,12 +321,14 @@ export function useChecklist() {
             );
           }
         } else {
-          const err = result.status === 'rejected' ? result.reason : result.value?.error;
+          const err = fallbackError
+            ? fallbackError
+            : (result.status === 'rejected' ? result.reason : result.value?.error);
           console.warn(`Analysis failed for row ${failure.originalIndex + 1} (${failure.testName}):`, err);
           setFailures(prev =>
             prev.map(f =>
               f.originalIndex === failure.originalIndex
-                ? { ...f, isAnalyzing: false, error: err instanceof Error ? err.message : 'Analysis failed' }
+                ? { ...f, isAnalyzing: false, error: typeof err === 'string' ? err : (err instanceof Error ? err.message : 'Analysis failed') }
                 : f
             )
           );
@@ -329,6 +336,11 @@ export function useChecklist() {
       }
 
       setAnalysisProgress(prev => (prev ? { ...prev, completed: Math.min(prev.completed + batch.length, prev.total) } : null));
+
+      // Small pacing delay to stay under the AI gateway per-minute quota
+      if (start + BATCH_SIZE < needsAnalysis.length) {
+        await new Promise((r) => setTimeout(r, 350));
+      }
     }
 
     setAnalysisProgress(null);

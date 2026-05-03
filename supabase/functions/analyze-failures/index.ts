@@ -1276,30 +1276,46 @@ Return ONLY valid JSON array, no markdown.`;
 
     let analyses: unknown[];
     try {
-      const response = await fetch(aiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${aiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(aiBody),
-      });
+      // Retry on 429 with exponential backoff (Lovable AI gateway shares per-minute quota)
+      const MAX_ATTEMPTS = 4;
+      let response: Response | null = null;
+      let lastErrorText = '';
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        response = await fetch(aiUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${aiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(aiBody),
+        });
+        if (response.ok) break;
+        if (response.status !== 429 || attempt === MAX_ATTEMPTS) break;
+        // Honor Retry-After header when present, else backoff: 1s, 2s, 4s + jitter
+        const retryAfterHeader = response.headers.get('retry-after');
+        const retryAfterSec = retryAfterHeader ? parseFloat(retryAfterHeader) : NaN;
+        const backoffMs = Number.isFinite(retryAfterSec)
+          ? Math.min(retryAfterSec * 1000, 8000)
+          : Math.min(1000 * 2 ** (attempt - 1), 4000) + Math.floor(Math.random() * 250);
+        console.warn(`AI 429 on attempt ${attempt}/${MAX_ATTEMPTS}; retrying in ${backoffMs}ms`);
+        await new Promise((r) => setTimeout(r, backoffMs));
+      }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('QA Audit: AI call failed. Attempted model:', modelName, '| Status:', response.status, '| Body:', errorText);
-        console.error("AI gateway error:", response.status, errorText);
-        if (response.status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (!response || !response.ok) {
+        const errorText = response ? await response.text() : 'no response';
+        lastErrorText = errorText;
+        console.error('QA Audit: AI call failed. Attempted model:', modelName, '| Status:', response?.status, '| Body:', errorText);
+        if (response?.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded", fallback: true }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        if (response.status === 402) {
-          return new Response(JSON.stringify({ error: "Payment required, please add credits" }), {
-            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        if (response?.status === 402) {
+          return new Response(JSON.stringify({ error: "Payment required, please add credits", fallback: true }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
-        throw new Error(`AI gateway error: ${response.status}`);
+        throw new Error(`AI gateway error: ${response?.status} ${lastErrorText}`);
       }
 
       const data = await response.json();
