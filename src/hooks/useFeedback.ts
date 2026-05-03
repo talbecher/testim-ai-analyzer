@@ -152,12 +152,23 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
     }));
   }, []);
 
-  // Handle bulk feedback – atomic single-pass update
-  const handleBulkFeedback = useCallback((ids: string[], feedback: UserFeedback) => {
+  // Handle bulk feedback – atomic single-pass update.
+  // Accepts either a single UserFeedback (applied to all selected rows) or a
+  // builder function so each row can compute its own feedback (e.g. wasCorrect
+  // derived from that row's own AI analysis).
+  const handleBulkFeedback = useCallback((
+    ids: string[],
+    feedbackOrBuilder: UserFeedback | ((failure: AnalyzedFailureWithFeedback) => UserFeedback)
+  ) => {
     const idSet = new Set(ids);
-    setFailuresWithFeedback(prev => prev.map(f =>
-      idSet.has(f.id) ? { ...f, feedback, isReviewed: true } : f
-    ));
+    const isBuilder = typeof feedbackOrBuilder === 'function';
+    setFailuresWithFeedback(prev => prev.map(f => {
+      if (!idSet.has(f.id)) return f;
+      const fb = isBuilder
+        ? (feedbackOrBuilder as (failure: AnalyzedFailureWithFeedback) => UserFeedback)(f)
+        : feedbackOrBuilder;
+      return { ...f, feedback: fb, isReviewed: true };
+    }));
   }, []);
 
   // Calculate summary statistics
