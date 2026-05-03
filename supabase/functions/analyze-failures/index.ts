@@ -249,9 +249,9 @@ const DECISION_FRAMEWORK = `
 - Network / infra errors → Environment / Infra Issue
 - Null / Undefined errors → Potential bug unless strong flaky signals exist
 
-## 7.5. CROSS-RUN HISTORY (GLOBAL — HIGH WEIGHT)
+## 7.5. CROSS-RUN HISTORY (BUCKET-SCOPED HISTORY — HIGH WEIGHT)
 
-Each failure may include a \`history\` object built from prior **uploaded** runs (all regression buckets). A run is a row in \`analysis_reports\`. A test **failed** in a run if it appears in that run's failures; **passed** implicitly if it was already "known" from an earlier failing upload and has no failure row for that run.
+Each failure may include a \`history\` object built from prior **uploaded** runs in the **same regression bucket** as this analysis (last up to 30 reports for that bucket only). When no regression bucket is available (legacy), the server falls back to the last 30 uploads across all buckets (global fallback). A run is a row in \`analysis_reports\`. A test **failed** in a run if it appears in that run's failures; **passed** implicitly if it was already "known" from an earlier failing upload and has no failure row for that run.
 
 Use \`history\` as a **HIGH-WEIGHT** narrative signal. The model may override it only when **§0 P0 safety**, **§1 Investigate fallback**, or **§1b SESSION_WEBDRIVER_INFRA** applies — history must **never** contradict those.
 
@@ -295,7 +295,7 @@ Add to priorityReason when applicable:
 - "Intermittent pattern (X alternations) - strong flaky signal"
 - "Failed X times consecutively - consistent failure pattern"
 
-**Note:** \`streakInfo\` is regression-scoped. \`history\` (§7.5) is **global** across uploads — use both; when they conflict, prefer **§7.5** for "was passing, now failing" regression smell, and **§9** for passed-locally flaky evidence.
+**Note:** \`streakInfo\` is regression-scoped. \`history\` (§7.5) is **bucket-scoped history** over uploads in that regression bucket — use both; when they conflict, prefer **§7.5** for "was passing, now failing" regression smell, and **§9** for passed-locally flaky evidence. When no bucket exists, treat timeline as the legacy global fallback described in §7.5.
 `;
 
 // Enhanced assertion rules
@@ -371,7 +371,7 @@ const HIERARCHY_OF_EVIDENCE = `
 Apply signals in this order when they conflict:
 1) P0 safety, Investigate fallback, and §1b session/WebDriver infra (absolute)
 2) Regression-specific corrections and passed-locally history (this bucket only)
-3) **Global cross-run history** (\`history.pattern\`, §7.5) — regression smell vs intermittent vs consistent global fails
+3) **Bucket-scoped cross-run history** (\`history.pattern\`, §7.5) — regression smell vs intermittent vs consistent fails within that bucket's timeline (legacy: global fallback when no bucket)
 4) Co-failure / systemic signals and bucket-scoped **streakInfo** (§9)
 5) Flaky KB and environment-style error families
 6) Heuristic error-pattern hints (use last)
@@ -484,30 +484,34 @@ interface TestHistory {
   pattern: TestHistoryPattern;
 }
 
-/** Implicit pass/fail series from last 30 uploads in the SAME regression bucket; current run is not in DB — streak includes this failure as +1. */
+/** Implicit pass/fail series from last 30 uploads in the SAME regression bucket when scoped; current run is not in DB — streak includes this failure as +1. */
 async function computeGlobalTestHistoryMap(
   supabase: ReturnType<typeof createClient>,
   testNames: string[],
   globalRowCountByTest: Map<string, number>,
-  regressionBucket?: string,
+  currentBucket?: string | null,
 ): Promise<Map<string, TestHistory>> {
   const out = new Map<string, TestHistory>();
   const unique = [...new Set(testNames)];
   if (unique.length === 0) return out;
 
+  const trimmedBucket =
+    currentBucket != null && String(currentBucket).trim().length > 0
+      ? String(currentBucket).trim()
+      : undefined;
+
   let reportsQuery = supabase
     .from('analysis_reports')
-    .select('id, run_date, created_at, run_name, regression_bucket')
+    .select('id, run_date, created_at, run_name, regression_bucket');
+
+  if (trimmedBucket) {
+    reportsQuery = reportsQuery.eq('regression_bucket', trimmedBucket);
+  }
+
+  const { data: recentReports } = await reportsQuery
     .order('run_date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(30);
-
-  // Scope history to the same regression bucket so the timeline is apples-to-apples.
-  if (regressionBucket) {
-    reportsQuery = reportsQuery.eq('regression_bucket', regressionBucket);
-  }
-
-  const { data: recentReports } = await reportsQuery;
 
   const reportsChrono = [...(recentReports || [])].reverse() as Array<{
     id: string;
@@ -517,7 +521,7 @@ async function computeGlobalTestHistoryMap(
     regression_bucket: string | null;
   }>;
   console.log(
-    `History scope: bucket=${regressionBucket || '<unscoped>'}, reports=${reportsChrono.length}`,
+    `History scope: bucket=[${trimmedBucket ?? 'GLOBAL'}], reports=[${reportsChrono.length}]`,
   );
   const reportIds = reportsChrono.map((r) => r.id);
   // Per-report → per-testName → { classification, priority } (presence of testName == failed in that run)
@@ -792,6 +796,8 @@ serve(async (req) => {
 
   try {
     const { failures, flakyTests, mode = 'production', regressionBucket } = await req.json();
+    const regressionBucketEffective =
+      regressionBucket == null ? '' : String(regressionBucket).trim();
 
     // Feature toggle: OpenAI if key exists and is valid; else Lovable fallback
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
@@ -1078,7 +1084,12 @@ ${firstSeenGlobally.length > 0
       const globalRowCountByTest = new Map<string, number>();
       globalTestMap.forEach((v, k) => globalRowCountByTest.set(k, v.total));
       try {
-        historyByTest = await computeGlobalTestHistoryMap(supabase, testNames, globalRowCountByTest, regressionBucket);
+        historyByTest = await computeGlobalTestHistoryMap(
+          supabase,
+          testNames,
+          globalRowCountByTest,
+          regressionBucketEffective || undefined,
+        );
         console.log(`Computed global cross-run history for ${historyByTest.size} tests`);
       } catch (hErr) {
         console.log('computeGlobalTestHistoryMap failed:', hErr);
@@ -1179,7 +1190,7 @@ If a test matches Flaky KB (even fuzzy match), note it in your response.
 IMPORTANT: Flaky KB is a supporting signal, not a hard rule.
 
 ## Failures to Analyze:
-Each failure may include **streakInfo** (this regression bucket, passed_locally) and **history** (global cross-run uploads, §7.5). Use both; **history** drives regression smell vs global intermittent/consistent failure.
+Each failure may include **streakInfo** (this regression bucket, passed_locally) and **history** (bucket-scoped history over prior uploads in §7.5). Use both; **history** drives regression smell vs intermittent/consistent failure within that bucket timeline. When no bucket exists, history uses the global fallback described in §7.5.
 When streakInfo is present: isIntermittent → Likely Flaky; isConsistentFailure → Potential bug (bucket-scoped).
 When history is present: follow §7.5 score nudges and priorityReason cues.
 ${JSON.stringify(failuresForPrompt, null, 2)}
