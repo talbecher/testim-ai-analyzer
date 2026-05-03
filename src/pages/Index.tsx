@@ -186,13 +186,15 @@ const Index = () => {
     setFilterClassification('all');
     setFilterReviewStatus('all');
     setFilterPattern(null);
+    setFilterRecommendation('all');
   }, []);
 
   const hasActiveFilters =
     !!searchQuery ||
     filterClassification !== 'all' ||
     filterReviewStatus !== 'all' ||
-    filterPattern !== null;
+    filterPattern !== null ||
+    filterRecommendation !== 'all';
   const classifications: Classification[] = ['Potential bug', 'Likely Flaky', 'Environment / Infra Issue', 'Expected Change', 'Investigate'];
 
   const handleFileUpload = (file: File) => {
