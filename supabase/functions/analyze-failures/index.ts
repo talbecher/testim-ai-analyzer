@@ -587,7 +587,18 @@ function computeDominantUserSignal(
   const wrong = o.aiWasWrongCount;
   const bugSide = cb + rm;
 
-  if (pl + bugSide + corr + wrong === 0) return 'unknown';
+  const totalSignals = pl + bugSide + corr + wrong;
+  if (totalSignals === 0) return 'unknown';
+
+  // Fewer than 3 tallies — do not call "mixed" on thin noise; need clearer strength
+  if (totalSignals < 3) {
+    const m = Math.max(pl, bugSide, corr, wrong);
+    if (m === pl && pl >= 2) return 'flaky';
+    if (m === bugSide && bugSide >= 2) {
+      return bugSide === rm ? 'manual_fix' : 'bug';
+    }
+    return 'unknown';
+  }
 
   const m = Math.max(pl, bugSide, corr, wrong);
   const atMax = [pl, bugSide, corr, wrong].filter((v) => v === m).length;
@@ -598,7 +609,8 @@ function computeDominantUserSignal(
     if (rm > cb && rm > pl) return 'manual_fix';
     return 'bug';
   }
-  return 'mixed';
+  // Only corr/wrong at max — weak / not actionable triage direction
+  return 'unknown';
 }
 
 function buildUserFeedbackHistorySummary(o: PriorUserOutcomes): string {
