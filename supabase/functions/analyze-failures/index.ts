@@ -381,6 +381,8 @@ Apply signals in this order when they conflict:
 2) Regression-specific corrections and passed-locally history (this bucket only)
 3) **Bucket-scoped cross-run history** (\`history.pattern\`, §7.5) — regression smell vs intermittent vs consistent fails within **that bucket only** (no cross-bucket data)
 3a) **CONSISTENT FAILURE STREAK RULE (pre-calculated \`historyStats\`, absolute):** If \`historyStats.consecutiveFailStreakIncludingCurrentRun\` ≥ 5, you MUST classify **Potential bug**, set **priority P1**, and include the exact phrase **"Consistent Failure Pattern"** in **priorityReason**. Add **CONSISTENT_FAILURE_PATTERN_STREAK** to **activeSignals**. This overrides **Flaky KB**, flaky-leaning signals, and §7.5 intermittent nudges — five or more consecutive fails in-bucket (including this upload) are **not** "likely flaky" by definition. Flaky KB may appear in **priorityReason** only as non-driving context. Still respects §0, §1, and §1b absolute rules.
+
+**Note:** Even if you output a different classification or priority, the **server post-processes** each row and **forces** **Potential bug** / **P1** when streak ≥ 5 (same \`historyStats\` as this row). Do **not** waste reasoning on flaky signals (including Flaky KB) when that streak threshold is met — output **Potential bug** / **P1** and move on.
 4) Co-failure / systemic signals and bucket-scoped **streakInfo** (§9)
 5) Flaky KB and environment-style error families
 6) Heuristic error-pattern hints (use last)
@@ -1429,6 +1431,18 @@ Return ONLY valid JSON array, no markdown.`;
       // Align classification with dominant direction in signalBreakdown; if mismatch, reduce confidence and set Investigate
       alignSignalBreakdownWithClassification(analysis);
       const rawFailure = failures[idx] as { errorMessage?: string } | undefined;
+
+      // Hard override: consecutive fail streak >= 5 (per-row historyStats); runs after AI parse, before client — §1b infra runs next and remains final when triggered
+      const fp = failuresForPrompt[idx] as { historyStats?: HistoryStatsForPrompt } | undefined;
+      const historyStats = fp?.historyStats;
+      if (historyStats && historyStats.consecutiveFailStreakIncludingCurrentRun >= 5) {
+        analysis.classification = 'Potential bug';
+        analysis.priority = 'P1';
+        analysis.priorityReason =
+          `• Consistent Failure Override: ${historyStats.consecutiveFailStreakIncludingCurrentRun} consecutive failures in this bucket — streak rule overrides all other signals.\n` +
+          (typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '');
+      }
+
       enforceSessionWebDriverInfraOverride(analysis, rawFailure?.errorMessage);
       return analysis;
     });
