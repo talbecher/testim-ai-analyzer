@@ -240,7 +240,7 @@ const DECISION_FRAMEWORK = `
 - If matched → increase probability of Likely Flaky
 - This is a supporting signal, not an absolute rule
 - **STRICT EXCEPTION (§1b):** If SESSION_WEBDRIVER_INFRA applies (\`Failed to create new session\` or \`WebDriverError\` in errorMessage), **ignore Flaky KB** for classification and suggestedAction; set flakyKBMatch false; do not prepend "Known flaky" to priorityReason
-- **§3a streak (absolute):** When \`historyStats.consecutiveFailStreakIncludingCurrentRun\` ≥ 5, Flaky KB **must not** change classification or priority — still **Potential bug** / **P1** per hierarchy §3a. You may still mention a Flaky KB name in **priorityReason** as context only.
+- **§3a streak + user feedback:** When \`historyStats.consecutiveFailStreakIncludingCurrentRun\` ≥ 5, use **\`priorUserOutcomes\` / \`userFeedbackHistorySummary\`** with streak as confidence; Flaky KB is secondary. If **dominantUserSignal** is **flaky**, lean **Likely Flaky** / lower priority; if **bug** or **manual_fix**, lean **Potential bug** / **P1**; if **mixed**, flag high attention; if **unknown**, treat as serious recurring failure (**Potential bug** / **P1**) unless §0/§1/§1b applies.
 
 ## 7. ERROR PATTERN HEURISTICS (USE ONLY IF ABOVE SIGNALS WEAK)
 - Element not found → usually Likely Flaky (UI/timing related)
@@ -380,9 +380,9 @@ Apply signals in this order when they conflict:
 1) P0 safety, Investigate fallback, and §1b session/WebDriver infra (absolute)
 2) Regression-specific corrections and passed-locally history (this bucket only)
 3) **Bucket-scoped cross-run history** (\`history.pattern\`, §7.5) — regression smell vs intermittent vs consistent fails within **that bucket only** (no cross-bucket data)
-3a) **CONSISTENT FAILURE STREAK RULE (pre-calculated \`historyStats\`, absolute):** If \`historyStats.consecutiveFailStreakIncludingCurrentRun\` ≥ 5, you MUST classify **Potential bug**, set **priority P1**, and include the exact phrase **"Consistent Failure Pattern"** in **priorityReason**. Add **CONSISTENT_FAILURE_PATTERN_STREAK** to **activeSignals**. This overrides **Flaky KB**, flaky-leaning signals, and §7.5 intermittent nudges — five or more consecutive fails in-bucket (including this upload) are **not** "likely flaky" by definition. Flaky KB may appear in **priorityReason** only as non-driving context. Still respects §0, §1, and §1b absolute rules.
+3a) **CONSISTENT FAILURE STREAK + USER FEEDBACK (pre-calculated \`historyStats\`, server-assisted):** Long streaks (\`consecutiveFailStreakIncludingCurrentRun\` ≥ 5) mean **high confidence something is recurring** — **direction** comes from **\`historyStats.priorUserOutcomes\`** / **\`userFeedbackHistorySummary\`** (passed locally, confirmed bug / bug link, manual fix, was_correct) from **prior fail rows in this bucket**. Still respects §0, §1, and §1b absolute rules.
 
-**Note:** Even if you output a different classification or priority, the **server post-processes** each row and **forces** **Potential bug** / **P1** when streak ≥ 5 (same \`historyStats\` as this row). Do **not** waste reasoning on flaky signals (including Flaky KB) when that streak threshold is met — output **Potential bug** / **P1** and move on.
+**Note:** When streak ≥ 5, the **server may post-process** classification/priority using that user-feedback dominant signal (see \`historyStats\`). Align your output with \`priorUserOutcomes.dominantUserSignal\` when streak ≥ 5 to avoid contradiction. For **mixed** dominant with streak ≥ 5, the server only prepends a **streak warning** to **priorityReason** — you still choose classification/priority but treat the case as high-attention.
 4) Co-failure / systemic signals and bucket-scoped **streakInfo** (§9)
 5) Flaky KB and environment-style error families
 6) Heuristic error-pattern hints (use last)
@@ -480,6 +480,23 @@ interface TestHistoryRunDetail {
   bucket?: string;
   aiClassification?: string;
   aiPriority?: string;
+  /** From analysis_results for this failure row (absent on implicit pass). */
+  passedLocally?: boolean | null;
+  wasCorrect?: boolean | null;
+  userClassification?: string | null;
+  requiredManualFix?: boolean | null;
+  bugLink?: string | null;
+}
+
+type DominantUserSignal = 'flaky' | 'bug' | 'manual_fix' | 'mixed' | 'unknown';
+
+interface PriorUserOutcomes {
+  passedLocallyCount: number;
+  confirmedBugCount: number;
+  requiredManualFixCount: number;
+  aiWasCorrectCount: number;
+  aiWasWrongCount: number;
+  dominantUserSignal: DominantUserSignal;
 }
 
 interface TestHistory {
@@ -517,6 +534,82 @@ interface HistoryStatsForPrompt {
   consecutiveFailsFromMostRecentInStrip: number;
   consecutiveFailStreakIncludingCurrentRun: number;
   bucketPriorUploadCount: number;
+  priorUserOutcomes: PriorUserOutcomes;
+  userFeedbackHistorySummary: string;
+}
+
+function buildPriorUserOutcomesFromRunDetails(details: TestHistoryRunDetail[]): PriorUserOutcomes {
+  let passedLocallyCount = 0;
+  let confirmedBugCount = 0;
+  let requiredManualFixCount = 0;
+  let aiWasCorrectCount = 0;
+  let aiWasWrongCount = 0;
+
+  for (const d of details) {
+    if (d.outcome !== 'fail') continue;
+    if (d.passedLocally === true) passedLocallyCount++;
+
+    const uc = (d.userClassification || '').trim().toLowerCase();
+    const hasBugLink = Boolean(d.bugLink && String(d.bugLink).trim());
+    if (uc === 'potential bug' || hasBugLink) confirmedBugCount++;
+
+    if (d.requiredManualFix === true) requiredManualFixCount++;
+
+    if (d.wasCorrect === true) aiWasCorrectCount++;
+    else if (d.wasCorrect === false) aiWasWrongCount++;
+  }
+
+  const dominantUserSignal = computeDominantUserSignal({
+    passedLocallyCount,
+    confirmedBugCount,
+    requiredManualFixCount,
+    aiWasCorrectCount,
+    aiWasWrongCount,
+  });
+
+  return {
+    passedLocallyCount,
+    confirmedBugCount,
+    requiredManualFixCount,
+    aiWasCorrectCount,
+    aiWasWrongCount,
+    dominantUserSignal,
+  };
+}
+
+function computeDominantUserSignal(
+  o: Omit<PriorUserOutcomes, 'dominantUserSignal'>,
+): DominantUserSignal {
+  const pl = o.passedLocallyCount;
+  const cb = o.confirmedBugCount;
+  const rm = o.requiredManualFixCount;
+  const corr = o.aiWasCorrectCount;
+  const wrong = o.aiWasWrongCount;
+  const bugSide = cb + rm;
+
+  if (pl + bugSide + corr + wrong === 0) return 'unknown';
+
+  const m = Math.max(pl, bugSide, corr, wrong);
+  const atMax = [pl, bugSide, corr, wrong].filter((v) => v === m).length;
+  if (atMax > 1) return 'mixed';
+
+  if (m === pl) return 'flaky';
+  if (m === bugSide) {
+    if (rm > cb && rm > pl) return 'manual_fix';
+    return 'bug';
+  }
+  return 'mixed';
+}
+
+function buildUserFeedbackHistorySummary(o: PriorUserOutcomes): string {
+  return [
+    'USER FEEDBACK HISTORY (from prior runs of this test in this bucket):',
+    `- Passed locally: ${o.passedLocallyCount}x → strong flaky signal`,
+    `- Confirmed bug: ${o.confirmedBugCount}x → strong recurring bug signal`,
+    `- Required manual fix: ${o.requiredManualFixCount}x → recurring issue signal`,
+    `- AI was correct: ${o.aiWasCorrectCount}x / AI was wrong: ${o.aiWasWrongCount}x`,
+    `- Dominant signal: ${o.dominantUserSignal}`,
+  ].join('\n');
 }
 
 function buildHistoryStatsForPrompt(h: TestHistory): HistoryStatsForPrompt {
@@ -530,6 +623,11 @@ function buildHistoryStatsForPrompt(h: TestHistory): HistoryStatsForPrompt {
   const consecutiveFailsFromMostRecentInStrip = countConsecutiveFailsFromNewestFirst(stripOutcomes);
   /** Same as `history.currentFailStreak`: prior trailing fails + this upload (+1). */
   const consecutiveFailStreakIncludingCurrentRun = 1 + consecutiveFailsFromMostRecentInStrip;
+
+  const details = h.lastNRunDetails ?? [];
+  const priorUserOutcomes = buildPriorUserOutcomesFromRunDetails(details);
+  const userFeedbackHistorySummary = buildUserFeedbackHistorySummary(priorUserOutcomes);
+
   return {
     lastWindowSize: totalRuns,
     lastWindowFailCount: failCount,
@@ -537,7 +635,54 @@ function buildHistoryStatsForPrompt(h: TestHistory): HistoryStatsForPrompt {
     consecutiveFailsFromMostRecentInStrip,
     consecutiveFailStreakIncludingCurrentRun,
     bucketPriorUploadCount: h.totalRunsKnown,
+    priorUserOutcomes,
+    userFeedbackHistorySummary,
   };
+}
+
+/** Streak ≥ 5: confidence; user feedback dominant → direction (§1b applied after this). */
+function applyStreakUserFeedbackOverride(
+  analysis: Record<string, unknown>,
+  historyStats: HistoryStatsForPrompt | undefined,
+): void {
+  if (!historyStats || historyStats.consecutiveFailStreakIncludingCurrentRun < 5) return;
+
+  const streak = historyStats.consecutiveFailStreakIncludingCurrentRun;
+  const o = historyStats.priorUserOutcomes;
+  const reason = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
+  const dom = o.dominantUserSignal;
+
+  if (dom === 'flaky') {
+    analysis.classification = 'Likely Flaky';
+    analysis.priority = 'P3';
+    analysis.priorityReason =
+      `• Streak Override (Flaky): ${streak} consecutive failures, but users marked this as passed locally ${o.passedLocallyCount}x — consistent flaky pattern.\n` +
+      reason;
+    return;
+  }
+
+  if (dom === 'bug' || dom === 'manual_fix') {
+    analysis.classification = 'Potential bug';
+    analysis.priority = 'P1';
+    const n = o.confirmedBugCount + o.requiredManualFixCount;
+    analysis.priorityReason =
+      `• Streak Override (Bug): ${streak} consecutive failures, users confirmed bug/manual fix ${n}x.\n` +
+      reason;
+    return;
+  }
+
+  if (dom === 'mixed') {
+    analysis.priorityReason =
+      `• Streak Warning: ${streak} consecutive failures with mixed user feedback — treat with high attention.\n` +
+      reason;
+    return;
+  }
+
+  analysis.classification = 'Potential bug';
+  analysis.priority = 'P1';
+  analysis.priorityReason =
+    `• Streak Override (No feedback): ${streak} consecutive failures with no prior user feedback.\n` +
+    reason;
 }
 
 /**
@@ -612,13 +757,29 @@ async function computeGlobalTestHistoryMap(
     `History scope: bucket=[${trimmedBucket}], reports=[${reportsChrono.length}] (eq applied before order/limit; mandatory bucket filter)`,
   );
   const reportIds = reportsChrono.map((r) => r.id);
-  // Per-report → per-testName → { classification, priority } (presence of testName == failed in that run)
-  const failsByReport = new Map<string, Map<string, { classification: string; priority: string }>>();
+  // Per-report → per-testName → AI + user outcome fields (presence of testName == failed in that run)
+  const failsByReport = new Map<
+    string,
+    Map<
+      string,
+      {
+        classification: string;
+        priority: string;
+        passedLocally: boolean | null;
+        wasCorrect: boolean | null;
+        userClassification: string | null;
+        requiredManualFix: boolean | null;
+        bugLink: string | null;
+      }
+    >
+  >();
 
   if (reportIds.length > 0) {
     const { data: failRows } = await supabase
       .from('analysis_results')
-      .select('report_id, test_name_normalized, ai_classification, ai_priority')
+      .select(
+        'report_id, test_name_normalized, ai_classification, ai_priority, passed_locally, was_correct, user_classification, required_manual_fix, bug_link',
+      )
       .in('report_id', reportIds)
       .in('test_name_normalized', unique);
 
@@ -628,7 +789,15 @@ async function computeGlobalTestHistoryMap(
       const cls = (row.ai_classification as string) || '';
       const pri = (row.ai_priority as string) || '';
       if (!failsByReport.has(rid)) failsByReport.set(rid, new Map());
-      failsByReport.get(rid)!.set(tn, { classification: cls, priority: pri });
+      failsByReport.get(rid)!.set(tn, {
+        classification: cls,
+        priority: pri,
+        passedLocally: row.passed_locally as boolean | null,
+        wasCorrect: row.was_correct as boolean | null,
+        userClassification: (row.user_classification as string | null) ?? null,
+        requiredManualFix: row.required_manual_fix as boolean | null,
+        bugLink: (row.bug_link as string | null) ?? null,
+      });
     }
   }
 
@@ -660,6 +829,15 @@ async function computeGlobalTestHistoryMap(
           bucket: r.regression_bucket || undefined,
           aiClassification: failInfo?.classification || undefined,
           aiPriority: failInfo?.priority || undefined,
+          ...(failedHere && failInfo
+            ? {
+                passedLocally: failInfo.passedLocally,
+                wasCorrect: failInfo.wasCorrect,
+                userClassification: failInfo.userClassification,
+                requiredManualFix: failInfo.requiredManualFix,
+                bugLink: failInfo.bugLink,
+              }
+            : {}),
         });
       }
     }
@@ -849,8 +1027,12 @@ Each failure in **Failures to Analyze** may include \`historyStats\` (server-com
 - **lastWindowSize** = N = count of prior runs represented in that strip (newest-first window)
 - **lastWindowFailCount** / **lastWindowPassCount** = X fails, Y passes in that strip (for that window: "Last N runs in this bucket: X fails, Y passes")
 - **consecutiveFailStreakIncludingCurrentRun** = Z = **1 + consecutiveFailsFromMostRecentInStrip** (consecutive red prior squares in the strip, newest-first, plus this failing upload — same formula as the server and UI strip)
+- **priorUserOutcomes** — counts from **prior fail rows** for this test in this bucket (from stored \`analysis_results\`): passedLocallyCount, confirmedBugCount (user said bug **or** bug_link), requiredManualFixCount, aiWasCorrectCount, aiWasWrongCount, **dominantUserSignal** (\`flaky\` | \`bug\` | \`manual_fix\` | \`mixed\` | \`unknown\`).
+- **userFeedbackHistorySummary** — one string block; treat as authoritative wording for triage narrative.
 
-**You MUST NOT recalculate or substitute alternative counts** for those facts. When you mention run totals in **priorityReason**, copy **N, X, Y, Z** from \`historyStats\` / \`history\` exactly.
+**USER FEEDBACK HISTORY (from prior runs of this test in this bucket)** — use with **Z** (streak): streak = **confidence**; user feedback = **direction**. When Z ≥ 5, weight \`priorUserOutcomes\` heavily.
+
+**You MUST NOT recalculate or substitute alternative counts** for those facts. When you mention run totals in **priorityReason**, copy **N, X, Y, Z** and user-outcome counts from \`historyStats\` / \`history.lastNRunDetails\` exactly.
 
 When you cite aggregate occurrence counts from the **CRITICAL/HIGH learning** sections below (e.g. "297×"), describe them in **priorityReason** using the exact phrase **"Global KB pattern matches (not test-specific)"** — those counts are **error-pattern-wide**, not this test's personal history.
 `;
@@ -1297,10 +1479,10 @@ ${HISTORY_STATS_INSTRUCTION}
 ${JSON.stringify(flakyTests, null, 2)}
 
 If a test matches Flaky KB (even fuzzy match), you may note it in **priorityReason** as context.
-IMPORTANT: Flaky KB is a supporting signal, not a hard rule — and it **never** overrides hierarchy **§3a** when \`historyStats.consecutiveFailStreakIncludingCurrentRun\` ≥ 5 (classification stays **Potential bug**, **P1**).
+IMPORTANT: Flaky KB is a supporting signal — when streak ≥ 5, **\`priorUserOutcomes\` / dominant signal** and the **§3a** server streak rule outrank Flaky KB (e.g. dominant **flaky** → Likely Flaky even with KB name present).
 
 ## Failures to Analyze:
-Each failure may include **streakInfo** (this regression bucket, passed_locally), **history** (bucket-scoped prior uploads in **this bucket only**, §7.5), and **historyStats** (pre-calculated N/X/Y/Z for that strip + streak including this upload). Use all three; **history** drives regression smell vs intermittent/consistent failure within that bucket timeline. If there is no bucket or no prior data in-bucket, **history** / **historyStats** may be absent (no cross-bucket fallback).
+Each failure may include **streakInfo** (this regression bucket, passed_locally), **history** (bucket-scoped prior uploads in **this bucket only**, §7.5), and **historyStats** (N/X/Y/Z, streak, **priorUserOutcomes**, **userFeedbackHistorySummary**, plus per-run user fields on **history.lastNRunDetails** for fail squares). Use all; streak = confidence, user feedback = direction. If there is no bucket or no prior data in-bucket, **history** / **historyStats** may be absent (no cross-bucket fallback).
 When streakInfo is present: isIntermittent → Likely Flaky; isConsistentFailure → Potential bug (bucket-scoped).
 When history / historyStats is present: follow §7.5 and **HISTORY STATS** rules; copy **historyStats** numbers verbatim in **priorityReason** when citing counts.
 ${JSON.stringify(failuresForPrompt, null, 2)}
@@ -1432,16 +1614,8 @@ Return ONLY valid JSON array, no markdown.`;
       alignSignalBreakdownWithClassification(analysis);
       const rawFailure = failures[idx] as { errorMessage?: string } | undefined;
 
-      // Hard override: consecutive fail streak >= 5 (per-row historyStats); runs after AI parse, before client — §1b infra runs next and remains final when triggered
       const fp = failuresForPrompt[idx] as { historyStats?: HistoryStatsForPrompt } | undefined;
-      const historyStats = fp?.historyStats;
-      if (historyStats && historyStats.consecutiveFailStreakIncludingCurrentRun >= 5) {
-        analysis.classification = 'Potential bug';
-        analysis.priority = 'P1';
-        analysis.priorityReason =
-          `• Consistent Failure Override: ${historyStats.consecutiveFailStreakIncludingCurrentRun} consecutive failures in this bucket — streak rule overrides all other signals.\n` +
-          (typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '');
-      }
+      applyStreakUserFeedbackOverride(analysis, fp?.historyStats);
 
       enforceSessionWebDriverInfraOverride(analysis, rawFailure?.errorMessage);
       return analysis;

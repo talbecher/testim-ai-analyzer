@@ -72,6 +72,12 @@ export interface TestHistoryRunDetail {
   bucket?: string;
   aiClassification?: string;
   aiPriority?: string;
+  /** Present on fail squares when analysis_results row includes feedback. */
+  passedLocally?: boolean | null;
+  wasCorrect?: boolean | null;
+  userClassification?: string | null;
+  requiredManualFix?: boolean | null;
+  bugLink?: string | null;
 }
 
 export interface TestHistory {
