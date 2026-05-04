@@ -26,7 +26,8 @@ export type SuggestedAction =
   | 'Update shared step' 
   | 'Rerun only' 
   | 'Ignore today / monitor'
-  | 'Verify manually';
+  | 'Verify manually'
+  | 'Skip';
 
 // Regression bucket name (list is dynamic from DB; see useRegressionBuckets)
 export type RegressionBucket = string;

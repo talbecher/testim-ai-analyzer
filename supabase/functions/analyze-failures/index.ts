@@ -597,19 +597,20 @@ function computeDominantUserSignal(
   const totalSignals = pl + bugSide + corr + wrong;
   if (totalSignals === 0) return 'unknown';
 
-  // Fewer than 3 tallies — do not call "mixed" on thin noise; need clearer strength
+  // Fewer than 3 tallies — direction from pl / bugSide only; corr/wrong count only toward totalSignals
   if (totalSignals < 3) {
-    const m = Math.max(pl, bugSide, corr, wrong);
-    if (m === pl && pl >= 2) return 'flaky';
-    if (m === bugSide && bugSide >= 2) {
+    const mDir = Math.max(pl, bugSide);
+    if (mDir === pl && pl >= 2) return 'flaky';
+    if (mDir === bugSide && bugSide >= 2) {
       return bugSide === rm ? 'manual_fix' : 'bug';
     }
     return 'unknown';
   }
 
-  const m = Math.max(pl, bugSide, corr, wrong);
-  const atMax = [pl, bugSide, corr, wrong].filter((v) => v === m).length;
-  if (atMax > 1) {
+  // Direction: flaky vs bug only — corr/wrong excluded from tie / dominant (still in totalSignals above)
+  const m = Math.max(pl, bugSide);
+  const atMax = [pl, bugSide].filter((v) => v === m).length;
+  if (atMax > 1 && m > 0) {
     // TEMP: remove after debugging streak/mixed triage
     console.log(
       'MIXED DEBUG:',
@@ -620,8 +621,8 @@ function computeDominantUserSignal(
         corr,
         wrong,
         totalSignals,
-        m: Math.max(pl, bugSide, corr, wrong),
-        atMax,
+        mDirMax: m,
+        atMaxDirection: atMax,
         cb,
         rm,
       }),
@@ -629,12 +630,11 @@ function computeDominantUserSignal(
     return 'mixed';
   }
 
-  if (m === pl) return 'flaky';
-  if (m === bugSide) {
+  if (m === pl && pl > 0) return 'flaky';
+  if (m === bugSide && bugSide > 0) {
     if (rm > cb && rm > pl) return 'manual_fix';
     return 'bug';
   }
-  // Only corr/wrong at max — weak / not actionable triage direction
   return 'unknown';
 }
 
@@ -681,11 +681,35 @@ function buildHistoryStatsForPrompt(h: TestHistory, debugTestName?: string): His
 function applyStreakUserFeedbackOverride(
   analysis: Record<string, unknown>,
   historyStats: HistoryStatsForPrompt | undefined,
+  debugTestName?: string,
 ): void {
   if (!historyStats || historyStats.consecutiveFailStreakIncludingCurrentRun < 5) return;
 
   const streak = historyStats.consecutiveFailStreakIncludingCurrentRun;
   const o = historyStats.priorUserOutcomes;
+  const bugSide = o.confirmedBugCount + o.requiredManualFixCount;
+  const totalSignals =
+    o.passedLocallyCount +
+    o.confirmedBugCount +
+    o.requiredManualFixCount +
+    o.aiWasCorrectCount +
+    o.aiWasWrongCount;
+
+  // TEMP: remove after debugging — once per failure with streak ≥ 5 (before branch overrides)
+  console.log(
+    'STREAK_OVERRIDE_DEBUG:',
+    JSON.stringify({
+      testName: debugTestName ?? '(unknown)',
+      streak,
+      dominantUserSignal: o.dominantUserSignal,
+      pl: o.passedLocallyCount,
+      bugSide,
+      corr: o.aiWasCorrectCount,
+      wrong: o.aiWasWrongCount,
+      totalSignals,
+    }),
+  );
+
   const reason = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
   const dom = o.dominantUserSignal;
 
@@ -1652,9 +1676,35 @@ Return ONLY valid JSON array, no markdown.`;
       const rawFailure = failures[idx] as { errorMessage?: string } | undefined;
 
       const fp = failuresForPrompt[idx] as { historyStats?: HistoryStatsForPrompt } | undefined;
-      applyStreakUserFeedbackOverride(analysis, fp?.historyStats);
+      const failMeta = failures[idx] as { testNameNormalized?: string; testName?: string } | undefined;
+      const streakDebugTestName =
+        failMeta?.testNameNormalized ?? failMeta?.testName ?? '(unknown)';
+      applyStreakUserFeedbackOverride(analysis, fp?.historyStats, streakDebugTestName);
 
       enforceSessionWebDriverInfraOverride(analysis, rawFailure?.errorMessage);
+
+      // Override 1: Likely Flaky is always Skip (post-AI, before client)
+      if (analysis.classification === 'Likely Flaky') {
+        analysis.suggestedAction = 'Skip';
+      }
+
+      // Override 2: Investigate at P2/P3 — low signal; align action with triage Skip
+      if (
+        analysis.classification === 'Investigate' &&
+        (analysis.priority === 'P2' || analysis.priority === 'P3')
+      ) {
+        analysis.suggestedAction = 'Skip';
+        const pr = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
+        analysis.priorityReason =
+          `• Noise Reduction: Classified as Investigate (${analysis.priority}), but historical data shows low reliability at this level — recommending Skip to focus attention on P0/P1.\n` +
+          pr;
+      }
+
+      if (analysis.classification === 'Expected Change') {
+        const tn = failMeta?.testName ?? failMeta?.testNameNormalized ?? '(unknown)';
+        console.log('[LOW_ACCURACY_SIGNAL] Expected Change classification used for test:', tn);
+      }
+
       return analysis;
     });
     
