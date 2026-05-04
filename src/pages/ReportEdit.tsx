@@ -81,8 +81,8 @@ export default function ReportEdit() {
       const matchesClassification = filterClassification === 'all' ||
         r.ai_classification === filterClassification;
       const matchesCorrectness = filterCorrectness === 'all' ||
-        (filterCorrectness === 'correct' && r.was_correct) ||
-        (filterCorrectness === 'incorrect' && !r.was_correct);
+        (filterCorrectness === 'correct' && r.was_correct === true) ||
+        (filterCorrectness === 'incorrect' && r.was_correct === false);
       return matchesSearch && matchesClassification && matchesCorrectness;
     });
   }, [currentResults, searchQuery, filterClassification, filterCorrectness]);
@@ -111,24 +111,30 @@ export default function ReportEdit() {
   };
 
   const handleSaveResult = async (resultId: string) => {
-    const wasCorrect = editValues.user_classification === currentResults.find(r => r.id === resultId)?.ai_classification;
-    
+    const row = currentResults.find((r) => r.id === resultId);
+    if (!row) return;
+    const merged = { ...row, ...editValues } as ReportResult;
+    const wasCorrect = wasAIRecommendationCorrect(merged);
+
     const success = await updateResult(resultId, {
       ...editValues,
       was_correct: wasCorrect,
     });
-    
+
     if (success) {
       setEditingResultId(null);
       setEditValues({});
-      
+
       // Recalculate report accuracy
-      const updatedResults = currentResults.map(r => 
-        r.id === resultId ? { ...r, ...editValues, was_correct: wasCorrect } : r
+      const updatedResults = currentResults.map((r) =>
+        r.id === resultId ? { ...r, ...editValues, was_correct: wasCorrect } : r,
       );
-      const correctCount = updatedResults.filter(r => r.was_correct !== false).length;
-      const accuracy = (correctCount / updatedResults.length) * 100;
-      
+      const correctCount = updatedResults.filter((r) => r.was_correct === true).length;
+      const judged = updatedResults.filter(
+        (r) => r.was_correct === true || r.was_correct === false,
+      ).length;
+      const accuracy = judged > 0 ? (correctCount / judged) * 100 : 0;
+
       await updateReport(reportId!, {
         correct_count: correctCount,
         accuracy_percentage: accuracy,

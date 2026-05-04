@@ -174,8 +174,8 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
   // Calculate summary statistics
   const summary = useMemo((): FeedbackSummary => {
     const reviewed = failuresWithFeedback.filter(f => f.isReviewed);
-    const correct = reviewed.filter(f => f.feedback?.wasCorrect);
-    const incorrect = reviewed.filter(f => !f.feedback?.wasCorrect);
+    const correct = reviewed.filter((f) => f.feedback?.wasCorrect === true);
+    const incorrect = reviewed.filter((f) => f.feedback?.wasCorrect === false);
     
     // Calculate common mistakes
     const mistakeMap = new Map<string, MistakePattern>();
@@ -207,9 +207,10 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
       reviewedCount: reviewed.length,
       correctCount: correct.length,
       incorrectCount: incorrect.length,
-      accuracyPercentage: reviewed.length > 0 
-        ? (correct.length / reviewed.length) * 100 
-        : 0,
+      accuracyPercentage:
+        correct.length + incorrect.length > 0
+          ? (correct.length / (correct.length + incorrect.length)) * 100
+          : 0,
       commonMistakes
     };
   }, [failuresWithFeedback]);
