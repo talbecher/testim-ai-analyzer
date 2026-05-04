@@ -538,7 +538,10 @@ interface HistoryStatsForPrompt {
   userFeedbackHistorySummary: string;
 }
 
-function buildPriorUserOutcomesFromRunDetails(details: TestHistoryRunDetail[]): PriorUserOutcomes {
+function buildPriorUserOutcomesFromRunDetails(
+  details: TestHistoryRunDetail[],
+  debugTestName?: string,
+): PriorUserOutcomes {
   let passedLocallyCount = 0;
   let confirmedBugCount = 0;
   let requiredManualFixCount = 0;
@@ -559,13 +562,16 @@ function buildPriorUserOutcomesFromRunDetails(details: TestHistoryRunDetail[]): 
     else if (d.wasCorrect === false) aiWasWrongCount++;
   }
 
-  const dominantUserSignal = computeDominantUserSignal({
-    passedLocallyCount,
-    confirmedBugCount,
-    requiredManualFixCount,
-    aiWasCorrectCount,
-    aiWasWrongCount,
-  });
+  const dominantUserSignal = computeDominantUserSignal(
+    {
+      passedLocallyCount,
+      confirmedBugCount,
+      requiredManualFixCount,
+      aiWasCorrectCount,
+      aiWasWrongCount,
+    },
+    debugTestName,
+  );
 
   return {
     passedLocallyCount,
@@ -579,6 +585,7 @@ function buildPriorUserOutcomesFromRunDetails(details: TestHistoryRunDetail[]): 
 
 function computeDominantUserSignal(
   o: Omit<PriorUserOutcomes, 'dominantUserSignal'>,
+  debugTestName?: string,
 ): DominantUserSignal {
   const pl = o.passedLocallyCount;
   const cb = o.confirmedBugCount;
@@ -602,7 +609,25 @@ function computeDominantUserSignal(
 
   const m = Math.max(pl, bugSide, corr, wrong);
   const atMax = [pl, bugSide, corr, wrong].filter((v) => v === m).length;
-  if (atMax > 1) return 'mixed';
+  if (atMax > 1) {
+    // TEMP: remove after debugging streak/mixed triage
+    console.log(
+      'MIXED DEBUG:',
+      JSON.stringify({
+        testName: debugTestName ?? '(unknown)',
+        pl,
+        bugSide,
+        corr,
+        wrong,
+        totalSignals,
+        m: Math.max(pl, bugSide, corr, wrong),
+        atMax,
+        cb,
+        rm,
+      }),
+    );
+    return 'mixed';
+  }
 
   if (m === pl) return 'flaky';
   if (m === bugSide) {
@@ -624,7 +649,7 @@ function buildUserFeedbackHistorySummary(o: PriorUserOutcomes): string {
   ].join('\n');
 }
 
-function buildHistoryStatsForPrompt(h: TestHistory): HistoryStatsForPrompt {
+function buildHistoryStatsForPrompt(h: TestHistory, debugTestName?: string): HistoryStatsForPrompt {
   const stripOutcomes: ('pass' | 'fail')[] =
     h.lastNRunDetails && h.lastNRunDetails.length > 0
       ? h.lastNRunDetails.map((d) => d.outcome)
@@ -637,7 +662,7 @@ function buildHistoryStatsForPrompt(h: TestHistory): HistoryStatsForPrompt {
   const consecutiveFailStreakIncludingCurrentRun = 1 + consecutiveFailsFromMostRecentInStrip;
 
   const details = h.lastNRunDetails ?? [];
-  const priorUserOutcomes = buildPriorUserOutcomesFromRunDetails(details);
+  const priorUserOutcomes = buildPriorUserOutcomesFromRunDetails(details, debugTestName);
   const userFeedbackHistorySummary = buildUserFeedbackHistorySummary(priorUserOutcomes);
 
   return {
@@ -1475,7 +1500,7 @@ ${learningPatternsPrompt}
         errorMessage: sanitizeErrorMessage(f.errorMessage),
         streakInfo: streakMap.get(f.testNameNormalized) ?? undefined,
         history: history ?? undefined,
-        ...(history ? { historyStats: buildHistoryStatsForPrompt(history) } : {}),
+        ...(history ? { historyStats: buildHistoryStatsForPrompt(history, f.testNameNormalized) } : {}),
       };
     });
 
