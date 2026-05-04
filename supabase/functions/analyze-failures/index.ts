@@ -240,6 +240,7 @@ const DECISION_FRAMEWORK = `
 - If matched → increase probability of Likely Flaky
 - This is a supporting signal, not an absolute rule
 - **STRICT EXCEPTION (§1b):** If SESSION_WEBDRIVER_INFRA applies (\`Failed to create new session\` or \`WebDriverError\` in errorMessage), **ignore Flaky KB** for classification and suggestedAction; set flakyKBMatch false; do not prepend "Known flaky" to priorityReason
+- **§3a streak (absolute):** When \`historyStats.consecutiveFailStreakIncludingCurrentRun\` ≥ 5, Flaky KB **must not** change classification or priority — still **Potential bug** / **P1** per hierarchy §3a. You may still mention a Flaky KB name in **priorityReason** as context only.
 
 ## 7. ERROR PATTERN HEURISTICS (USE ONLY IF ABOVE SIGNALS WEAK)
 - Element not found → usually Likely Flaky (UI/timing related)
@@ -351,6 +352,11 @@ const GUARDRAILS = `
 - Reduce confidence when uncertain
 - If truly ambiguous, use "Investigate" classification
 
+### TIMEOUT / ENVIRONMENT CONFIDENCE FLOOR
+- If the failure row's **errorPattern** is exactly \`Timeout\` **OR** your final **classification** is \`Environment / Infra Issue\`, set **confidence ≥ 75** even when bucket history is sparse, conflicting, or uncertain.
+- Rationale: the recommended action (treat as infra/env and investigate stability) is clear; low confidence would mislead triage.
+- This floor does **not** override **§0** (P0 safety), **§1** when the Investigate fallback block truly applies, or **§1b** (session/WebDriver lock already uses 85–95%).
+
 ### COMMON MISTAKES TO AVOID
 ❌ Do NOT ignore regression-specific patterns
 ❌ Do NOT classify flaky UI/timing failures as P0
@@ -374,7 +380,7 @@ Apply signals in this order when they conflict:
 1) P0 safety, Investigate fallback, and §1b session/WebDriver infra (absolute)
 2) Regression-specific corrections and passed-locally history (this bucket only)
 3) **Bucket-scoped cross-run history** (\`history.pattern\`, §7.5) — regression smell vs intermittent vs consistent fails within **that bucket only** (no cross-bucket data)
-3a) **CONSISTENT FAILURE STREAK RULE (pre-calculated \`historyStats\`):** If \`historyStats.consecutiveFailStreakIncludingCurrentRun\` ≥ 5, you MUST classify **Potential bug**, set **priority P1**, and include the exact phrase **"Consistent Failure Pattern"** in **priorityReason**. Add **CONSISTENT_FAILURE_PATTERN_STREAK** to **activeSignals**. This overrides flaky-leaning signals and §7.5 intermittent nudges **unless** you set **flakyKBMatch: true** for this row because the test name matches the **Flaky KB** list in the system prompt (known-flaky exception — not global pattern counts). Still respects §0, §1, and §1b absolute rules.
+3a) **CONSISTENT FAILURE STREAK RULE (pre-calculated \`historyStats\`, absolute):** If \`historyStats.consecutiveFailStreakIncludingCurrentRun\` ≥ 5, you MUST classify **Potential bug**, set **priority P1**, and include the exact phrase **"Consistent Failure Pattern"** in **priorityReason**. Add **CONSISTENT_FAILURE_PATTERN_STREAK** to **activeSignals**. This overrides **Flaky KB**, flaky-leaning signals, and §7.5 intermittent nudges — five or more consecutive fails in-bucket (including this upload) are **not** "likely flaky" by definition. Flaky KB may appear in **priorityReason** only as non-driving context. Still respects §0, §1, and §1b absolute rules.
 4) Co-failure / systemic signals and bucket-scoped **streakInfo** (§9)
 5) Flaky KB and environment-style error families
 6) Heuristic error-pattern hints (use last)
@@ -487,6 +493,20 @@ interface TestHistory {
   pattern: TestHistoryPattern;
 }
 
+/**
+ * Count consecutive fails from the newest end of the strip.
+ * `stripNewestFirst` must match `lastNRunDetails` / `lastNOutcomes` order from `computeGlobalTestHistoryMap`
+ * (full prior timeline for this bucket, newest run first — same strip the UI renders as oldest→newest LTR).
+ */
+function countConsecutiveFailsFromNewestFirst(stripNewestFirst: ('pass' | 'fail')[]): number {
+  let n = 0;
+  for (let i = 0; i < stripNewestFirst.length; i++) {
+    if (stripNewestFirst[i] === 'fail') n++;
+    else break;
+  }
+  return n;
+}
+
 /** Pre-calculated strip stats for the AI (last N runs shown = newest-first strip). */
 interface HistoryStatsForPrompt {
   lastWindowSize: number;
@@ -505,17 +525,15 @@ function buildHistoryStatsForPrompt(h: TestHistory): HistoryStatsForPrompt {
   const totalRuns = stripOutcomes.length;
   const failCount = stripOutcomes.filter((r) => r === 'fail').length;
   const passCount = totalRuns - failCount;
-  let consecutiveFailsFromMostRecentInStrip = 0;
-  for (let i = 0; i < stripOutcomes.length; i++) {
-    if (stripOutcomes[i] === 'fail') consecutiveFailsFromMostRecentInStrip++;
-    else break;
-  }
+  const consecutiveFailsFromMostRecentInStrip = countConsecutiveFailsFromNewestFirst(stripOutcomes);
+  /** Same as `history.currentFailStreak`: prior trailing fails + this upload (+1). */
+  const consecutiveFailStreakIncludingCurrentRun = 1 + consecutiveFailsFromMostRecentInStrip;
   return {
     lastWindowSize: totalRuns,
     lastWindowFailCount: failCount,
     lastWindowPassCount: passCount,
     consecutiveFailsFromMostRecentInStrip,
-    consecutiveFailStreakIncludingCurrentRun: h.currentFailStreak,
+    consecutiveFailStreakIncludingCurrentRun,
     bucketPriorUploadCount: h.totalRunsKnown,
   };
 }
@@ -644,11 +662,8 @@ async function computeGlobalTestHistoryMap(
       }
     }
 
-    let trailingFails = 0;
-    for (let j = priorOutcomes.length - 1; j >= 0; j--) {
-      if (priorOutcomes[j] === 'fail') trailingFails++;
-      else break;
-    }
+    const stripNewestFirst = [...priorOutcomes].reverse() as ('pass' | 'fail')[];
+    const trailingFails = countConsecutiveFailsFromNewestFirst(stripNewestFirst);
     const currentFailStreak = 1 + trailingFails;
 
     let trailingPasses = 0;
@@ -663,8 +678,9 @@ async function computeGlobalTestHistoryMap(
 
     const failedRuns = priorOutcomes.filter((o) => o === 'fail').length;
     const passedRuns = priorOutcomes.filter((o) => o === 'pass').length;
-    const lastNOutcomes = [...priorOutcomes].reverse().slice(0, 10) as ('pass' | 'fail')[];
-    const lastNRunDetails = [...priorRunDetails].reverse().slice(0, 10);
+    /** Full prior strip (≤30 runs, same bucket) — must stay in sync with streak math and UI squares. */
+    const lastNOutcomes = stripNewestFirst;
+    const lastNRunDetails = [...priorRunDetails].reverse();
 
     let pattern: TestHistoryPattern;
     if (isFirstSeenGlobally) {
@@ -830,7 +846,7 @@ const HISTORY_STATS_INSTRUCTION = `
 Each failure in **Failures to Analyze** may include \`historyStats\` (server-computed from the same bucket-scoped strip as \`history\`). These numbers are **final**:
 - **lastWindowSize** = N = count of prior runs represented in that strip (newest-first window)
 - **lastWindowFailCount** / **lastWindowPassCount** = X fails, Y passes in that strip (for that window: "Last N runs in this bucket: X fails, Y passes")
-- **consecutiveFailStreakIncludingCurrentRun** = Z = consecutive fail streak **including this failing upload** ("Current consecutive fail streak: Z")
+- **consecutiveFailStreakIncludingCurrentRun** = Z = **1 + consecutiveFailsFromMostRecentInStrip** (consecutive red prior squares in the strip, newest-first, plus this failing upload — same formula as the server and UI strip)
 
 **You MUST NOT recalculate or substitute alternative counts** for those facts. When you mention run totals in **priorityReason**, copy **N, X, Y, Z** from \`historyStats\` / \`history\` exactly.
 
@@ -1278,8 +1294,8 @@ ${HISTORY_STATS_INSTRUCTION}
 ## Flaky KB (Known Flaky Tests - Global):
 ${JSON.stringify(flakyTests, null, 2)}
 
-If a test matches Flaky KB (even fuzzy match), note it in your response.
-IMPORTANT: Flaky KB is a supporting signal, not a hard rule.
+If a test matches Flaky KB (even fuzzy match), you may note it in **priorityReason** as context.
+IMPORTANT: Flaky KB is a supporting signal, not a hard rule — and it **never** overrides hierarchy **§3a** when \`historyStats.consecutiveFailStreakIncludingCurrentRun\` ≥ 5 (classification stays **Potential bug**, **P1**).
 
 ## Failures to Analyze:
 Each failure may include **streakInfo** (this regression bucket, passed_locally), **history** (bucket-scoped prior uploads in **this bucket only**, §7.5), and **historyStats** (pre-calculated N/X/Y/Z for that strip + streak including this upload). Use all three; **history** drives regression smell vs intermittent/consistent failure within that bucket timeline. If there is no bucket or no prior data in-bucket, **history** / **historyStats** may be absent (no cross-bucket fallback).

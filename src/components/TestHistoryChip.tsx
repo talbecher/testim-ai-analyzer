@@ -8,7 +8,11 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
-const MAX_VISIBLE = 8;
+/**
+ * Same cap as bucket history query (analyze-failures): full strip so trailing red count
+ * matches historyStats / currentFailStreak − 1.
+ */
+const MAX_STRIP = 30;
 
 function patternHeadline(pattern: TestHistoryPattern, h: TestHistory): string {
   switch (pattern) {
@@ -53,10 +57,10 @@ export function TestHistoryChip({ history, className }: TestHistoryChipProps) {
       ? lastNRunDetails
       : lastNOutcomes.map((o) => ({ outcome: o }));
 
-  // Reverse to chronological (oldest → newest, LTR), then cap to last N visible.
+  // Reverse to chronological (oldest → newest, LTR) — same order as server strip.
   const chrono = [...detailsNewestFirst].reverse();
-  const truncated = chrono.length > MAX_VISIBLE;
-  const visible = truncated ? chrono.slice(-MAX_VISIBLE) : chrono;
+  const truncated = chrono.length > MAX_STRIP;
+  const visible = truncated ? chrono.slice(-MAX_STRIP) : chrono;
 
   const showWarning = pattern === 'was-passing-now-failing';
   const headline = patternHeadline(pattern, history);
@@ -90,12 +94,12 @@ export function TestHistoryChip({ history, className }: TestHistoryChipProps) {
             </TooltipContent>
           </Tooltip>
         ) : (
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex max-w-[min(100%,280px)] items-center gap-0.5 overflow-x-auto overflow-y-visible py-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:max-w-[360px]">
             {truncated && (
-              <span className="mr-0.5 text-[10px] leading-none text-muted-foreground">…</span>
+              <span className="mr-0.5 shrink-0 text-[10px] leading-none text-muted-foreground">…</span>
             )}
             {visible.map((d, idx) => {
-              const isCurrent = idx === visible.length - 1;
+              const isLatestPrior = idx === visible.length - 1;
               const isPass = d.outcome === 'pass';
               const label = runLabel(d, chrono.length - visible.length + idx + 1);
               const dateStr = formatDate(d.runDate);
@@ -106,8 +110,8 @@ export function TestHistoryChip({ history, className }: TestHistoryChipProps) {
                     <span className="inline-flex cursor-help items-center justify-center p-1 -m-1">
                       <span
                         className={cn(
-                          'inline-block transition-transform hover:scale-110',
-                          isCurrent
+                          'inline-block shrink-0 transition-transform hover:scale-110',
+                          isLatestPrior
                             ? 'h-[18px] w-[18px] rounded-[5px] ring-1 ring-foreground/30 ring-offset-1 ring-offset-background'
                             : 'h-4 w-4 rounded-[4px]',
                           isPass ? 'bg-confidence-high' : 'bg-bug',
@@ -122,8 +126,10 @@ export function TestHistoryChip({ history, className }: TestHistoryChipProps) {
                   >
                     <p className="font-medium">
                       {label}
-                      {isCurrent && (
-                        <span className="ml-1 text-muted-foreground">(current run)</span>
+                      {isLatestPrior && (
+                        <span className="ml-1 text-muted-foreground">
+                          (latest prior upload · streak including this failure: {history.currentFailStreak})
+                        </span>
                       )}
                     </p>
                     <div className="space-y-0.5 text-muted-foreground">
