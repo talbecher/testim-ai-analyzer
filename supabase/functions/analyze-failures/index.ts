@@ -677,16 +677,26 @@ function buildHistoryStatsForPrompt(h: TestHistory, debugTestName?: string): His
   };
 }
 
-/** Streak ≥ 5: confidence; user feedback dominant → direction (§1b applied after this). */
+/** Streak ≥ 5 and/or strong passed-locally signal; user feedback direction (§1b applied after this). */
 function applyStreakUserFeedbackOverride(
   analysis: Record<string, unknown>,
   historyStats: HistoryStatsForPrompt | undefined,
   debugTestName?: string,
 ): void {
-  if (!historyStats || historyStats.consecutiveFailStreakIncludingCurrentRun < 5) return;
+  if (!historyStats) return;
+
+  const o = historyStats.priorUserOutcomes;
+  /** Fail squares in bucket strip (= count of `outcome === 'fail'` in lastNRunDetails). */
+  const totalFailsInWindow = historyStats.lastWindowFailCount;
+  const hasLongStreak = historyStats.consecutiveFailStreakIncludingCurrentRun >= 5;
+  const hasStrongFlakySignal =
+    o.passedLocallyCount >= 5 &&
+    o.dominantUserSignal === 'flaky' &&
+    o.passedLocallyCount / Math.max(totalFailsInWindow, 1) >= 0.6;
+
+  if (!hasLongStreak && !hasStrongFlakySignal) return;
 
   const streak = historyStats.consecutiveFailStreakIncludingCurrentRun;
-  const o = historyStats.priorUserOutcomes;
   const bugSide = o.confirmedBugCount + o.requiredManualFixCount;
   const totalSignals =
     o.passedLocallyCount +
@@ -695,12 +705,15 @@ function applyStreakUserFeedbackOverride(
     o.aiWasCorrectCount +
     o.aiWasWrongCount;
 
-  // TEMP: remove after debugging — once per failure with streak ≥ 5 (before branch overrides)
+  // TEMP: remove after debugging
   console.log(
     'STREAK_OVERRIDE_DEBUG:',
     JSON.stringify({
       testName: debugTestName ?? '(unknown)',
+      hasLongStreak,
+      hasStrongFlakySignal,
       streak,
+      totalFailsInWindow,
       dominantUserSignal: o.dominantUserSignal,
       pl: o.passedLocallyCount,
       bugSide,
@@ -712,6 +725,20 @@ function applyStreakUserFeedbackOverride(
 
   const reason = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
   const dom = o.dominantUserSignal;
+
+  // Strong flaky without long consecutive streak — flaky only (no bug/mixed/unknown branches)
+  if (hasStrongFlakySignal && !hasLongStreak) {
+    const passRate = Math.round((o.passedLocallyCount / Math.max(totalFailsInWindow, 1)) * 1000) / 10;
+    analysis.classification = 'Likely Flaky';
+    analysis.priority = 'P3';
+    analysis.suggestedAction = 'Skip';
+    analysis.priorityReason =
+      `• Strong Flaky Signal: passed locally ${o.passedLocallyCount}x with ${passRate}% local pass rate — no long streak but clear flaky pattern.\n` +
+      reason;
+    return;
+  }
+
+  if (!hasLongStreak) return;
 
   if (dom === 'flaky') {
     analysis.classification = 'Likely Flaky';
