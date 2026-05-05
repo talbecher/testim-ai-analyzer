@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { AlertTriangle, Info } from 'lucide-react';
 import type { TestHistory, TestHistoryPattern, TestHistoryRunDetail } from '@/types/testim';
 import {
@@ -42,6 +43,67 @@ function formatDate(iso?: string): string | undefined {
   const d = new Date(`${iso}T12:00:00Z`);
   if (isNaN(d.getTime())) return iso;
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+/** Up to 3 compact lines for fail squares (server-enriched lastNRunDetails). */
+function UserFeedbackTooltipBlock({ d }: { d: TestHistoryRunDetail }) {
+  if (d.outcome !== 'fail') return null;
+
+  const lines: ReactNode[] = [];
+  if (d.passedLocally === true) {
+    lines.push(
+      <p key="pl" className="text-green-600 dark:text-green-500">
+        Passed locally ✓
+      </p>,
+    );
+  }
+  const confirmedBug =
+    d.userClassification?.trim().toLowerCase() === 'potential bug' || Boolean(d.bugLink?.trim());
+  if (confirmedBug) {
+    lines.push(
+      <p key="bug" className="text-orange-600 dark:text-orange-400">
+        Confirmed bug 🐛
+      </p>,
+    );
+  }
+  if (d.requiredManualFix === true) {
+    lines.push(
+      <p key="fix" className="text-orange-600/90 dark:text-orange-400/90">
+        Required manual fix 🔧
+      </p>,
+    );
+  }
+  if (d.wasCorrect === true) {
+    lines.push(
+      <p key="ok" className="text-green-600 dark:text-green-500">
+        AI was correct ✓
+      </p>,
+    );
+  } else if (d.wasCorrect === false) {
+    lines.push(
+      <p key="bad" className="text-red-600 dark:text-red-500">
+        AI was wrong ✗
+      </p>,
+    );
+  }
+  if (lines.length === 0) {
+    lines.push(
+      <p key="none" className="text-muted-foreground">
+        No feedback recorded
+      </p>,
+    );
+  }
+  const shown = lines.slice(0, 3);
+
+  return (
+    <>
+      <div className="my-1.5 border-t border-border/60" aria-hidden />
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        User feedback
+      </p>
+      <div className="space-y-0.5">{shown}</div>
+    </>
+  );
 }
 
 export interface TestHistoryChipProps {
@@ -146,27 +208,32 @@ export function TestHistoryChip({ history, className }: TestHistoryChipProps) {
                       <p>
                         <span className="text-foreground/70">Outcome:</span>{' '}
                         {isPass ? (
-                          <span className="text-foreground">
-                            Passed — not in failures CSV
-                          </span>
+                          <span className="text-foreground">Passed</span>
                         ) : (
                           <span className="text-foreground">Failed</span>
                         )}
                       </p>
-                      {!isPass && (
+                      {isPass ? (
+                        <p className="text-muted-foreground">
+                          Test passed in this run (not in failures list)
+                        </p>
+                      ) : (
                         <>
-                          <p>
-                            <span className="text-foreground/70">AI classified as:</span>{' '}
-                            <span className="font-medium text-foreground">
-                              {d.aiClassification || 'unknown'}
-                            </span>
-                          </p>
-                          {d.aiPriority && (
+                          <div className="space-y-0.5">
                             <p>
-                              <span className="text-foreground/70">AI priority:</span>{' '}
-                              <span className="font-medium text-foreground">{d.aiPriority}</span>
+                              <span className="text-foreground/70">AI classified as:</span>{' '}
+                              <span className="font-medium text-foreground">
+                                {d.aiClassification || 'unknown'}
+                              </span>
                             </p>
-                          )}
+                            {d.aiPriority && (
+                              <p>
+                                <span className="text-foreground/70">AI priority:</span>{' '}
+                                <span className="font-medium text-foreground">{d.aiPriority}</span>
+                              </p>
+                            )}
+                          </div>
+                          <UserFeedbackTooltipBlock d={d} />
                         </>
                       )}
                     </div>
