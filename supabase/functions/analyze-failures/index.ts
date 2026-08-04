@@ -1636,12 +1636,12 @@ Return ONLY valid JSON array, no markdown.`;
         });
         if (response.ok) break;
         if (response.status !== 429 || attempt === MAX_ATTEMPTS) break;
-        // Honor Retry-After header when present, else backoff: 1s, 2s, 4s + jitter
+        // Honor Retry-After header when present, else backoff: 2s, 4s, 8s + jitter (was 1s/2s/4s)
         const retryAfterHeader = response.headers.get('retry-after');
         const retryAfterSec = retryAfterHeader ? parseFloat(retryAfterHeader) : NaN;
         const backoffMs = Number.isFinite(retryAfterSec)
-          ? Math.min(retryAfterSec * 1000, 8000)
-          : Math.min(1000 * 2 ** (attempt - 1), 4000) + Math.floor(Math.random() * 250);
+          ? Math.min(retryAfterSec * 1000, 20000)
+          : Math.min(2000 * 2 ** (attempt - 1), 8000) + Math.floor(Math.random() * 500);
         console.warn(`AI 429 on attempt ${attempt}/${MAX_ATTEMPTS}; retrying in ${backoffMs}ms`);
         await new Promise((r) => setTimeout(r, backoffMs));
       }
@@ -1650,14 +1650,30 @@ Return ONLY valid JSON array, no markdown.`;
         const errorText = response ? await response.text() : 'no response';
         lastErrorText = errorText;
         console.error('QA Audit: AI call failed. Attempted model:', modelName, '| Status:', response?.status, '| Body:', errorText);
-        if (response?.status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit exceeded", fallback: true }), {
-            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+
+        const isRateLimit =
+          response?.status === 429 ||
+          /rate_limit_exceeded/i.test(errorText) ||
+          /rate limit/i.test(errorText);
+
+        if (isRateLimit) {
+          console.error('QA Audit: OpenAI/Lovable rate_limit_exceeded — returning HTTP 429 to client');
+          return new Response(
+            JSON.stringify({
+              error: 'Rate limit exceeded',
+              code: 'rate_limit_exceeded',
+              details: errorText.slice(0, 500),
+            }),
+            {
+              status: 429,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            },
+          );
         }
+
         if (response?.status === 402) {
-          return new Response(JSON.stringify({ error: "Payment required, please add credits", fallback: true }), {
-            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          return new Response(JSON.stringify({ error: "Payment required, please add credits", code: "payment_required" }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         throw new Error(`AI gateway error: ${response?.status} ${lastErrorText}`);

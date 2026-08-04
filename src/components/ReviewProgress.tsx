@@ -13,7 +13,7 @@ export function ReviewProgress({ reviewed, total, onComplete }: ReviewProgressPr
   const isComplete = reviewed === total && total > 0;
 
   return (
-    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-4 sticky top-4 z-10">
+    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-4">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1">
           <ClipboardCheck className="h-5 w-5 text-primary" />

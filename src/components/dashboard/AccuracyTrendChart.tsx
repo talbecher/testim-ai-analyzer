@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid } from "recharts";
+import { TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 
 interface ReportData {
@@ -32,7 +33,8 @@ export const AccuracyTrendChart = ({ reports }: AccuracyTrendChartProps) => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          📈 Accuracy Trend
+          <TrendingUp className="h-5 w-5" aria-hidden />
+          Accuracy Trend
         </CardTitle>
         <CardDescription>AI classification accuracy over time</CardDescription>
       </CardHeader>

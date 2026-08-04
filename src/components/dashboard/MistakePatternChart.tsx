@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts";
+import { AlertTriangle } from "lucide-react";
 
 interface MistakePatternChartProps {
   mistakes: Array<{ pattern: string; count: number }>;
@@ -26,7 +27,8 @@ export const MistakePatternChart = ({ mistakes }: MistakePatternChartProps) => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          ⚠️ Common Mistakes
+          <AlertTriangle className="h-5 w-5" aria-hidden />
+          Common Mistakes
         </CardTitle>
         <CardDescription>
           Cases where the AI's classification (left) was corrected by you to a different one (right).

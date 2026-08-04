@@ -10,6 +10,7 @@ import { AccuracyTrendChart } from "@/components/dashboard/AccuracyTrendChart";
 import { MistakePatternChart } from "@/components/dashboard/MistakePatternChart";
 import { RecentReportsTable } from "@/components/dashboard/RecentReportsTable";
 import { StatsCards } from "@/components/dashboard/StatsCards";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ReportData {
   id: string;
@@ -78,8 +79,30 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading dashboard...</div>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-12 w-12 rounded-lg" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-4 w-80 max-w-full" />
+              </div>
+            </div>
+            <Skeleton className="h-10 w-40" />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Skeleton className="h-[320px] w-full" />
+            <Skeleton className="h-[320px] w-full" />
+          </div>
+          <Skeleton className="h-64 w-full" />
+        </div>
       </div>
     );
   }

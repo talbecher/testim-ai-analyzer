@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { FileText } from "lucide-react";
 import { format } from "date-fns";
 
 interface ReportData {
@@ -28,7 +29,10 @@ export const RecentReportsTable = ({ reports }: RecentReportsTableProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>📋 Recent Reports</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5" aria-hidden />
+          Recent Reports
+        </CardTitle>
         <CardDescription>Latest analysis runs and their results</CardDescription>
       </CardHeader>
       <CardContent>

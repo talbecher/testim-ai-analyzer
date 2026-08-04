@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Database, Clock, CheckCircle, Check, X, Edit2, Bug, TestTube, ExternalLink, Wrench } from 'lucide-react';
+import { Database, Clock, CheckCircle, Check, X, Edit2, Bug, TestTube, ExternalLink, Wrench, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
 import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
@@ -160,8 +160,9 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
                   Testim Classified
                 </span>
               ) : (
-                <span className="px-2 py-1 rounded text-xs font-medium bg-primary/20 text-primary border border-primary/30">
-                  🤖 AI
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-primary/20 text-primary border border-primary/30">
+                  <Bot className="h-3 w-3" aria-hidden />
+                  AI
                 </span>
               )}
               <span className={cn("px-2 py-1 rounded text-xs font-medium text-white", priorityColors[failure.analysis.priority])}>
