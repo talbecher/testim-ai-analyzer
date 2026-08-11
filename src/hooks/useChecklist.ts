@@ -14,6 +14,17 @@ import {
   priorityReasonWithInfraFirstSentence,
 } from '@/lib/sessionWebDriverInfra';
 import { coercePriorityReasonText } from '@/lib/priorityReasonToggle';
+import {
+  ANALYSIS_MAX_CONCURRENT,
+  ANALYSIS_RATE_LIMIT_DEFAULT_WAIT_MS,
+  ANALYSIS_RATE_LIMIT_RETRIES,
+  ANALYSIS_ROW_DELAY_MS,
+  computeRateLimitWaitMs,
+  extractInvokeFailureDetails,
+  isRateLimitMessage,
+  mapWithConcurrencyLimit,
+  sleep,
+} from '@/lib/analysisPacing';
 
 /** Post-process a single AI analysis (flaky KB, priority, requiresRerun). */
 function applyPostProcessing(
@@ -242,60 +253,7 @@ export function useChecklist() {
 
     setAnalysisProgress({ completed: 0, total: needsAnalysis.length });
 
-    const BATCH_SIZE = 1;
-    /** Pace between rows — OpenAI free/low tiers 429 easily with sub-second bursts. */
-    const BASE_ROW_DELAY_MS = 1500;
-    const RATE_LIMIT_RETRIES = 2;
-
-    const formatInvokeError = (err: unknown): string => {
-      if (typeof err === 'string') return err;
-      if (err instanceof Error) return err.message;
-      if (err && typeof err === 'object' && 'message' in err) {
-        const msg = (err as { message?: unknown }).message;
-        if (typeof msg === 'string' && msg.trim()) return msg;
-      }
-      return 'Analysis failed';
-    };
-
-    const isRateLimitMessage = (msg: string) =>
-      /rate limit/i.test(msg) || /rate_limit_exceeded/i.test(msg);
-
-    /** Prefer JSON body from non-2xx function responses (e.g. HTTP 429). */
-    const extractInvokeFailureMessage = async (
-      data: unknown,
-      error: unknown,
-    ): Promise<string> => {
-      if (data && typeof data === 'object' && data !== null && 'error' in data) {
-        const bodyErr = (data as { error?: unknown; code?: unknown }).error;
-        const code = (data as { code?: unknown }).code;
-        if (typeof bodyErr === 'string' && bodyErr.trim()) {
-          if (code === 'rate_limit_exceeded' || isRateLimitMessage(bodyErr)) {
-            return 'Rate limit exceeded';
-          }
-          return bodyErr;
-        }
-      }
-
-      // FunctionsHttpError may expose the Response on `.context`
-      const ctx = error && typeof error === 'object' && error !== null && 'context' in error
-        ? (error as { context?: unknown }).context
-        : undefined;
-      if (ctx && typeof ctx === 'object' && ctx !== null && 'json' in ctx && typeof (ctx as { json: unknown }).json === 'function') {
-        try {
-          const body = await (ctx as Response).clone().json() as { error?: string; code?: string };
-          if (body?.code === 'rate_limit_exceeded' || (body?.error && isRateLimitMessage(body.error))) {
-            return 'Rate limit exceeded';
-          }
-          if (typeof body?.error === 'string' && body.error.trim()) return body.error;
-        } catch {
-          // ignore parse errors
-        }
-      }
-
-      const fallback = formatInvokeError(error);
-      if (isRateLimitMessage(fallback)) return 'Rate limit exceeded';
-      return fallback;
-    };
+    let rowDelayMs = ANALYSIS_ROW_DELAY_MS;
 
     const buildFailureForAI = (failure: AnalyzedFailure): FailureForAI => {
       const patternResult = detectErrorPattern(failure.errorMessage);
@@ -330,7 +288,7 @@ export function useChecklist() {
 
     type RowOutcome =
       | { ok: true; analysis: AIAnalysisResult }
-      | { ok: false; error: string };
+      | { ok: false; error: string; retryAfterMs?: number };
 
     const invokeOnce = async (forAI: FailureForAI): Promise<RowOutcome> => {
       const { data, error } = await supabase.functions.invoke('analyze-failures', {
@@ -359,20 +317,36 @@ export function useChecklist() {
         return { ok: false, error: legacyFallback };
       }
 
-      const message = await extractInvokeFailureMessage(data, error);
-      return { ok: false, error: message };
+      const failureDetails = await extractInvokeFailureDetails(data, error);
+      return {
+        ok: false,
+        error: failureDetails.message,
+        retryAfterMs: failureDetails.retryAfterMs,
+      };
     };
 
     const analyzeRowWithRetries = async (forAI: FailureForAI): Promise<RowOutcome> => {
       let last: RowOutcome = { ok: false, error: 'Analysis failed' };
-      for (let attempt = 0; attempt <= RATE_LIMIT_RETRIES; attempt++) {
-        last = await invokeOnce(forAI);
-        if (last.ok) return last;
-        if (!isRateLimitMessage(last.error) || attempt === RATE_LIMIT_RETRIES) return last;
-        // 8s, 16s — give OpenAI RPM window time to recover
-        const waitMs = 8000 * 2 ** attempt;
-        console.warn(`Rate limited; waiting ${waitMs}ms before retry ${attempt + 1}/${RATE_LIMIT_RETRIES}`);
-        await new Promise((r) => setTimeout(r, waitMs));
+      for (let attempt = 0; attempt <= ANALYSIS_RATE_LIMIT_RETRIES; attempt++) {
+        const result = await invokeOnce(forAI);
+        if (result.ok) return result;
+        last = result;
+        if (!isRateLimitMessage(result.error) || attempt === ANALYSIS_RATE_LIMIT_RETRIES) {
+          return result;
+        }
+
+        const waitMs = computeRateLimitWaitMs(
+          attempt,
+          result.retryAfterMs ?? ANALYSIS_RATE_LIMIT_DEFAULT_WAIT_MS,
+        );
+        console.warn(
+          `Rate limited; waiting ${Math.round(waitMs / 1000)}s before retry ${attempt + 1}/${ANALYSIS_RATE_LIMIT_RETRIES}`,
+        );
+        toast.info('OpenAI rate limit — waiting before retry', {
+          description: `Pausing ${Math.round(waitMs / 1000)}s, then retrying row (attempt ${attempt + 1}/${ANALYSIS_RATE_LIMIT_RETRIES})…`,
+          duration: Math.min(waitMs, 10_000),
+        });
+        await sleep(waitMs);
       }
       return last;
     };
@@ -381,27 +355,19 @@ export function useChecklist() {
     let failCount = 0;
     let lastFailMessage = '';
 
-    for (let start = 0; start < needsAnalysis.length; start += BATCH_SIZE) {
-      const batch = needsAnalysis.slice(start, start + BATCH_SIZE);
-
-      for (const failure of batch) {
+    await mapWithConcurrencyLimit(
+      needsAnalysis,
+      async (failure) => {
         const forAI = buildFailureForAI(failure);
         const outcome = await analyzeRowWithRetries(forAI);
 
-        if (outcome.ok) {
-          successCount += 1;
-          const analysis = applyPostProcessing(failure, outcome.analysis, flakyKB);
-          setFailures(prev =>
-            prev.map(f =>
-              f.originalIndex === failure.originalIndex
-                ? { ...f, analysis, isAnalyzing: false, error: undefined }
-                : f
-            )
-          );
-        } else {
+        if (!outcome.ok) {
           failCount += 1;
           lastFailMessage = outcome.error;
           console.warn(`Analysis failed for row ${failure.originalIndex + 1} (${failure.testName}):`, outcome.error);
+          if (isRateLimitMessage(outcome.error)) {
+            rowDelayMs = Math.max(rowDelayMs * 2, ANALYSIS_RATE_LIMIT_DEFAULT_WAIT_MS / 2);
+          }
           setFailures(prev =>
             prev.map(f =>
               f.originalIndex === failure.originalIndex
@@ -409,16 +375,32 @@ export function useChecklist() {
                 : f
             )
           );
+          return outcome;
         }
-      }
 
-      setAnalysisProgress(prev => (prev ? { ...prev, completed: Math.min(prev.completed + batch.length, prev.total) } : null));
+        successCount += 1;
+        rowDelayMs = Math.max(ANALYSIS_ROW_DELAY_MS, Math.floor(rowDelayMs * 0.85));
+        const analysis = applyPostProcessing(failure, outcome.analysis, flakyKB);
+        setFailures(prev =>
+          prev.map(f =>
+            f.originalIndex === failure.originalIndex
+              ? { ...f, analysis, isAnalyzing: false, error: undefined }
+              : f
+          )
+        );
 
-      if (start + BATCH_SIZE < needsAnalysis.length) {
-        const delay = failCount > successCount ? BASE_ROW_DELAY_MS * 2 : BASE_ROW_DELAY_MS;
-        await new Promise((r) => setTimeout(r, delay));
-      }
-    }
+        return outcome;
+      },
+      {
+        concurrency: ANALYSIS_MAX_CONCURRENT,
+        delayMs: () => rowDelayMs,
+        onItemComplete: () => {
+          setAnalysisProgress(prev =>
+            prev ? { ...prev, completed: Math.min(prev.completed + 1, prev.total) } : null,
+          );
+        },
+      },
+    );
 
     if (failCount > 0 && successCount === 0) {
       const rateLimited = isRateLimitMessage(lastFailMessage);
