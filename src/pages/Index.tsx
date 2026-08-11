@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ErrorPatternChips } from '@/components/ErrorPatternChips';
 import { groupFailuresByPattern, getBucketKeyForMessage } from '@/lib/errorPatternGrouping';
 import { Link } from 'react-router-dom';
+import { AppHeader } from '@/components/AppHeader';
 import { useChecklist } from '@/hooks/useChecklist';
 import { useFeedback } from '@/hooks/useFeedback';
 import { useSessionPersistence } from '@/hooks/useSessionPersistence';
@@ -14,11 +15,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug, Rocket, Info, RotateCcw, X, ListChecks, Flame, ArrowDownAZ } from 'lucide-react';
+import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug, Rocket, Info, RotateCcw, X, ListChecks, Flame, ArrowDownAZ } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { AppLogo } from '@/components/AppLogo';
 import { cn } from '@/lib/utils';
 import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
 import { format } from 'date-fns';
@@ -350,36 +349,11 @@ const Index = () => {
         )}
 
         {/* Header */}
-        <header className="text-center space-y-2 py-2 relative">
-          <div className="absolute right-0 top-2 flex gap-2">
-            <ThemeToggle />
-            <Button asChild variant="outline" size="sm">
-              <Link to="/reports">
-                <FileText className="mr-2 h-4 w-4" />
-                Reports
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/settings">
-                <SettingsIcon className="mr-2 h-4 w-4" />
-                Settings
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard">
-                <BarChart3 className="mr-2 h-4 w-4" />
-                Dashboard
-              </Link>
-            </Button>
-          </div>
-          <div className="gap-3 flex items-center justify-start">
-            <AppLogo size="lg" />
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">
-              Testim.io Regression Failure Analyzer
-            </h1>
-          </div>
-          
-        </header>
+        <AppHeader
+          title="Testim.io Regression Failure Analyzer"
+          centered
+          logoSize="lg"
+        />
 
         {/* Run Details Card */}
         <Card className="border-border/50 bg-card/50 backdrop-blur-sm">

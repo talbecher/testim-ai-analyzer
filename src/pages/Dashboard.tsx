@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { AppHeader } from "@/components/AppHeader";
+import { AppLogo } from "@/components/AppLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, TrendingUp, Target, AlertTriangle, BarChart3 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { AppLogo } from "@/components/AppLogo";
+import { TrendingUp, Target, AlertTriangle } from "lucide-react";
 import { AccuracyTrendChart } from "@/components/dashboard/AccuracyTrendChart";
 import { MistakePatternChart } from "@/components/dashboard/MistakePatternChart";
 import { RecentReportsTable } from "@/components/dashboard/RecentReportsTable";
@@ -110,25 +110,12 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <AppLogo size="lg" />
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">AI Analysis Dashboard</h1>
-              <p className="text-muted-foreground mt-1">Track accuracy trends and common failure patterns</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <ThemeToggle />
-            <Button asChild variant="outline">
-              <Link to="/">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Analyzer
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <AppHeader
+          title="AI Analysis Dashboard"
+          subtitle="Track accuracy trends and common failure patterns"
+          logoSize="lg"
+          className="mb-8"
+        />
 
         {reports.length === 0 ? (
           <Card className="border-dashed">

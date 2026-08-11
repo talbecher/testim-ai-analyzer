@@ -1,17 +1,16 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { AppHeader } from '@/components/AppHeader';
+import { AppLogo } from '@/components/AppLogo';
 import { useLearningPatterns, LearningPattern, PatternExplanation } from '@/hooks/useLearningPatterns';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
-  ArrowLeft, TrendingUp, Zap, AlertTriangle, CheckCircle, 
-  FileText, BarChart3, Settings as SettingsIcon, Search, SkipForward,
+  TrendingUp, Zap, AlertTriangle, CheckCircle, 
+  Search, SkipForward,
   Lightbulb, Wrench, MessageSquare, Tag
 } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { AppLogo } from '@/components/AppLogo';
 import { LearningBoostButton } from '@/components/LearningBoostButton';
 import { cn } from '@/lib/utils';
 
@@ -161,44 +160,11 @@ export default function AILearning() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/reports">
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-            </Button>
-            <div className="flex items-center gap-3">
-              <AppLogo size="md" />
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">AI Learning Insights</h1>
-                <p className="text-sm text-muted-foreground">See how the AI learns from your corrections</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <ThemeToggle />
-            <Button asChild variant="outline" size="sm">
-              <Link to="/reports">
-                <FileText className="mr-2 h-4 w-4" />
-                Reports
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/settings">
-                <SettingsIcon className="mr-2 h-4 w-4" />
-                Settings
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard">
-                <BarChart3 className="mr-2 h-4 w-4" />
-                Dashboard
-              </Link>
-            </Button>
-          </div>
-        </header>
+        <AppHeader
+          title="AI Learning Insights"
+          subtitle="See how the AI learns from your corrections"
+          backTo="/reports"
+        />
 
         {/* How It Works */}
         <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">

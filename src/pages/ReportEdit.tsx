@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { AppHeader } from '@/components/AppHeader';
 import { useReports, ReportResult } from '@/hooks/useReports';
 import { useBugCategories } from '@/hooks/useBugCategories';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ArrowLeft, Save, Search, Filter, CheckCircle2, XCircle, Edit3, Brain, SearchCheck, SkipForward, Wrench, Rocket, AlertTriangle } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { AppLogo } from '@/components/AppLogo';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -219,58 +219,59 @@ export default function ReportEdit() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/reports">
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-            </Button>
-            {editingName ? (
-              <div className="flex items-center gap-3">
-                <Input
-                  value={reportName}
-                  onChange={(e) => setReportName(e.target.value)}
-                  className="text-xl font-bold w-64"
-                  autoFocus
-                />
-                <Button onClick={handleSaveReportName} size="sm">
-                  <Save className="h-4 w-4 mr-1" />
-                  Save
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setEditingName(false)}>
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <AppLogo size="md" />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-bold text-foreground">{currentReport.run_name}</h1>
-                    <Button variant="ghost" size="icon" onClick={() => setEditingName(true)}>
-                      <Edit3 className="h-4 w-4" />
-                    </Button>
-                    {(currentReport as any).is_feature_rollout && (
-                      <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-                        <Rocket className="h-3 w-3 mr-1" />
-                        Feature Rollout
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {format(new Date(currentReport.run_date), 'MMMM dd, yyyy')}
-                    {currentReport.updated_at && (
-                      <> • Updated {format(new Date(currentReport.updated_at), 'MMM dd, HH:mm')}</>
-                    )}
-                  </p>
+        <AppHeader
+          title=""
+          leftContent={
+            <div className="flex items-center gap-4 min-w-0">
+              <Button variant="ghost" size="icon" asChild>
+                <Link to="/reports">
+                  <ArrowLeft className="h-5 w-5" />
+                </Link>
+              </Button>
+              {editingName ? (
+                <div className="flex items-center gap-3">
+                  <Input
+                    value={reportName}
+                    onChange={(e) => setReportName(e.target.value)}
+                    className="text-xl font-bold w-64"
+                    autoFocus
+                  />
+                  <Button onClick={handleSaveReportName} size="sm">
+                    <Save className="h-4 w-4 mr-1" />
+                    Save
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setEditingName(false)}>
+                    Cancel
+                  </Button>
                 </div>
-              </div>
-            )}
-          </div>
-          <ThemeToggle />
-        </header>
+              ) : (
+                <div className="flex items-center gap-3 min-w-0">
+                  <AppLogo size="md" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-2xl font-bold text-foreground truncate">{currentReport.run_name}</h1>
+                      <Button variant="ghost" size="icon" onClick={() => setEditingName(true)}>
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                      {(currentReport as { is_feature_rollout?: boolean }).is_feature_rollout && (
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                          <Rocket className="h-3 w-3 mr-1" />
+                          Feature Rollout
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(currentReport.run_date), 'MMMM dd, yyyy')}
+                      {currentReport.updated_at && (
+                        <> • Updated {format(new Date(currentReport.updated_at), 'MMM dd, HH:mm')}</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          }
+        />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

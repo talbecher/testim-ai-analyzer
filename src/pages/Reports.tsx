@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AppHeader } from '@/components/AppHeader';
 import { useReports, ReportData } from '@/hooks/useReports';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -24,8 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, FileText, Pencil, Trash2, Brain, Search, BarChart3, Bug, Settings as SettingsIcon, Rocket } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { FileText, Pencil, Trash2, Search, Bug, Rocket } from 'lucide-react';
 import { AppLogo } from '@/components/AppLogo';
 import { format } from 'date-fns';
 
@@ -63,44 +63,11 @@ export default function Reports() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/">
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-            </Button>
-            <div className="flex items-center gap-3">
-              <AppLogo size="md" />
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Saved Reports</h1>
-                <p className="text-sm text-muted-foreground">View and manage your analysis reports</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <ThemeToggle />
-            <Button asChild variant="outline" size="sm">
-              <Link to="/ai-learning">
-                <Brain className="mr-2 h-4 w-4" />
-                AI Learning
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/settings">
-                <SettingsIcon className="mr-2 h-4 w-4" />
-                Settings
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard">
-                <BarChart3 className="mr-2 h-4 w-4" />
-                Dashboard
-              </Link>
-            </Button>
-          </div>
-        </header>
+        <AppHeader
+          title="Saved Reports"
+          subtitle="View and manage your analysis reports"
+          backTo="/"
+        />
 
         {/* Learning Stats Banner */}
         <Card className="border-primary/20 bg-primary/5">
