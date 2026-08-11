@@ -1,15 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { Link } from 'react-router-dom';
+import { AppHeader } from '@/components/AppHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Plus, Trash2, GripVertical, Tag, TestTube, Wrench, Info, FolderOpen } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Tag, TestTube, Wrench, Info, FolderOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { BugCategory, CategoryType } from '@/types/bugCategory';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { AppLogo } from '@/components/AppLogo';
 import { toast } from 'sonner';
 import { getVersionInfo } from '@/version';
 import { ChangelogDialog } from '@/components/ChangelogDialog';
@@ -281,21 +279,7 @@ const Settings = () => {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button asChild variant="ghost" size="icon">
-              <Link to="/">
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-            </Button>
-            <div className="flex items-center gap-3">
-              <AppLogo size="md" />
-              <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-            </div>
-          </div>
-          <ThemeToggle />
-        </header>
+        <AppHeader title="Settings" backTo="/" />
 
         {/* Regression Buckets */}
         <Card className="border-border/50">

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { FailureEntry, AnalyzedFailure, FlakyTestForAI, FailureForAI, AIAnalysisResult, ReportMode, SortOption } from '@/types/testim';
 import { useRegressionBuckets } from './useRegressionBuckets';
@@ -13,6 +14,17 @@ import {
   priorityReasonWithInfraFirstSentence,
 } from '@/lib/sessionWebDriverInfra';
 import { coercePriorityReasonText } from '@/lib/priorityReasonToggle';
+import {
+  ANALYSIS_MAX_CONCURRENT,
+  ANALYSIS_RATE_LIMIT_DEFAULT_WAIT_MS,
+  ANALYSIS_RATE_LIMIT_RETRIES,
+  ANALYSIS_ROW_DELAY_MS,
+  computeRateLimitWaitMs,
+  extractInvokeFailureDetails,
+  isRateLimitMessage,
+  mapWithConcurrencyLimit,
+  sleep,
+} from '@/lib/analysisPacing';
 
 /** Post-process a single AI analysis (flaky KB, priority, requiresRerun). */
 function applyPostProcessing(
@@ -241,7 +253,7 @@ export function useChecklist() {
 
     setAnalysisProgress({ completed: 0, total: needsAnalysis.length });
 
-    const BATCH_SIZE = 1;
+    let rowDelayMs = ANALYSIS_ROW_DELAY_MS;
 
     const buildFailureForAI = (failure: AnalyzedFailure): FailureForAI => {
       const patternResult = detectErrorPattern(failure.errorMessage);
@@ -274,73 +286,136 @@ export function useChecklist() {
       };
     };
 
-    for (let start = 0; start < needsAnalysis.length; start += BATCH_SIZE) {
-      const batch = needsAnalysis.slice(start, start + BATCH_SIZE);
-      const batchPayloads = batch.map(f => ({ failure: f, forAI: buildFailureForAI(f) }));
+    type RowOutcome =
+      | { ok: true; analysis: AIAnalysisResult }
+      | { ok: false; error: string; retryAfterMs?: number };
 
-      const settled = await Promise.allSettled(
-        batchPayloads.map(({ forAI }) =>
-          supabase.functions.invoke('analyze-failures', {
-            body: {
-              failures: [forAI],
-              flakyTests: flakyTestsForAI,
-              mode: reportMode,
-              regressionBucket: selectedRegressionBucket,
-            },
-          })
-        )
-      );
+    const invokeOnce = async (forAI: FailureForAI): Promise<RowOutcome> => {
+      const { data, error } = await supabase.functions.invoke('analyze-failures', {
+        body: {
+          failures: [forAI],
+          flakyTests: flakyTestsForAI,
+          mode: reportMode,
+          regressionBucket: selectedRegressionBucket,
+        },
+      });
 
-      for (let j = 0; j < batch.length; j++) {
-        const failure = batch[j];
-        const result = settled[j];
-        const data = result.status === 'fulfilled' ? result.value.data : undefined;
-        const fallbackError = data && (data as { fallback?: boolean; error?: string }).fallback
+      // Legacy soft-fail body (HTTP 200 + fallback) — still handle if an old deploy is live
+      const legacyFallback =
+        data && (data as { fallback?: boolean; error?: string }).fallback
           ? (data as { error?: string }).error || 'AI temporarily unavailable'
           : null;
 
-        if (result.status === 'fulfilled' && !result.value.error && !fallbackError) {
-          const results = (data?.results ?? []) as Array<{ failureId: number; analysis: AIAnalysisResult }>;
-          const rawAnalysis = results[0]?.analysis;
-          if (rawAnalysis) {
-            const analysis = applyPostProcessing(failure, rawAnalysis, flakyKB);
-            setFailures(prev =>
-              prev.map(f =>
-                f.originalIndex === failure.originalIndex
-                  ? { ...f, analysis, isAnalyzing: false, error: undefined }
-                  : f
-              )
-            );
-          } else {
-            setFailures(prev =>
-              prev.map(f =>
-                f.originalIndex === failure.originalIndex
-                  ? { ...f, isAnalyzing: false, error: 'No analysis in response' }
-                  : f
-              )
-            );
+      if (!error && !legacyFallback) {
+        const results = (data?.results ?? []) as Array<{ failureId: number; analysis: AIAnalysisResult }>;
+        const rawAnalysis = results[0]?.analysis;
+        if (rawAnalysis) return { ok: true, analysis: rawAnalysis };
+        return { ok: false, error: 'No analysis in response' };
+      }
+
+      if (legacyFallback) {
+        return { ok: false, error: legacyFallback };
+      }
+
+      const failureDetails = await extractInvokeFailureDetails(data, error);
+      return {
+        ok: false,
+        error: failureDetails.message,
+        retryAfterMs: failureDetails.retryAfterMs,
+      };
+    };
+
+    const analyzeRowWithRetries = async (forAI: FailureForAI): Promise<RowOutcome> => {
+      let last: RowOutcome = { ok: false, error: 'Analysis failed' };
+      for (let attempt = 0; attempt <= ANALYSIS_RATE_LIMIT_RETRIES; attempt++) {
+        const result = await invokeOnce(forAI);
+        if (result.ok) return result;
+        last = result;
+        if (!isRateLimitMessage(result.error) || attempt === ANALYSIS_RATE_LIMIT_RETRIES) {
+          return result;
+        }
+
+        const waitMs = computeRateLimitWaitMs(
+          attempt,
+          result.retryAfterMs ?? ANALYSIS_RATE_LIMIT_DEFAULT_WAIT_MS,
+        );
+        console.warn(
+          `Rate limited; waiting ${Math.round(waitMs / 1000)}s before retry ${attempt + 1}/${ANALYSIS_RATE_LIMIT_RETRIES}`,
+        );
+        toast.info('OpenAI rate limit — waiting before retry', {
+          description: `Pausing ${Math.round(waitMs / 1000)}s, then retrying row (attempt ${attempt + 1}/${ANALYSIS_RATE_LIMIT_RETRIES})…`,
+          duration: Math.min(waitMs, 10_000),
+        });
+        await sleep(waitMs);
+      }
+      return last;
+    };
+
+    let successCount = 0;
+    let failCount = 0;
+    let lastFailMessage = '';
+
+    await mapWithConcurrencyLimit(
+      needsAnalysis,
+      async (failure) => {
+        const forAI = buildFailureForAI(failure);
+        const outcome = await analyzeRowWithRetries(forAI);
+
+        if (!outcome.ok) {
+          failCount += 1;
+          lastFailMessage = outcome.error;
+          console.warn(`Analysis failed for row ${failure.originalIndex + 1} (${failure.testName}):`, outcome.error);
+          if (isRateLimitMessage(outcome.error)) {
+            rowDelayMs = Math.max(rowDelayMs * 2, ANALYSIS_RATE_LIMIT_DEFAULT_WAIT_MS / 2);
           }
-        } else {
-          const err = fallbackError
-            ? fallbackError
-            : (result.status === 'rejected' ? result.reason : result.value?.error);
-          console.warn(`Analysis failed for row ${failure.originalIndex + 1} (${failure.testName}):`, err);
           setFailures(prev =>
             prev.map(f =>
               f.originalIndex === failure.originalIndex
-                ? { ...f, isAnalyzing: false, error: typeof err === 'string' ? err : (err instanceof Error ? err.message : 'Analysis failed') }
+                ? { ...f, isAnalyzing: false, error: outcome.error }
                 : f
             )
           );
+          return outcome;
         }
-      }
 
-      setAnalysisProgress(prev => (prev ? { ...prev, completed: Math.min(prev.completed + batch.length, prev.total) } : null));
+        successCount += 1;
+        rowDelayMs = Math.max(ANALYSIS_ROW_DELAY_MS, Math.floor(rowDelayMs * 0.85));
+        const analysis = applyPostProcessing(failure, outcome.analysis, flakyKB);
+        setFailures(prev =>
+          prev.map(f =>
+            f.originalIndex === failure.originalIndex
+              ? { ...f, analysis, isAnalyzing: false, error: undefined }
+              : f
+          )
+        );
 
-      // Small pacing delay to stay under the AI gateway per-minute quota
-      if (start + BATCH_SIZE < needsAnalysis.length) {
-        await new Promise((r) => setTimeout(r, 350));
-      }
+        return outcome;
+      },
+      {
+        concurrency: ANALYSIS_MAX_CONCURRENT,
+        delayMs: () => rowDelayMs,
+        onItemComplete: () => {
+          setAnalysisProgress(prev =>
+            prev ? { ...prev, completed: Math.min(prev.completed + 1, prev.total) } : null,
+          );
+        },
+      },
+    );
+
+    if (failCount > 0 && successCount === 0) {
+      const rateLimited = isRateLimitMessage(lastFailMessage);
+      const msg = rateLimited
+        ? `OpenAI rate limit exceeded — all ${failCount} analyses failed. Wait a minute, then try Analyze again. (Replace OPENAI_API_KEY in Supabase secrets if this persists.)`
+        : `All ${failCount} analyses failed${lastFailMessage ? `: ${lastFailMessage}` : ''}. Wait a minute and try Analyze again.`;
+      setError(msg);
+      toast.error(rateLimited ? 'OpenAI rate limit exceeded' : 'Analysis failed', { description: msg });
+    } else if (failCount > 0) {
+      const rateLimited = isRateLimitMessage(lastFailMessage);
+      const msg = rateLimited
+        ? `${failCount} of ${successCount + failCount} analyses hit OpenAI rate limits. Successful rows are shown below — wait and re-run Analyze for the rest.`
+        : `${failCount} of ${successCount + failCount} analyses failed${lastFailMessage ? ` (e.g. ${lastFailMessage})` : ''}. Successful rows are shown below.`;
+      setError(msg);
+      toast.error(rateLimited ? 'OpenAI rate limit exceeded' : 'Some analyses failed', { description: msg });
     }
 
     setAnalysisProgress(null);

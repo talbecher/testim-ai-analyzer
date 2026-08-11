@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { AppHeader } from "@/components/AppHeader";
+import { AppLogo } from "@/components/AppLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, TrendingUp, Target, AlertTriangle, BarChart3 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { AppLogo } from "@/components/AppLogo";
+import { TrendingUp, Target, AlertTriangle } from "lucide-react";
 import { AccuracyTrendChart } from "@/components/dashboard/AccuracyTrendChart";
 import { MistakePatternChart } from "@/components/dashboard/MistakePatternChart";
 import { RecentReportsTable } from "@/components/dashboard/RecentReportsTable";
 import { StatsCards } from "@/components/dashboard/StatsCards";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ReportData {
   id: string;
@@ -78,8 +79,30 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading dashboard...</div>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-12 w-12 rounded-lg" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-4 w-80 max-w-full" />
+              </div>
+            </div>
+            <Skeleton className="h-10 w-40" />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Skeleton className="h-[320px] w-full" />
+            <Skeleton className="h-[320px] w-full" />
+          </div>
+          <Skeleton className="h-64 w-full" />
+        </div>
       </div>
     );
   }
@@ -87,25 +110,12 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <AppLogo size="lg" />
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">AI Analysis Dashboard</h1>
-              <p className="text-muted-foreground mt-1">Track accuracy trends and common failure patterns</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <ThemeToggle />
-            <Button asChild variant="outline">
-              <Link to="/">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Analyzer
-              </Link>
-            </Button>
-          </div>
-        </div>
+        <AppHeader
+          title="AI Analysis Dashboard"
+          subtitle="Track accuracy trends and common failure patterns"
+          logoSize="lg"
+          className="mb-8"
+        />
 
         {reports.length === 0 ? (
           <Card className="border-dashed">

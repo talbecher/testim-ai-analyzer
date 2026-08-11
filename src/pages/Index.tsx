@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ErrorPatternChips } from '@/components/ErrorPatternChips';
 import { groupFailuresByPattern, getBucketKeyForMessage } from '@/lib/errorPatternGrouping';
 import { Link } from 'react-router-dom';
+import { AppHeader } from '@/components/AppHeader';
 import { useChecklist } from '@/hooks/useChecklist';
 import { useFeedback } from '@/hooks/useFeedback';
 import { useSessionPersistence } from '@/hooks/useSessionPersistence';
@@ -14,11 +15,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Settings as SettingsIcon, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug, Rocket, Info, RotateCcw, X, ListChecks } from 'lucide-react';
+import { Upload, Zap, Trash2, CalendarIcon, FileText, ClipboardList, BarChart3, Search, Filter, CheckCircle, BookOpen, SearchCheck, CircleSlash, Target, Bug, Rocket, Info, RotateCcw, X, ListChecks, Flame, ArrowDownAZ } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { AppLogo } from '@/components/AppLogo';
 import { cn } from '@/lib/utils';
 import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
 import { format } from 'date-fns';
@@ -320,8 +319,14 @@ const Index = () => {
     });
   }, [sortedFailures, failuresWithFeedback, searchQuery, filterClassification, filterReviewStatus, filterPattern, filterRecommendation, visibleBucketKeys]);
 
-  return <div className="min-h-screen bg-background p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+  return <div className={cn("min-h-screen bg-background p-4", selectedIds.size > 0 && "pb-24")}>
+      <a
+        href="#main-results"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-md focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        Skip to results
+      </a>
+      <div className="max-w-6xl mx-auto space-y-4">
         {/* Session Restore Banner */}
         {showRestoreBanner && (
           <Alert className="bg-amber-500/10 border-amber-500/30">
@@ -344,47 +349,22 @@ const Index = () => {
         )}
 
         {/* Header */}
-        <header className="text-center space-y-3 py-4 relative">
-          <div className="absolute right-0 top-4 flex gap-2">
-            <ThemeToggle />
-            <Button asChild variant="outline" size="sm">
-              <Link to="/reports">
-                <FileText className="mr-2 h-4 w-4" />
-                Reports
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/settings">
-                <SettingsIcon className="mr-2 h-4 w-4" />
-                Settings
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard">
-                <BarChart3 className="mr-2 h-4 w-4" />
-                Dashboard
-              </Link>
-            </Button>
-          </div>
-          <div className="gap-3 flex items-center justify-start">
-            <AppLogo size="lg" />
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">
-              Testim.io Regression Failure Analyzer
-            </h1>
-          </div>
-          
-        </header>
+        <AppHeader
+          title="Testim.io Regression Failure Analyzer"
+          centered
+          logoSize="lg"
+        />
 
         {/* Run Details Card */}
         <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <ClipboardList className="h-5 w-5 text-primary" />
               Run Details
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* Regression Bucket Dropdown */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
@@ -480,8 +460,8 @@ const Index = () => {
         e.preventDefault();
         setDragOver(true);
       }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}>
-          <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
-            <div className="p-4 rounded-full bg-muted/50">
+          <CardContent className="flex flex-col items-center justify-center py-8 gap-3">
+            <div className="p-3 rounded-full bg-muted/50">
               <Upload className="h-10 w-10 text-muted-foreground" />
             </div>
             <div className="text-center space-y-1">
@@ -497,13 +477,16 @@ const Index = () => {
         </Card>
 
         {/* Already-classified info banner */}
-        {preClassifiedStats && <div className="bg-confidence-high/10 border border-confidence-high/30 rounded-lg p-4">
+        {preClassifiedStats && <div className="bg-confidence-high/10 border border-confidence-high/30 rounded-lg p-3">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-confidence-high/20">
                 <CheckCircle className="h-5 w-5 text-confidence-high" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-foreground">📋 Pre-classified file from Testim.io</p>
+                <p className="font-medium text-foreground inline-flex items-center gap-1.5">
+                  <ClipboardList className="h-4 w-4 shrink-0" aria-hidden />
+                  Pre-classified file from Testim.io
+                </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   <span className="text-confidence-high font-medium">{preClassifiedStats.classified}</span> failures already classified 
                   <span className="text-muted-foreground"> → will be marked as reviewed</span>
@@ -533,12 +516,17 @@ const Index = () => {
               </>}
           </Alert>}
 
-        {error && <div className="bg-destructive/10 text-destructive p-4 rounded-lg border border-destructive/20">{error}</div>}
+        {error && (
+          <Alert variant="destructive" className="border-destructive/40">
+            <AlertTitle>Analysis error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         {failures.length > 0 && <>
             {/* Run Info Banner */}
-            {runDetails.name && <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
+            {runDetails.name && <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
                   <span className="text-sm text-muted-foreground">Run:</span>
                   <span className="font-semibold text-foreground">{runDetails.name}</span>
                   <span className="text-muted-foreground">•</span>
@@ -548,7 +536,7 @@ const Index = () => {
               </div>}
 
             {/* Stats - Recommendation based (clickable to filter) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Card
                 role="button"
                 tabIndex={0}
@@ -560,7 +548,7 @@ const Index = () => {
                   filterRecommendation === 'all' && "ring-2 ring-foreground/40"
                 )}
               >
-                <CardContent className="h-full pt-4 flex flex-col items-center justify-center text-center">
+                <CardContent className="h-full pt-3 pb-3 flex flex-col items-center justify-center text-center">
                   <ListChecks className="h-5 w-5 mx-auto text-foreground mb-1" />
                   <div className="text-3xl font-bold text-foreground">{recommendationStats.total}</div>
                   <div className="text-sm text-muted-foreground mt-1">Total Analyzed</div>
@@ -577,7 +565,7 @@ const Index = () => {
                   filterRecommendation === 'investigate' && "ring-2 ring-bug"
                 )}
               >
-                <CardContent className="h-full pt-4 flex flex-col items-center justify-center text-center">
+                <CardContent className="h-full pt-3 pb-3 flex flex-col items-center justify-center text-center">
                   <SearchCheck className="h-5 w-5 mx-auto text-bug mb-1" />
                   <div className="text-3xl font-bold text-bug">{recommendationStats.investigate}</div>
                   <div className="text-sm text-muted-foreground mt-1">Investigate</div>
@@ -594,14 +582,14 @@ const Index = () => {
                   filterRecommendation === 'skip' && "ring-2 ring-flaky"
                 )}
               >
-                <CardContent className="h-full pt-4 flex flex-col items-center justify-center text-center">
+                <CardContent className="h-full pt-3 pb-3 flex flex-col items-center justify-center text-center">
                   <CircleSlash className="h-5 w-5 mx-auto text-flaky mb-1" />
                   <div className="text-3xl font-bold text-flaky">{recommendationStats.skip}</div>
                   <div className="text-sm text-muted-foreground mt-1">Skip</div>
                 </CardContent>
               </Card>
               <Card className="h-full border-confidence-high/30 bg-confidence-high/5">
-                <CardContent className="h-full pt-4 flex flex-col items-center justify-center text-center">
+                <CardContent className="h-full pt-3 pb-3 flex flex-col items-center justify-center text-center">
                   <Target className="h-5 w-5 mx-auto text-confidence-high mb-1" />
                   <div className="text-3xl font-bold text-confidence-high">
                     {summary.reviewedCount > 0 ? `${summary.accuracyPercentage.toFixed(0)}%` : '—'}
@@ -630,6 +618,11 @@ const Index = () => {
                   Clear All
                 </Button>
               </div>
+              {!runDetails.name && (
+                <p className="text-sm text-muted-foreground">
+                  Select a regression bucket to enable analysis.
+                </p>
+              )}
               {/* Analysis progress bar: table fills up in real time as each row completes */}
               {isAnalyzing && analysisProgress && analysisProgress.total > 0 && (
                 <div className="space-y-1">
@@ -649,9 +642,9 @@ const Index = () => {
             {hasAnalyzedResults && <ReviewProgress reviewed={reviewedCount} total={analyzedCount} onComplete={handleCompleteReview} />}
 
             {/* Search and Filters — sticky so it stays accessible while scrolling the list */}
-            {hasAnalyzedResults && <div className="sticky top-0 z-20 -mx-2 px-2 py-2 bg-background/85 backdrop-blur-md">
+            {hasAnalyzedResults && <div className="sticky top-0 z-20 -mx-2 px-2 py-1.5 bg-background/85 backdrop-blur-md">
               <Card className="border-border/50 bg-card/80">
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-3 space-y-2">
                   {/* Pattern chips: auto-detected error categories */}
                   {patternGroups.length > 0 && (
                     <ErrorPatternChips
@@ -662,7 +655,7 @@ const Index = () => {
                     />
                   )}
 
-                  <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex flex-col md:flex-row gap-3">
                     {/* Search Input */}
                     <div className="flex-1 relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -696,10 +689,30 @@ const Index = () => {
                           <SelectValue placeholder="Sort by..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="original">📄 Original Order</SelectItem>
-                          <SelectItem value="priority">🔥 Priority (P0→P3)</SelectItem>
-                          <SelectItem value="confidence">📊 AI Confidence</SelectItem>
-                          <SelectItem value="testName">🔤 Test Name (A-Z)</SelectItem>
+                          <SelectItem value="original">
+                            <span className="inline-flex items-center gap-2">
+                              <FileText className="h-3.5 w-3.5" aria-hidden />
+                              Original Order
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="priority">
+                            <span className="inline-flex items-center gap-2">
+                              <Flame className="h-3.5 w-3.5" aria-hidden />
+                              Priority (P0→P3)
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="confidence">
+                            <span className="inline-flex items-center gap-2">
+                              <BarChart3 className="h-3.5 w-3.5" aria-hidden />
+                              AI Confidence
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="testName">
+                            <span className="inline-flex items-center gap-2">
+                              <ArrowDownAZ className="h-3.5 w-3.5" aria-hidden />
+                              Test Name (A-Z)
+                            </span>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -778,7 +791,7 @@ const Index = () => {
             )}
 
             {/* Results - scrollable list; Flex with gap-4 so cards don't shrink or hide */}
-            <div className="overflow-y-auto min-h-0 flex flex-col gap-4">
+            <div id="main-results" tabIndex={-1} className="overflow-y-auto min-h-0 flex flex-col gap-3 outline-none">
               {filteredFailures.map(f => {
                 if (f.analysis) {
                   const withFb = failuresWithFeedback.find(x => x.id === f.id) || { ...f, isReviewed: false as const };
@@ -808,8 +821,16 @@ const Index = () => {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-mono text-sm font-medium truncate text-foreground">{f.testName}</h3>
                           {f.errorMessage && <p className="text-xs text-muted-foreground mt-1 truncate">{f.errorMessage}</p>}
+                          {f.error && (
+                            <p className="text-xs text-destructive mt-2">
+                              Analysis failed: {f.error}
+                            </p>
+                          )}
                         </div>
                         {f.isAnalyzing && <div className="animate-pulse text-muted-foreground text-sm">Analyzing...</div>}
+                        {!f.isAnalyzing && f.error && (
+                          <span className="text-xs text-destructive shrink-0 font-medium">Failed</span>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

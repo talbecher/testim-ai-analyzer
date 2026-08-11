@@ -197,6 +197,14 @@
       opacity: 0.7;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-slide-up,
+    .animate-pulse-gentle {
+      animation: none !important;
+    }
+  }
 }
 
 /* Custom scrollbar */
