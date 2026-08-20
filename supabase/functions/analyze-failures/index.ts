@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { requireAuth } from '../_shared/auth.ts';
-import { resolveAIProvider } from '../_shared/aiConfig.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1166,16 +1164,21 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const authResult = await requireAuth(req);
-  if (authResult instanceof Response) return authResult;
-
   try {
     const { failures, flakyTests, mode = 'production', regressionBucket } = await req.json();
     const regressionBucketEffective =
       regressionBucket == null ? '' : String(regressionBucket).trim();
 
-    const { useOpenAI, openaiApiKey: OPENAI_API_KEY, lovableApiKey: LOVABLE_API_KEY } =
-      resolveAIProvider(Deno.env.get('OPENAI_API_KEY'), Deno.env.get('LOVABLE_API_KEY'));
+    // Feature toggle: OpenAI if key exists and is valid; else Lovable fallback
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const useOpenAI = Boolean(
+      OPENAI_API_KEY?.trim() &&
+      !OPENAI_API_KEY.toLowerCase().includes('waiting_for_token')
+    );
+    if (!useOpenAI && !LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured (required when OPENAI_API_KEY is not set)');
+    }
 
     // Validate regression bucket
     if (!regressionBucket) {

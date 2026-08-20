@@ -1,294 +1,2340 @@
 {
   "tests": [
-    { "testName": "00 - Reset Configuration Support Tab", "reason": "Known flaky", "notes": "Regression 1,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "0 - Threat Scope API - Mixpanel/UI and ThreatScope Robo Test Events Validation", "reason": "Known flaky", "notes": "ThreatScope™", "lastReviewed": "2025-12-23" },
-    { "testName": "Aborted Tasks", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Admin Emails - Admin info notification emails", "reason": "Known flaky", "notes": "Account Features,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Admin Fusion Sets Table - Deleted Fusion Set", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Admin Fusion Sets Table - Search", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Admin Teams - Team Types Search", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Admin Users - Create New User", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Admin Users - Go To Team", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Admin Users - Overrides Edit Timestamps", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Android Apps - 16KB Alignment - Un-supported app", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "Annotations - Entitlement", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Annotations - FS Release/Copy", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti ATO - Android - Strandhogg", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti ATO - Detect SIM Swap", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Deep Proxy Detection Toggle", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Licensing Negative", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - mTLS Pre-Authentication + Mobile Device + Connection Risk - Android", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Mutex Advanced - iOS", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Mutex General - Android", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Pin to Host - Android", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Pin to Host - Marriott Use Case", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Protected Hosts Limit", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Rate limit connections - In-App Defense - Android", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Rate limit connections - In-App Detection - Android", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Rate limit connections - In-App Detection - iOS", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Rate limit connections - No threatEvent - iOS", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Session Risk - App Specific Payload Signing Key", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Session Risk - Behavior Update Modal", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Session Risk - DEVICETrust™  In Message Policy (invalidateSecret)", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Session Risk - MobileBOT Source™", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Session Risk - Subscription Licensing", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Bot - Threat Events + Secure Communication Features", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Malware and Anti Fraud - Toggle Testing", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Anti Malware and Anti Fraud - Unlicensed", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "API - CICD Vendors - 3rd Partner Vendors", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "App Expiration License - iOS", "reason": "Known flaky", "notes": "Regression 3,Account Features", "lastReviewed": "2025-12-23" },
-    { "testName": "App List - App Management License", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "App List - Sticky", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "App List - Unselected App Actions", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "App Validation - Download Validation in Deploy Tab Part 1", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "App Validation - Download Validation in Deploy Tab Part 2", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Authentication Settings - Ping Federation - General", "reason": "Known flaky", "notes": "Sign In and Sign Out,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Auto-DEV Private Signing (Android) - SHA1 - With Google Play App Signing", "reason": "Known flaky", "notes": "Sign,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "Auto-DEV Private Signing (Android) - SHA256 - Without Google Play App Signing", "reason": "Known flaky", "notes": "Sign,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - AAB Downloads", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - Build Diff with Detection Only", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - Download Fusion Set Overview - APK", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - Filter By Threat Event", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - Filter Frameworks Part 1", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - IPA Downloads", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - Link To User/Team Settings", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - Remove Hotfix", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - Run Automation - Customed present Device Group (CSV)", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - Show Build With Logs", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - Show my Events Only", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - Show overrides Only", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Backstage - Upload in Task Timeline", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Blocked User - Fail Password Attempts", "reason": "Known flaky", "notes": "Sign In and Sign Out,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Build - Error Validation", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Build to Test - iOS - General + Trusted Featured per Vendor", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Certified Secure - Context Info", "reason": "Known flaky", "notes": "Account Features,Regression 3,Certified Secure", "lastReviewed": "2025-12-23" },
-    { "testName": "Certified Secure - General", "reason": "Known flaky", "notes": "Account Features,Regression 3,Certified Secure", "lastReviewed": "2025-12-23" },
-    { "testName": "Certified Secure - Google Play Signature Validation Indication", "reason": "Known flaky", "notes": "Account Features,Regression 3,Certified Secure", "lastReviewed": "2025-12-23" },
-    { "testName": "Certified Secure - OS Coverage - iOS", "reason": "Known flaky", "notes": "Account Features,Regression 3,Certified Secure", "lastReviewed": "2025-12-23" },
-    { "testName": "Companies - General Tab - License Type", "reason": "Known flaky", "notes": "Companies,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Companies - The session time to live (Minutes)", "reason": "Known flaky", "notes": "Companies,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Company Admin - Company Relation - Teams - Positive / Negative", "reason": "Known flaky", "notes": "Companies,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Company Admin - Negative", "reason": "Known flaky", "notes": "Companies,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Configuration - Advanced", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Configuration - Appdome Users - Read Only", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Configuration - Concurrency Limit", "reason": "Known flaky", "notes": "Account Features,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Configuration - New User Defaults", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Configuration - Support Tab - Elasticsearch", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" },
-    { "testName": "Context - App Set-Up - Android", "reason": "Known flaky", "notes": "Context,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "Cross. Env - App Validation - iOS App on Mac", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Delete Company - Validate company relation for Teams / Users", "reason": "Known flaky", "notes": "Companies,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Delete Company - Validate company relation with Sec Release", "reason": "Known flaky", "notes": "Companies,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Delete User - Remove user from all related accounts", "reason": "Known flaky", "notes": "Sign In and Sign Out,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Android - Google Play Private Signing", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Auto Dev Signing - APK", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Build - iOS", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Context - APK", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Context -  Change Bundle ID", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Context Negative", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Download", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Download Negative", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Fusion Set Compare - Appdome Admin", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Fusion Set Compare - Company Admin", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Fusion Set Compare - General + Unlicensed", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Fusion Set Export - Company Admin", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Fusion Set Export - General + Unlicensed", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Fusion Set Export - Specific Bundle ID Hotfix", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Fusion Set Export - Team Workspace", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - General Negative", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Get Apps List Negative", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Private Signing Negative - APK", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Release Fusion set into team", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Status - AMI Messages", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Status - AMI Messages - Negative", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Status Negative", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "DEV API - Validation - Upload and Status Negative", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Download Apps (AAB - Dynamic Features) - Part 1", "reason": "Known flaky", "notes": "Deploy,Regression 7,Download", "lastReviewed": "2025-12-23" },
-    { "testName": "Download Apps (Android) - Private Signing - SHA1", "reason": "Known flaky", "notes": "Deploy,Regression 7,Download", "lastReviewed": "2025-12-23" },
-    { "testName": "Download Apps (iOS) - On Appdome", "reason": "Known flaky", "notes": "Deploy,Regression 7,Download", "lastReviewed": "2025-12-23" },
-    { "testName": "Download Files - IPA", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Download SDK - Android", "reason": "Known flaky", "notes": "Deploy,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "Download SDK - iOS - Private Sign", "reason": "Known flaky", "notes": "Deploy,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "Download SDK - iOS - Sign On Appdome", "reason": "Known flaky", "notes": "Deploy,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "FailSafe Enforcement - General", "reason": "Known flaky", "notes": "Threat Events,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "FS History - Create FS from old version + Transfer app subscription", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "FS History - General + Playground Set", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "FS History - Leave Without Saving Modal", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set - Copy - Frozen FS", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set - Create New - Empty Name", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set - Create New - IPA", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set - Details", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set - Details - Blue Shields Icons", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set Export - General + Unlicensed", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set Export - License Mismatch", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set Export - SDK General + Unlicensed", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set Export - Team", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set Export - Threat Event Indication", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set Overview - Hotfix Visibility", "reason": "Known flaky", "notes": "Regression 3,Account Features", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set - Search - AAB", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set - Search - IPA", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set - Sort - IPA", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set - Subscribe - IPA", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Fusion Set - Subscribe - SDK", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Geo Compliance - Detect Geo DeSync - Android", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "IDAnchor - General (Android)", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "IDAnchor - General (iOS)", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Ideal SRM Account - Features", "reason": "Known flaky", "notes": "Account Types,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "In-App Detection - ThreatEvent Warning", "reason": "Known flaky", "notes": "Threat Events,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Incompatible Visual Indication - Framework Incompatibility", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Incompatible Visual Indication - General + Active Incompatible Features", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Incompatible Visual Indication - Threat Event Visualization", "reason": "Known flaky", "notes": "Fusion Sets,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Invalid Apps - Android (AAB)", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "iOS - Force Signing by Target Name - Multiple Files - Wrong File On Target", "reason": "Known flaky", "notes": "Sign,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "iOS - On Appdome - Un-matching amount of provisioning profiles and entitlements", "reason": "Known flaky", "notes": "Sign,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "iOS SDK - On Appdome", "reason": "Known flaky", "notes": "Sign,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "iOS - Signing Entitlements Configuration  - Vanilla Unsigned", "reason": "Known flaky", "notes": "Sign,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "iOS - Signing Entitlements - Entitlement Backstage Indication", "reason": "Known flaky", "notes": "Sign,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "iOS - Signing Entitlements - New User", "reason": "Known flaky", "notes": "Sign,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "Log out from Account and API page and log in again", "reason": "Known flaky", "notes": "Sign In and Sign Out,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Log out from Admin Pages", "reason": "Known flaky", "notes": "Sign In and Sign Out,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Log out from Team Management page and log in again", "reason": "Known flaky", "notes": "Sign In and Sign Out,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Management - Intune", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "On Appdome (Android) - Google Play App Signing - Support Two Signatures", "reason": "Known flaky", "notes": "Sign,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "OS Coverage - Unlicensed Scenarios", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "PWA Apps (Both iOS and Android) - Allow Uploading PWA apps", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "PWA Apps (Both iOS and Android) - Disable Enable Short Flow", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "PWA Apps (Both iOS and Android) - PWA Uploads Limits", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "PWA Custom No Internet Space - Both", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "PWA Custom Splash (iOS)", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "PWA Custom Splash Space - Both", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "Release Info - Android", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "SDK - iOS - Threat Monitoring Build", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Android Store Submission - Detect Google Emulators", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Android Store Submission - Trust Google Play Store Tests", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - App list - Progress Bar", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Obfuscate App Logic - DataDog/Crashlytics/Sentry - Green Checkmark", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Secure Certificate Pinning - Android Engine Fallback", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Secure Certificate Pinning (Auto) - Certificate Expiry Date - Strict Evaluation", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Secure Certificate Pinning (Auto) - Expired Cert In Fusion Set", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Secure Certificate Pinning (Auto) - New Secure Communication UI - Certificate Expiry Date - Root Evaluation (DEPRECATED)", "reason": "Known flaky", "notes": "Quarantine", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Secure Certificate Pinning - Build API - Expired Certificate", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Secure Certificate Pinning - Certificate Expiry Date - Chain Evaluation", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Secure Certificate Pinning - Certificate Expiry Date - Negative Cases", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Secure Certificate Pinning - Microservice Disabled - Certificate Validation", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Secure Certificate Pinning - New Secure Communication UI - Certificate Expiry Date - Chain Evaluation (DEPRECATED)", "reason": "Known flaky", "notes": "Quarantine", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Secure Communication", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Toggle Testing", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Security - Unlicensed", "reason": "Known flaky", "notes": "Build,Regression 2", "lastReviewed": "2025-12-23" },
-    { "testName": "Session Timeout - Logout", "reason": "Known flaky", "notes": "Sign In and Sign Out,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Session Timeout - Stay Logged In", "reason": "Known flaky", "notes": "Sign In and Sign Out,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Short Messages - Release fusion set", "reason": "Known flaky", "notes": "Threat Events,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Signup - Regular Account - Existing user account", "reason": "Known flaky", "notes": "Signup,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Support API - App Display Log", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Support API - Delete Fusion Set", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Support API - License Mismatch Details And Approve License Mismatch", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Support API - Sign Reproduction Bundle", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Support API - Team Compare", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Team Duplicate ADMIN - Teams", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Team Duplicate - Fusion Sets", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Team Duplicate - Members & Fusion Sets", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Team - Extra Param/Plugin APK - Default Hidden from Json", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Team - Extra Param/Plugin SDK", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Team - Hotfix Alert! AAB", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Team - Hotfix Alert! APK", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Team - Hotfix Alert! Extensive", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Team - Hotfix Alert! IPA", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Team - Hotfix Android - Features Not Supported by Engine", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Team - Hotfix Android SDK (aar)", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Team - Hotfix - Show User Different Engine Version - AAB", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Team Management API - Block Members to Use Team API", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Team - Remove Param/Plugin APK", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Team - Remove Param/Plugin IPA", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Copy Fused Build", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Entitlements - Certificates Update", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Entitlements - Context", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Entitlements - Download Files from Fusion Set", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Entitlements - Freeze/Unfreeze Appdome Version", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Entitlements - Release Fusion Set Into", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set - APK/AAB Extra Params and Plugins", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set - Copy to Team - Engine Only", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set - Copy to Team - Extra Params and Plugins Part 2", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set - Copy to Team - Fusion Set & Engine", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set - Engine Only APK/AAB Extra Params and Plugins", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set (Engine Only) - Copy Fused Build - Hotfix Version", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set - Engine Only IPA Extra Params and Plugins", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set - Entitlements - Edit Fusion Sets", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set - Entitlements - Freeze/Unfreeze Appdome Version", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set (Fusion Set and Engine Only) - Copy Fused Build - Extra Params & Plugins", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set - IPA Extra Params and Plugins", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set - Lock Freeze - Appdome Version and Fusion Set Freeze", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Freeze Fusion Set - Unlicensed Feature", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Fusion Sets Release with Different Engine Version", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Fusion Sets with App Specific Settings", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - List - Copy Team ID", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - List - Preview Members And Apps", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Manage and Edit - Roles", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - SDK - Freeze Fusion Set - Appdome Version and Fusion Set Freeze", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - SDK - Freeze Fusion Set - Engine Only - Extra Params and Plugins", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - SDK - Freeze Fusion Set - Extra Params and Plugins", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - SDK - Fusion Sets with mismatching licenses", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - SDK - Fusion Sets without mismatching licenses", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - SEC Release - App Specific Settings", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - SEC Release - Case Insensitive", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - SEC Release - Decline Fusion Set", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - SEC Release - Extra Params & Plugins", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - SEC Release - General from Fusion Set Details", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Teams - Success Mail for Team Members", "reason": "Known flaky", "notes": "Teams,Regression 4", "lastReviewed": "2025-12-23" },
-    { "testName": "Threat Remediation Center™ - {app_display_name} Key", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "Threat Remediation Center™ - ThreatCode", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "Threat Scope API - Mixpanel/Appdome - Unique Devices Total Data: With Task IDs (DEPRECATED)", "reason": "Known flaky", "notes": "ThreatScope™,Quarantine", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope API - Mobile Bot Defense Events validation", "reason": "Known flaky", "notes": "ThreatScope™", "lastReviewed": "2025-12-23" },
-    { "testName": "Threat Scope API - Validating Geo-Source file - Properties and Metadata (DEPRECATED)", "reason": "Known flaky", "notes": "ThreatScope™,Quarantine", "lastReviewed": "2025-12-23" },
-    { "testName": "Threat Scope API - Validating Unique Devices file - Properties and Metadata (DEPRECATED)", "reason": "Known flaky", "notes": "ThreatScope™,Quarantine", "lastReviewed": "2025-12-23" },
-    { "testName": "Threat Scope API - Validation of the Map Data, Compared to The Map API Call - end to end - Team WorkSpace/ Team View", "reason": "Known flaky", "notes": "ThreatScope™", "lastReviewed": "2025-12-23" },
-    { "testName": "Threat Scope API - Validation of the Timeline Data, Compared to The Timeline API Call - end to end", "reason": "Known flaky", "notes": "ThreatScope™", "lastReviewed": "2025-12-23" },
-    { "testName": "Threat Scope API - Validation of the Timeline Data, Compared to The Timeline API Call - end to end - Team WorkSpace/ Team View", "reason": "Known flaky", "notes": "ThreatScope™", "lastReviewed": "2025-12-23" },
-    { "testName": "Threat Scope API - Validation of Threat Scope Dashboard Data - Attacks Breakdowns - end to end - WorkSpace/ Team View", "reason": "Known flaky", "notes": "ThreatScope™", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Build Indication", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Dashboard - Admin - Favorite Demo - Demo Only", "reason": "Known flaky", "notes": "ThreatScope™,ThreatScope-Functionality(UI)", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Dashboard - Admin - Favorite Demo - No Demo Accounts", "reason": "Known flaky", "notes": "ThreatScope™,ThreatScope-Functionality(UI)", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Dashboard - Copy Filter Values", "reason": "Known flaky", "notes": "ThreatScope™,ThreatScope-Functionality(UI)", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Dashboard - Create, Update, Duplicate, Edit, Lock, Unlock and Delete View", "reason": "Known flaky", "notes": "ThreatScope™,ThreatScope-Functionality(UI)", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Dashboard - Download Options - SnapShots - Regular User", "reason": "Known flaky", "notes": "ThreatScope™,ThreatScope-Functionality(UI)", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Dashboard - Filters - Team Type", "reason": "Known flaky", "notes": "ThreatScope™,ThreatScope-Functionality(UI)", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Dashboard - Inclusive Filters", "reason": "Known flaky", "notes": "ThreatScope™,ThreatScope-Functionality(UI)", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Dashboard - No automatic search for \"View Specific Builds with Threats Only\"", "reason": "Known flaky", "notes": "ThreatScope™,ThreatScope-Functionality(UI)", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Dashboard - View Specific Builds with Threats Only - Bundle ID with a dash / Hover from team WorkSpace", "reason": "Known flaky", "notes": "ThreatScope™,ThreatScope-Functionality(UI)", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Dashboard - Widgets", "reason": "Known flaky", "notes": "ThreatScope™,ThreatScope-Functionality(UI)", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Detection Only - AAB - Detection Only - Sec Release", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Detection Only - APK/AAB - Father/Son Toggles", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Detection Only - APK/AAB - Freeze FS + Detection Only + ThreatEvent In App Defense", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Detection Only - APK/AAB - Freeze FS + Detection Only + ThreatEvent In App Detection", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Detection Only - iOS - Father/Son Toggles", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Detection Only - iOS - Freeze FS + Detection Only + ThreatEvent In App Defense", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Detection Only - iOS - Freeze FS + Detection Only + ThreatEvent In App Detection", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Detection Only - iOS - Licensed Security Features Only", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Detection only - Mixpanel Analytics toggle", "reason": "Known flaky", "notes": "Account Features,Mixpanel,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - No Mixpanel PII + Remove Fields", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "ThreatScope™ - Unreleased Features Scenarios", "reason": "Known flaky", "notes": "Account Features,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "Trial Account - Certified Secure + Warning Footer - App Expiration", "reason": "Known flaky", "notes": "Account Types,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Trial Account - Certified Secure - Account Type", "reason": "Known flaky", "notes": "Account Types,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Trial Account - Complete to Ideal GO", "reason": "Known flaky", "notes": "Account Types,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Unmarked Threat Events - Android - Old Engine SDK >= 34", "reason": "Known flaky", "notes": "Threat Events,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Upload Apps - Android Apps - Block Emulator Only Apps", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "Upload Apps - Android Apps - Dex/ProGuard SDKs", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "Upload Apps - iOS Apps - Backstage Indication", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "Upload Apps - iOS Apps - Delete App - Permanently", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "Upload Apps - Upload - Android Dynamic Features", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "Upload - iOS SDK - Delete SDK - Permanently", "reason": "Known flaky", "notes": "Upload Apps,Regression 8", "lastReviewed": "2025-12-23" },
-    { "testName": "Upload to Store (Android) - SHA256 - Google Play", "reason": "Known flaky", "notes": "Deploy,Regression 7", "lastReviewed": "2025-12-23" },
-    { "testName": "User - Concurrency Limit", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "User Emails - Build Success", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "User Emails - Context Failure", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "User Emails - Team Copy Fused Build", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "User Emails - Team Upload App", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "User - Extra Param/Plugin APK - Hidden/Visible", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "User - Extra Param/Plugin SDK", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "User - Hotfix Alert! AAB", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "User - Hotfix Alert! APK", "reason": "Known flaky", "notes": "Account Features,Regression 3", "lastReviewed": "2025-12-23" },
-    { "testName": "User Management API - Create New User and Delete User", "reason": "Known flaky", "notes": "API,Regression 1", "lastReviewed": "2025-12-23" },
-    { "testName": "Workflow Summary - Android Deobfuscation Script", "reason": "Known flaky", "notes": "Account Activity Log and View Tab,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Workflow Summary - Changing Builds", "reason": "Known flaky", "notes": "Account Activity Log and View Tab,Regression 5", "lastReviewed": "2025-12-23" },
-    { "testName": "Z - Configuration - General", "reason": "Known flaky", "notes": "Admin Pages,Regression 6", "lastReviewed": "2025-12-23" }
+    {
+      "testName": "00 - Reset Configuration Support Tab",
+      "reason": "Known flaky",
+      "notes": "Regression 1,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "0 - Threat Scope API - Mixpanel/UI and ThreatScope Robo Test Events Validation",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Aborted Tasks",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Admin Emails - Admin info notification emails",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Admin Fusion Sets Table - Deleted Fusion Set",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Admin Fusion Sets Table - Search",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Admin Teams - Team Types Search",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Admin Users - Create New User",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Admin Users - Go To Team",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Admin Users - Overrides Edit Timestamps",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Android Apps - 16KB Alignment - Un-supported app",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Annotations - Entitlement",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Annotations - FS Release/Copy",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti ATO - Android - Strandhogg",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti ATO - Detect SIM Swap",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Deep Proxy Detection Toggle",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Licensing Negative",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - mTLS Pre-Authentication + Mobile Device + Connection Risk - Android",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Mutex Advanced - iOS",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Mutex General - Android",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Pin to Host - Android",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Pin to Host - Marriott Use Case",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Protected Hosts Limit",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Rate limit connections - In-App Defense - Android",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Rate limit connections - In-App Detection - Android",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Rate limit connections - In-App Detection - iOS",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Rate limit connections - No threatEvent - iOS",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Session Risk - App Specific Payload Signing Key",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Session Risk - Behavior Update Modal",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Session Risk - DEVICETrust™  In Message Policy (invalidateSecret)",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Session Risk - MobileBOT Source™",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Session Risk - Subscription Licensing",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Bot - Threat Events + Secure Communication Features",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Malware and Anti Fraud - Toggle Testing",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Anti Malware and Anti Fraud - Unlicensed",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "API - CICD Vendors - 3rd Partner Vendors",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "App Expiration License - iOS",
+      "reason": "Known flaky",
+      "notes": "Regression 3,Account Features",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "App List - App Management License",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "App List - Sticky",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "App List - Unselected App Actions",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "App Validation - Download Validation in Deploy Tab Part 1",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "App Validation - Download Validation in Deploy Tab Part 2",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Authentication Settings - Ping Federation - General",
+      "reason": "Known flaky",
+      "notes": "Sign In and Sign Out,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Auto-DEV Private Signing (Android) - SHA1 - With Google Play App Signing",
+      "reason": "Known flaky",
+      "notes": "Sign,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Auto-DEV Private Signing (Android) - SHA256 - Without Google Play App Signing",
+      "reason": "Known flaky",
+      "notes": "Sign,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - AAB Downloads",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - Build Diff with Detection Only",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - Download Fusion Set Overview - APK",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - Filter By Threat Event",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - Filter Frameworks Part 1",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - IPA Downloads",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - Link To User/Team Settings",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - Remove Hotfix",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - Run Automation - Customed present Device Group (CSV)",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - Show Build With Logs",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - Show my Events Only",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - Show overrides Only",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Backstage - Upload in Task Timeline",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Blocked User - Fail Password Attempts",
+      "reason": "Known flaky",
+      "notes": "Sign In and Sign Out,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Build - Error Validation",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Build to Test - iOS - General + Trusted Featured per Vendor",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Certified Secure - Context Info",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3,Certified Secure",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Certified Secure - General",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3,Certified Secure",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Certified Secure - Google Play Signature Validation Indication",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3,Certified Secure",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Certified Secure - OS Coverage - iOS",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3,Certified Secure",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Companies - General Tab - License Type",
+      "reason": "Known flaky",
+      "notes": "Companies,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Companies - The session time to live (Minutes)",
+      "reason": "Known flaky",
+      "notes": "Companies,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Company Admin - Company Relation - Teams - Positive / Negative",
+      "reason": "Known flaky",
+      "notes": "Companies,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Company Admin - Negative",
+      "reason": "Known flaky",
+      "notes": "Companies,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Configuration - Advanced",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Configuration - Appdome Users - Read Only",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Configuration - Concurrency Limit",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Configuration - New User Defaults",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Configuration - Support Tab - Elasticsearch",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Context - App Set-Up - Android",
+      "reason": "Known flaky",
+      "notes": "Context,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Cross. Env - App Validation - iOS App on Mac",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Delete Company - Validate company relation for Teams / Users",
+      "reason": "Known flaky",
+      "notes": "Companies,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Delete Company - Validate company relation with Sec Release",
+      "reason": "Known flaky",
+      "notes": "Companies,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Delete User - Remove user from all related accounts",
+      "reason": "Known flaky",
+      "notes": "Sign In and Sign Out,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Android - Google Play Private Signing",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Auto Dev Signing - APK",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Build - iOS",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Context - APK",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Context -  Change Bundle ID",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Context Negative",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Download",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Download Negative",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Fusion Set Compare - Appdome Admin",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Fusion Set Compare - Company Admin",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Fusion Set Compare - General + Unlicensed",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Fusion Set Export - Company Admin",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Fusion Set Export - General + Unlicensed",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Fusion Set Export - Specific Bundle ID Hotfix",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Fusion Set Export - Team Workspace",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - General Negative",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Get Apps List Negative",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Private Signing Negative - APK",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Release Fusion set into team",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Status - AMI Messages",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Status - AMI Messages - Negative",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Status Negative",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "DEV API - Validation - Upload and Status Negative",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Download Apps (AAB - Dynamic Features) - Part 1",
+      "reason": "Known flaky",
+      "notes": "Deploy,Regression 7,Download",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Download Apps (Android) - Private Signing - SHA1",
+      "reason": "Known flaky",
+      "notes": "Deploy,Regression 7,Download",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Download Apps (iOS) - On Appdome",
+      "reason": "Known flaky",
+      "notes": "Deploy,Regression 7,Download",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Download Files - IPA",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Download SDK - Android",
+      "reason": "Known flaky",
+      "notes": "Deploy,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Download SDK - iOS - Private Sign",
+      "reason": "Known flaky",
+      "notes": "Deploy,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Download SDK - iOS - Sign On Appdome",
+      "reason": "Known flaky",
+      "notes": "Deploy,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "FailSafe Enforcement - General",
+      "reason": "Known flaky",
+      "notes": "Threat Events,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "FS History - Create FS from old version + Transfer app subscription",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "FS History - General + Playground Set",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "FS History - Leave Without Saving Modal",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set - Copy - Frozen FS",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set - Create New - Empty Name",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set - Create New - IPA",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set - Details",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set - Details - Blue Shields Icons",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set Export - General + Unlicensed",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set Export - License Mismatch",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set Export - SDK General + Unlicensed",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set Export - Team",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set Export - Threat Event Indication",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set Overview - Hotfix Visibility",
+      "reason": "Known flaky",
+      "notes": "Regression 3,Account Features",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set - Search - AAB",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set - Search - IPA",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set - Sort - IPA",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set - Subscribe - IPA",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Fusion Set - Subscribe - SDK",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Geo Compliance - Detect Geo DeSync - Android",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "IDAnchor - General (Android)",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "IDAnchor - General (iOS)",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Ideal SRM Account - Features",
+      "reason": "Known flaky",
+      "notes": "Account Types,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "In-App Detection - ThreatEvent Warning",
+      "reason": "Known flaky",
+      "notes": "Threat Events,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Incompatible Visual Indication - Framework Incompatibility",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Incompatible Visual Indication - General + Active Incompatible Features",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Incompatible Visual Indication - Threat Event Visualization",
+      "reason": "Known flaky",
+      "notes": "Fusion Sets,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Invalid Apps - Android (AAB)",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "iOS - Force Signing by Target Name - Multiple Files - Wrong File On Target",
+      "reason": "Known flaky",
+      "notes": "Sign,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "iOS - On Appdome - Un-matching amount of provisioning profiles and entitlements",
+      "reason": "Known flaky",
+      "notes": "Sign,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "iOS SDK - On Appdome",
+      "reason": "Known flaky",
+      "notes": "Sign,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "iOS - Signing Entitlements Configuration  - Vanilla Unsigned",
+      "reason": "Known flaky",
+      "notes": "Sign,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "iOS - Signing Entitlements - Entitlement Backstage Indication",
+      "reason": "Known flaky",
+      "notes": "Sign,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "iOS - Signing Entitlements - New User",
+      "reason": "Known flaky",
+      "notes": "Sign,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Log out from Account and API page and log in again",
+      "reason": "Known flaky",
+      "notes": "Sign In and Sign Out,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Log out from Admin Pages",
+      "reason": "Known flaky",
+      "notes": "Sign In and Sign Out,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Log out from Team Management page and log in again",
+      "reason": "Known flaky",
+      "notes": "Sign In and Sign Out,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Management - Intune",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "On Appdome (Android) - Google Play App Signing - Support Two Signatures",
+      "reason": "Known flaky",
+      "notes": "Sign,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "OS Coverage - Unlicensed Scenarios",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "PWA Apps (Both iOS and Android) - Allow Uploading PWA apps",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "PWA Apps (Both iOS and Android) - Disable Enable Short Flow",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "PWA Apps (Both iOS and Android) - PWA Uploads Limits",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "PWA Custom No Internet Space - Both",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "PWA Custom Splash (iOS)",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "PWA Custom Splash Space - Both",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Release Info - Android",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "SDK - iOS - Threat Monitoring Build",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Android Store Submission - Detect Google Emulators",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Android Store Submission - Trust Google Play Store Tests",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - App list - Progress Bar",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Obfuscate App Logic - DataDog/Crashlytics/Sentry - Green Checkmark",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Secure Certificate Pinning - Android Engine Fallback",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Secure Certificate Pinning (Auto) - Certificate Expiry Date - Strict Evaluation",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Secure Certificate Pinning (Auto) - Expired Cert In Fusion Set",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Secure Certificate Pinning (Auto) - New Secure Communication UI - Certificate Expiry Date - Root Evaluation (DEPRECATED)",
+      "reason": "Known flaky",
+      "notes": "Quarantine",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Secure Certificate Pinning - Build API - Expired Certificate",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Secure Certificate Pinning - Certificate Expiry Date - Chain Evaluation",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Secure Certificate Pinning - Certificate Expiry Date - Negative Cases",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Secure Certificate Pinning - Microservice Disabled - Certificate Validation",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Secure Certificate Pinning - New Secure Communication UI - Certificate Expiry Date - Chain Evaluation (DEPRECATED)",
+      "reason": "Known flaky",
+      "notes": "Quarantine",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Secure Communication",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Toggle Testing",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Security - Unlicensed",
+      "reason": "Known flaky",
+      "notes": "Build,Regression 2",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Session Timeout - Logout",
+      "reason": "Known flaky",
+      "notes": "Sign In and Sign Out,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Session Timeout - Stay Logged In",
+      "reason": "Known flaky",
+      "notes": "Sign In and Sign Out,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Short Messages - Release fusion set",
+      "reason": "Known flaky",
+      "notes": "Threat Events,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Signup - Regular Account - Existing user account",
+      "reason": "Known flaky",
+      "notes": "Signup,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Support API - App Display Log",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Support API - Delete Fusion Set",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Support API - License Mismatch Details And Approve License Mismatch",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Support API - Sign Reproduction Bundle",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Support API - Team Compare",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team Duplicate ADMIN - Teams",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team Duplicate - Fusion Sets",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team Duplicate - Members & Fusion Sets",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team - Extra Param/Plugin APK - Default Hidden from Json",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team - Extra Param/Plugin SDK",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team - Hotfix Alert! AAB",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team - Hotfix Alert! APK",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team - Hotfix Alert! Extensive",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team - Hotfix Alert! IPA",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team - Hotfix Android - Features Not Supported by Engine",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team - Hotfix Android SDK (aar)",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team - Hotfix - Show User Different Engine Version - AAB",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team Management API - Block Members to Use Team API",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team - Remove Param/Plugin APK",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Team - Remove Param/Plugin IPA",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Copy Fused Build",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Entitlements - Certificates Update",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Entitlements - Context",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Entitlements - Download Files from Fusion Set",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Entitlements - Freeze/Unfreeze Appdome Version",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Entitlements - Release Fusion Set Into",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - APK/AAB Extra Params and Plugins",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - Copy to Team - Engine Only",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - Copy to Team - Extra Params and Plugins Part 2",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - Copy to Team - Fusion Set & Engine",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - Engine Only APK/AAB Extra Params and Plugins",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set (Engine Only) - Copy Fused Build - Hotfix Version",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - Engine Only IPA Extra Params and Plugins",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - Entitlements - Edit Fusion Sets",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - Entitlements - Freeze/Unfreeze Appdome Version",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set (Fusion Set and Engine Only) - Copy Fused Build - Extra Params & Plugins",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - IPA Extra Params and Plugins",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - Lock Freeze - Appdome Version and Fusion Set Freeze",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - Unlicensed Feature",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Fusion Sets Release with Different Engine Version",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Fusion Sets with App Specific Settings",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - List - Copy Team ID",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - List - Preview Members And Apps",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Manage and Edit - Roles",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - SDK - Freeze Fusion Set - Appdome Version and Fusion Set Freeze",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - SDK - Freeze Fusion Set - Engine Only - Extra Params and Plugins",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - SDK - Freeze Fusion Set - Extra Params and Plugins",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - SDK - Fusion Sets with mismatching licenses",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - SDK - Fusion Sets without mismatching licenses",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - SEC Release - App Specific Settings",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - SEC Release - Case Insensitive",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - SEC Release - Decline Fusion Set",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - SEC Release - Extra Params & Plugins",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - SEC Release - General from Fusion Set Details",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Success Mail for Team Members",
+      "reason": "Known flaky",
+      "notes": "Teams,Regression 4",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Threat Remediation Center™ - {app_display_name} Key",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Threat Remediation Center™ - ThreatCode",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Threat Scope API - Mixpanel/Appdome - Unique Devices Total Data: With Task IDs (DEPRECATED)",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,Quarantine",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope API - Mobile Bot Defense Events validation",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Threat Scope API - Validating Geo-Source file - Properties and Metadata (DEPRECATED)",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,Quarantine",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Threat Scope API - Validating Unique Devices file - Properties and Metadata (DEPRECATED)",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,Quarantine",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Threat Scope API - Validation of the Map Data, Compared to The Map API Call - end to end - Team WorkSpace/ Team View",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Threat Scope API - Validation of the Timeline Data, Compared to The Timeline API Call - end to end",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Threat Scope API - Validation of the Timeline Data, Compared to The Timeline API Call - end to end - Team WorkSpace/ Team View",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Threat Scope API - Validation of Threat Scope Dashboard Data - Attacks Breakdowns - end to end - WorkSpace/ Team View",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Build Indication",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Dashboard - Admin - Favorite Demo - Demo Only",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,ThreatScope-Functionality(UI)",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Dashboard - Admin - Favorite Demo - No Demo Accounts",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,ThreatScope-Functionality(UI)",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Dashboard - Copy Filter Values",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,ThreatScope-Functionality(UI)",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Dashboard - Create, Update, Duplicate, Edit, Lock, Unlock and Delete View",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,ThreatScope-Functionality(UI)",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Dashboard - Download Options - SnapShots - Regular User",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,ThreatScope-Functionality(UI)",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Dashboard - Filters - Team Type",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,ThreatScope-Functionality(UI)",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Dashboard - Inclusive Filters",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,ThreatScope-Functionality(UI)",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Dashboard - No automatic search for \"View Specific Builds with Threats Only\"",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,ThreatScope-Functionality(UI)",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Dashboard - View Specific Builds with Threats Only - Bundle ID with a dash / Hover from team WorkSpace",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,ThreatScope-Functionality(UI)",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Dashboard - Widgets",
+      "reason": "Known flaky",
+      "notes": "ThreatScope™,ThreatScope-Functionality(UI)",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Detection Only - AAB - Detection Only - Sec Release",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Detection Only - APK/AAB - Father/Son Toggles",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Detection Only - APK/AAB - Freeze FS + Detection Only + ThreatEvent In App Defense",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Detection Only - APK/AAB - Freeze FS + Detection Only + ThreatEvent In App Detection",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Detection Only - iOS - Father/Son Toggles",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Detection Only - iOS - Freeze FS + Detection Only + ThreatEvent In App Defense",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Detection Only - iOS - Freeze FS + Detection Only + ThreatEvent In App Detection",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Detection Only - iOS - Licensed Security Features Only",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Detection only - Mixpanel Analytics toggle",
+      "reason": "Known flaky",
+      "notes": "Account Features,Mixpanel,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - No Mixpanel PII + Remove Fields",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "ThreatScope™ - Unreleased Features Scenarios",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Trial Account - Certified Secure + Warning Footer - App Expiration",
+      "reason": "Known flaky",
+      "notes": "Account Types,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Trial Account - Certified Secure - Account Type",
+      "reason": "Known flaky",
+      "notes": "Account Types,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Trial Account - Complete to Ideal GO",
+      "reason": "Known flaky",
+      "notes": "Account Types,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Unmarked Threat Events - Android - Old Engine SDK >= 34",
+      "reason": "Known flaky",
+      "notes": "Threat Events,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Upload Apps - Android Apps - Block Emulator Only Apps",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Upload Apps - Android Apps - Dex/ProGuard SDKs",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Upload Apps - iOS Apps - Backstage Indication",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Upload Apps - iOS Apps - Delete App - Permanently",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Upload Apps - Upload - Android Dynamic Features",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Upload - iOS SDK - Delete SDK - Permanently",
+      "reason": "Known flaky",
+      "notes": "Upload Apps,Regression 8",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Upload to Store (Android) - SHA256 - Google Play",
+      "reason": "Known flaky",
+      "notes": "Deploy,Regression 7",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "User - Concurrency Limit",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "User Emails - Build Success",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "User Emails - Context Failure",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "User Emails - Team Copy Fused Build",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "User Emails - Team Upload App",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "User - Extra Param/Plugin APK - Hidden/Visible",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "User - Extra Param/Plugin SDK",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "User - Hotfix Alert! AAB",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "User - Hotfix Alert! APK",
+      "reason": "Known flaky",
+      "notes": "Account Features,Regression 3",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "User Management API - Create New User and Delete User",
+      "reason": "Known flaky",
+      "notes": "API,Regression 1",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Workflow Summary - Android Deobfuscation Script",
+      "reason": "Known flaky",
+      "notes": "Account Activity Log and View Tab,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Workflow Summary - Changing Builds",
+      "reason": "Known flaky",
+      "notes": "Account Activity Log and View Tab,Regression 5",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Z - Configuration - General",
+      "reason": "Known flaky",
+      "notes": "Admin Pages,Regression 6",
+      "lastReviewed": "2025-12-23"
+    },
+    {
+      "testName": "Teams - Add Non-Appdome domain to Appdome company",
+      "testNameNormalized": "teams_add_non_appdome_domain_to_appdome_company",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 29/30 failures passed locally (96.7%)"
+    },
+    {
+      "testName": "DEV API - On Appdome Sign Negative - APK",
+      "testNameNormalized": "dev_api_on_appdome_sign_negative_apk",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 27/27 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "DEV API - On Appdome Sign Negative - iOS",
+      "testNameNormalized": "dev_api_on_appdome_sign_negative_ios",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 26/27 failures passed locally (96.3%)"
+    },
+    {
+      "testName": "User Emails - Password Reset From User Settings",
+      "testNameNormalized": "user_emails_password_reset_from_user_settings",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 20/22 failures passed locally (90.9%)"
+    },
+    {
+      "testName": "API - CICD Vendors - CLI (Python, Bash)",
+      "testNameNormalized": "api_cicd_vendors_cli_python_bash",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 19/22 failures passed locally (86.4%)"
+    },
+    {
+      "testName": "Teams - Trial Account",
+      "testNameNormalized": "teams_trial_account",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 18/19 failures passed locally (94.7%)"
+    },
+    {
+      "testName": "Backstage - Hidden Params in Build Diff",
+      "testNameNormalized": "backstage_hidden_params_in_build_diff",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 13/13 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Teams - Fusion Sets Release with all options - Part 2",
+      "testNameNormalized": "teams_fusion_sets_release_with_all_options_part_2",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 12/13 failures passed locally (92.3%)"
+    },
+    {
+      "testName": "Team - Microservice Hotfix iOS",
+      "testNameNormalized": "team_microservice_hotfix_ios",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 12/17 failures passed locally (70.6%)"
+    },
+    {
+      "testName": "User - Microservice Hotfix iOS",
+      "testNameNormalized": "user_microservice_hotfix_ios",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 11/12 failures passed locally (91.7%)"
+    },
+    {
+      "testName": "Cross. Env - App Validation - Microservice Hotfix",
+      "testNameNormalized": "cross_env_app_validation_microservice_hotfix",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 11/13 failures passed locally (84.6%)"
+    },
+    {
+      "testName": "Context - App Display Customization - Favicon - Negative validations",
+      "testNameNormalized": "context_app_display_customization_favicon_negative_validations",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 10/10 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Teams - Entitlements - Duplicate Team",
+      "testNameNormalized": "teams_entitlements_duplicate_team",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 10/10 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Admin Teams - Compare Teams",
+      "testNameNormalized": "admin_teams_compare_teams",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 10/11 failures passed locally (90.9%)"
+    },
+    {
+      "testName": "Account Activity Log - Sorting Options - Part 2",
+      "testNameNormalized": "account_activity_log_sorting_options_part_2",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 10/11 failures passed locally (90.9%)"
+    },
+    {
+      "testName": "Mobile EDR - Threat-EKG™ - Threat-EKG Source™",
+      "testNameNormalized": "mobile_edr_threat_ekg_threat_ekg_source",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 10/12 failures passed locally (83.3%)"
+    },
+    {
+      "testName": "Upload Apps - iOS Apps - Fake Extension",
+      "testNameNormalized": "upload_apps_ios_apps_fake_extension",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 10/11 failures passed locally (90.9%)"
+    },
+    {
+      "testName": "Upload Apps - Android Apps (AAB) - Drag Feature But Fake Extension",
+      "testNameNormalized": "upload_apps_android_apps_aab_drag_feature_but_fake_extension",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 9/10 failures passed locally (90.0%)"
+    },
+    {
+      "testName": "Download Apps (iOS) - Auto-DEV signing",
+      "testNameNormalized": "download_apps_ios_auto_dev_signing",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 9/11 failures passed locally (81.8%)"
+    },
+    {
+      "testName": "Configuration - Support Tab - Microservice Overrides Validation",
+      "testNameNormalized": "configuration_support_tab_microservice_overrides_validation",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 9/10 failures passed locally (90.0%)"
+    },
+    {
+      "testName": "Upload Apps - iOS Apps - Different Build Numbers",
+      "testNameNormalized": "upload_apps_ios_apps_different_build_numbers",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 9/9 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Configuration - Support Tab - Zendesk/JIRA Validation - Delete Annotation",
+      "testNameNormalized": "configuration_support_tab_zendeskjira_validation_delete_annotation",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 9/15 failures passed locally (60.0%)"
+    },
+    {
+      "testName": "SDK - Android - Threat Shielding Build",
+      "testNameNormalized": "sdk_android_threat_shielding_build",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 9/12 failures passed locally (75.0%)"
+    },
+    {
+      "testName": "Forgot Password",
+      "testNameNormalized": "forgot_password",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 8/11 failures passed locally (72.7%)"
+    },
+    {
+      "testName": "Forgot Password - Trying out an invalid password",
+      "testNameNormalized": "forgot_password_trying_out_an_invalid_password",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 8/10 failures passed locally (80.0%)"
+    },
+    {
+      "testName": "Private Signing (Android) - Download APK from AAB",
+      "testNameNormalized": "private_signing_android_download_apk_from_aab",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 8/9 failures passed locally (88.9%)"
+    },
+    {
+      "testName": "DEV API - Build - Secure Certificate Pinning By Host",
+      "testNameNormalized": "dev_api_build_secure_certificate_pinning_by_host",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 8/8 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "DEV API - Get Active Sessions Negative",
+      "testNameNormalized": "dev_api_get_active_sessions_negative",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 7/7 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Teams - On Behalf Of - Ideal GO and DEV",
+      "testNameNormalized": "teams_on_behalf_of_ideal_go_and_dev",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 7/10 failures passed locally (70.0%)"
+    },
+    {
+      "testName": "Team - Microservice Hotfix SDK",
+      "testNameNormalized": "team_microservice_hotfix_sdk",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 7/7 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "DEV API - Sign and Download SDK - iOS",
+      "testNameNormalized": "dev_api_sign_and_download_sdk_ios",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 7/7 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "DEV API - Download Certified Secure As Json",
+      "testNameNormalized": "dev_api_download_certified_secure_as_json",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 7/8 failures passed locally (87.5%)"
+    },
+    {
+      "testName": "Teams - SEC Release - Hotfix Freeze Part 1",
+      "testNameNormalized": "teams_sec_release_hotfix_freeze_part_1",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 7/8 failures passed locally (87.5%)"
+    },
+    {
+      "testName": "DEV API - Build - Anti Bot Payload Signing Key",
+      "testNameNormalized": "dev_api_build_anti_bot_payload_signing_key",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 7/7 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Admin Teams - Edit team",
+      "testNameNormalized": "admin_teams_edit_team",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 6/6 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "SDK - Android - Threat Monitoring Build",
+      "testNameNormalized": "sdk_android_threat_monitoring_build",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 6/8 failures passed locally (75.0%)"
+    },
+    {
+      "testName": "Certified Secure - Diagnostic Logs",
+      "testNameNormalized": "certified_secure_diagnostic_logs",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 6/8 failures passed locally (75.0%)"
+    },
+    {
+      "testName": "Backstage - Run Automation Browserstack Android",
+      "testNameNormalized": "backstage_run_automation_browserstack_android",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 6/7 failures passed locally (85.7%)"
+    },
+    {
+      "testName": "Admin Apps - Upload and Download Apps",
+      "testNameNormalized": "admin_apps_upload_and_download_apps",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 6/7 failures passed locally (85.7%)"
+    },
+    {
+      "testName": "User Menu - API Tooltips",
+      "testNameNormalized": "user_menu_api_tooltips",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 6/7 failures passed locally (85.7%)"
+    },
+    {
+      "testName": "PWA Support Push Notifications Both",
+      "testNameNormalized": "pwa_support_push_notifications_both",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 6/7 failures passed locally (85.7%)"
+    },
+    {
+      "testName": "Backstage - Upgrade Scenario - Run Automation Browserstack Android",
+      "testNameNormalized": "backstage_upgrade_scenario_run_automation_browserstack_android",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 6/8 failures passed locally (75.0%)"
+    },
+    {
+      "testName": "Fusion Set - Naming policy - Validation",
+      "testNameNormalized": "fusion_set_naming_policy_validation",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 5/5 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "User - Specific Platform Hotfix",
+      "testNameNormalized": "user_specific_platform_hotfix",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 5/9 failures passed locally (55.6%)"
+    },
+    {
+      "testName": "Backstage - Compare Teams File Compare",
+      "testNameNormalized": "backstage_compare_teams_file_compare",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 5/6 failures passed locally (83.3%)"
+    },
+    {
+      "testName": "Threat Remediation Center™ - Context Menu + PDF",
+      "testNameNormalized": "threat_remediation_center_context_menu_pdf",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 4/4 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Free Trial - Promo Code - Fraud",
+      "testNameNormalized": "free_trial_promo_code_fraud",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 4/6 failures passed locally (66.7%)"
+    },
+    {
+      "testName": "Sanity (iOS/Android) for Certified Secure and Message policy FAC/Automation",
+      "testNameNormalized": "sanity_iosandroid_for_certified_secure_and_message_policy_facautomation",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 4/8 failures passed locally (50.0%)"
+    },
+    {
+      "testName": "Teams - List - Search Team",
+      "testNameNormalized": "teams_list_search_team",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 4/4 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Teams - Entitlements - Copy Fused Builds Into",
+      "testNameNormalized": "teams_entitlements_copy_fused_builds_into",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 4/4 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Backstage - Team Type Filter",
+      "testNameNormalized": "backstage_team_type_filter",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 4/4 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Backstage - Running Logs - APK",
+      "testNameNormalized": "backstage_running_logs_apk",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 4/5 failures passed locally (80.0%)"
+    },
+    {
+      "testName": "DEV API - Upload and iOS Sign with Microservice",
+      "testNameNormalized": "dev_api_upload_and_ios_sign_with_microservice",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 4/5 failures passed locally (80.0%)"
+    },
+    {
+      "testName": "Backstage - Ignore Appdome Users",
+      "testNameNormalized": "backstage_ignore_appdome_users",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 4/4 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Backstage - Upgrade Hotfix",
+      "testNameNormalized": "backstage_upgrade_hotfix",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 4/7 failures passed locally (57.1%)"
+    },
+    {
+      "testName": "DEV API - On Appdome Sign - API Credentials Override UI",
+      "testNameNormalized": "dev_api_on_appdome_sign_api_credentials_override_ui",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 4/6 failures passed locally (66.7%)"
+    },
+    {
+      "testName": "User Emails - Team Sign Success",
+      "testNameNormalized": "user_emails_team_sign_success",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/3 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "DEV API - Validate Certified Secure Negative",
+      "testNameNormalized": "dev_api_validate_certified_secure_negative",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/4 failures passed locally (75.0%)"
+    },
+    {
+      "testName": "OS Coverage - Disabled Features",
+      "testNameNormalized": "os_coverage_disabled_features",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/3 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Upload Apps - Android Apps - Different Build Numbers",
+      "testNameNormalized": "upload_apps_android_apps_different_build_numbers",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/5 failures passed locally (60.0%)"
+    },
+    {
+      "testName": "Security -  AAB/APK Xamarin",
+      "testNameNormalized": "security_aabapk_xamarin",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/3 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Backstage - Running Logs - iOS",
+      "testNameNormalized": "backstage_running_logs_ios",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/4 failures passed locally (75.0%)"
+    },
+    {
+      "testName": "User Menu - Appdome binary naming - APK",
+      "testNameNormalized": "user_menu_appdome_binary_naming_apk",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/6 failures passed locally (50.0%)"
+    },
+    {
+      "testName": "PWA Support Push Notifications Both - Different Files",
+      "testNameNormalized": "pwa_support_push_notifications_both_different_files",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/5 failures passed locally (60.0%)"
+    },
+    {
+      "testName": "Backstage - Run Automation Browserstack - iOS",
+      "testNameNormalized": "backstage_run_automation_browserstack_ios",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/6 failures passed locally (50.0%)"
+    },
+    {
+      "testName": "DEV API - Get Active Sessions",
+      "testNameNormalized": "dev_api_get_active_sessions",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/3 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "DEV API - Build to Test - Android",
+      "testNameNormalized": "dev_api_build_to_test_android",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/3 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Upload Apps - iOS App - Privacy Manifest - Fusion Set Warnings",
+      "testNameNormalized": "upload_apps_ios_app_privacy_manifest_fusion_set_warnings",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/4 failures passed locally (75.0%)"
+    },
+    {
+      "testName": "DEV API - Build - Secure Certificate Pinning",
+      "testNameNormalized": "dev_api_build_secure_certificate_pinning",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/3 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Backstage - Filter by App ID",
+      "testNameNormalized": "backstage_filter_by_app_id",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/3 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "DEV API - Build SDK - Android",
+      "testNameNormalized": "dev_api_build_sdk_android",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/3 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Configuration - Support Tab - Certificate Validation - Public Key Warning",
+      "testNameNormalized": "configuration_support_tab_certificate_validation_public_key_warning",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/5 failures passed locally (60.0%)"
+    },
+    {
+      "testName": "On Appdome (Android) - Trusted Signing - Two Trusted Fingerprint",
+      "testNameNormalized": "on_appdome_android_trusted_signing_two_trusted_fingerprint",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/6 failures passed locally (50.0%)"
+    },
+    {
+      "testName": "Advanced Tab - General + Extra Params/Plugins",
+      "testNameNormalized": "advanced_tab_general_extra_paramsplugins",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/5 failures passed locally (60.0%)"
+    },
+    {
+      "testName": "Teams - SDK - SEC Release - General From Fusion Set",
+      "testNameNormalized": "teams_sdk_sec_release_general_from_fusion_set",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 3/4 failures passed locally (75.0%)"
+    },
+    {
+      "testName": "Backstage - Decode File - Log Type Visibility",
+      "testNameNormalized": "backstage_decode_file_log_type_visibility",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/3 failures passed locally (66.7%)"
+    },
+    {
+      "testName": "Threat Events - Score - Negative",
+      "testNameNormalized": "threat_events_score_negative",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/3 failures passed locally (66.7%)"
+    },
+    {
+      "testName": "Event log and License Configuration - User/Team/Company Navigation",
+      "testNameNormalized": "event_log_and_license_configuration_userteamcompany_navigation",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "DEV API - Auto Deploy Negative",
+      "testNameNormalized": "dev_api_auto_deploy_negative",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Support API - Copy Fused Build",
+      "testNameNormalized": "support_api_copy_fused_build",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/4 failures passed locally (50.0%)"
+    },
+    {
+      "testName": "Backstage - Pin this Event",
+      "testNameNormalized": "backstage_pin_this_event",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "User - iOS SDK - Hotfix",
+      "testNameNormalized": "user_ios_sdk_hotfix",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/3 failures passed locally (66.7%)"
+    },
+    {
+      "testName": "iOS - Multi Provisioning Profiles - Auto-DEV Private Signing",
+      "testNameNormalized": "ios_multi_provisioning_profiles_auto_dev_private_signing",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Backstage - Filter by Fusion set ID",
+      "testNameNormalized": "backstage_filter_by_fusion_set_id",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Teams - Success Mail for Builder",
+      "testNameNormalized": "teams_success_mail_for_builder",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/3 failures passed locally (66.7%)"
+    },
+    {
+      "testName": "Threat Events - Score - Configuration",
+      "testNameNormalized": "threat_events_score_configuration",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/4 failures passed locally (50.0%)"
+    },
+    {
+      "testName": "Anti Bot - Enforcement URLs List - iOS",
+      "testNameNormalized": "anti_bot_enforcement_urls_list_ios",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Team Duplicate ADMIN - Allowed Features",
+      "testNameNormalized": "team_duplicate_admin_allowed_features",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "DEV API - iOS Deploy Script Negative",
+      "testNameNormalized": "dev_api_ios_deploy_script_negative",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/4 failures passed locally (50.0%)"
+    },
+    {
+      "testName": "User Emails - Blocked User",
+      "testNameNormalized": "user_emails_blocked_user",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - Lock Freeze - Fusion Set Only",
+      "testNameNormalized": "teams_freeze_fusion_set_lock_freeze_fusion_set_only",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Teams - Fusion Set Release - Appdome Admin Release Limitation",
+      "testNameNormalized": "teams_fusion_set_release_appdome_admin_release_limitation",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Team - Microservice Hotfix Android",
+      "testNameNormalized": "team_microservice_hotfix_android",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Teams - Copy Apps from Team to Team",
+      "testNameNormalized": "teams_copy_apps_from_team_to_team",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "License Overrides - General",
+      "testNameNormalized": "license_overrides_general",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Security - TOTALData™ Encryption",
+      "testNameNormalized": "security_totaldata_encryption",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/3 failures passed locally (66.7%)"
+    },
+    {
+      "testName": "Backstage - Search Combinations",
+      "testNameNormalized": "backstage_search_combinations",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    },
+    {
+      "testName": "Support API - Sign iOS Apps",
+      "testNameNormalized": "support_api_sign_ios_apps",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/4 failures passed locally (50.0%)"
+    },
+    {
+      "testName": "Teams - SDK - SEC Release - License Difference",
+      "testNameNormalized": "teams_sdk_sec_release_license_difference",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/3 failures passed locally (66.7%)"
+    },
+    {
+      "testName": "Teams - Freeze Fusion Set - Unfreeze Options",
+      "testNameNormalized": "teams_freeze_fusion_set_unfreeze_options",
+      "reason": "Flaky - passes locally",
+      "notes": "Auto-detected: 2/2 failures passed locally (100.0%)"
+    }
   ],
-  "lastUpdated": "2025-12-23T00:00:00Z"
+  "lastUpdated": "2026-08-20",
+  "autoDetectedCount": 100
 }
