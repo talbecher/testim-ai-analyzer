@@ -258,18 +258,21 @@ const Index = () => {
   // Recommendation stats (Investigate vs Skip)
   const recommendationStats = useMemo(() => {
     const analyzed = sortedFailures.filter(f => f.analysis);
-    const investigate = analyzed.filter(f =>
-      aiRecommendedInvestigate({
+    const investigate = analyzed.filter(f => {
+      const withFb = failuresWithFeedback.find(x => x.id === f.id);
+      return aiRecommendedInvestigate({
         classification: f.analysis?.classification,
         priority: f.analysis?.priority,
-      }),
-    );
+        confidence: f.analysis?.confidence,
+        passedLocally: withFb?.feedback?.passedLocally ?? null,
+      });
+    });
     return {
       total: analyzed.length,
       investigate: investigate.length,
       skip: analyzed.length - investigate.length
     };
-  }, [sortedFailures]);
+  }, [sortedFailures, failuresWithFeedback]);
 
   // Pattern groups: count from the SAME pool the filter applies to (analyzed rows
   // in sortedFailures), so a chip's count always equals the number of rows that
@@ -310,6 +313,8 @@ const Index = () => {
       const recommended = aiRecommendedInvestigate({
         classification: f.analysis?.classification,
         priority: f.analysis?.priority,
+        confidence: f.analysis?.confidence,
+        passedLocally: withFb.feedback?.passedLocally ?? null,
       });
       const matchesRecommendation =
         filterRecommendation === 'all' ||

@@ -1,0 +1,87 @@
+
+> vite_react_shadcn_ts@1.2.4 evaluate
+> tsx scripts/evaluate-prompt.ts --limit 100 -v
+
+Testim AI Analyzer — Prompt Evaluation Harness
+Mode: READ-ONLY (no database writes)
+
+Loading historical evaluation rows…
+  Total eligible rows in DB: 2418
+  Rows selected for evaluation: 100
+Authenticated for edge function invocation.
+
+  Re-evaluated: 10/100  Re-evaluated: 20/100  Re-evaluated: 30/100  Re-evaluated: 40/100  Re-evaluated: 50/100  Re-evaluated: 60/100  Re-evaluated: 70/100  Re-evaluated: 80/100  Re-evaluated: 90/100  Re-evaluated: 100/100
+
+
+Accuracy Summary
+────────────────────────────────────────────────────────────
+Metric                                  Value   
+────────────────────────────────────────────────
+Sample size                             100     
+Invoke errors                           0       
+Stored report accuracy (avg)            64.4%   
+Baseline accuracy (stored AI vs human)  96.0%   
+New accuracy (re-run vs human)          79.0%   
+Accuracy delta                          -17.0%  
+
+Classification Quality
+────────────────────────────────────────────────────────────
+Metric                           Value                                   
+─────────────────────────────────────────────────────────────────────────
+Investigate false-positive rate  0.0% (0/3 AI Investigate calls)         
+Bug detection recall             85.0% (34/40 human Potential bug rows)  
+
+Confusion Matrix (rows = human, cols = AI)
+────────────────────────────────────────────────────────────
+Human \ AI                 Total  Potential bug  Likely Flaky  Environment / Infra Issue  Expected Change  Investigate  
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Environment / Infra Issue  3      0              1             2                          0                0            
+Expected Change            3      3              0             0                          0                0            
+Investigate                12     0              0             0                          0                12           
+Likely Flaky               42     0              42            0                          0                0            
+Potential bug              40     40             0             0                          0                0            
+
+Confusion Matrix (rows = human, cols = AI)
+────────────────────────────────────────────────────────────
+Human \ AI                 Total  Potential bug  Likely Flaky  Environment / Infra Issue  Expected Change  Investigate  
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Environment / Infra Issue  3      0              1             2                          0                0            
+Expected Change            3      2              0             0                          1                0            
+Investigate                12     3              6             0                          0                3            
+Likely Flaky               42     3              39            0                          0                0            
+Potential bug              40     34             6             0                          0                0            
+
+Net Changes vs Baseline
+────────────────────────────────────────────────────────────
+Direction                            Count  
+────────────────────────────────────────────
+Improved (was wrong → now correct)   1      
+Regressed (was correct → now wrong)  18     
+Unchanged correct                    78     
+Unchanged wrong                      3      
+
+New Mismatches (human vs re-run)
+────────────────────────────────────────────────────────────
+Test                                      Human                      Stored AI      New AI         Confidence  
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────
+anti_bot_mtls_pre_authentication_mobile_  Likely Flaky               Likely Flaky   Potential bug  90          
+fusion_set_copy_frozen_fs_sdk             Investigate                Investigate    Likely Flaky   85          
+fusion_set_subscribe_ipa                  Potential bug              Potential bug  Likely Flaky   80          
+fs_history_create_fs_from_old_version_tr  Potential bug              Potential bug  Likely Flaky   80          
+dev_api_context_apk                       Investigate                Investigate    Likely Flaky   80          
+sanity_iosandroid_for_certified_secure_a  Potential bug              Potential bug  Likely Flaky   80          
+session_timeout_timeout_while_in_a_task   Potential bug              Potential bug  Likely Flaky   75          
+security_secure_certificate_pinning_micr  Investigate                Investigate    Likely Flaky   85          
+anti_bot_session_risk_android             Likely Flaky               Likely Flaky   Potential bug  90          
+trial_account_complete_to_ideal_srm       Potential bug              Potential bug  Likely Flaky   80          
+teams_entitlements_general                Investigate                Investigate    Likely Flaky   85          
+teams_sdk_fusion_sets_release_with_diffe  Investigate                Investigate    Potential bug  90          
+teams_freeze_fusion_set_entitlements_edi  Investigate                Investigate    Potential bug  85          
+download_apps_direct_download             Investigate                Investigate    Likely Flaky   85          
+configuration_support_tab_certificate_va  Potential bug              Potential bug  Likely Flaky   80          
+backstage_run_automation_browserstack_io  Investigate                Investigate    Likely Flaky   80          
+api_bot_protection_extended               Investigate                Investigate    Potential bug  90          
+mobile_edr_threat_ekg_subscription_tier_  Expected Change            Potential bug  Potential bug  90          
+anti_bot_session_risk_android             Environment / Infra Issue  Likely Flaky   Likely Flaky   80          
+api_bot_protection_unauthorized_api_acce  Expected Change            Potential bug  Potential bug  90          
+anti_bot_pin_to_host_android              Likely Flaky               Likely Flaky   Potential bug  85          

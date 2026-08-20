@@ -57,6 +57,8 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
   const shouldInvestigate = aiRecommendedInvestigate({
     classification: failure.analysis?.classification,
     priority: failure.analysis?.priority,
+    confidence: failure.analysis?.confidence,
+    passedLocally: failure.feedback?.passedLocally ?? null,
   });
 
   const handleConfirmBug = (category: string, bugLink?: string) => {

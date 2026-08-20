@@ -68,6 +68,7 @@ export function LearningModeCard({ failure }: LearningModeCardProps) {
   const recommendsInvestigate = aiRecommendedInvestigate({
     classification: failure.analysis?.classification,
     priority: failure.analysis?.priority,
+    confidence: failure.analysis?.confidence,
   });
 
   const neededManualWork = requiredManualWork(failure.preClassified);

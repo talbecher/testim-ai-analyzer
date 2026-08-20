@@ -185,6 +185,8 @@ export interface AIAnalysisResult {
   assertionDetails?: AssertionDetailsForAI;
   /** Global upload history (last ~30 runs in DB); attached by Edge, not from LLM JSON. */
   history?: TestHistory;
+  /** True when RAG historical similar-failures context was injected server-side. */
+  rag_used?: boolean;
 }
 
 // Combined Failure with Analysis

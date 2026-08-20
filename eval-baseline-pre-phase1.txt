@@ -1,0 +1,61 @@
+
+> vite_react_shadcn_ts@1.2.4 evaluate
+> tsx scripts/evaluate-prompt.ts --limit 100
+
+Testim AI Analyzer — Prompt Evaluation Harness
+Mode: READ-ONLY (no database writes)
+
+Loading historical evaluation rows…
+  Total eligible rows in DB: 2418
+  Rows selected for evaluation: 100
+Authenticated for edge function invocation.
+
+  Re-evaluated: 10/100  Re-evaluated: 20/100  Re-evaluated: 30/100  Re-evaluated: 40/100  Re-evaluated: 50/100  Re-evaluated: 60/100  Re-evaluated: 70/100  Re-evaluated: 80/100  Re-evaluated: 90/100  Re-evaluated: 100/100
+
+
+Accuracy Summary
+────────────────────────────────────────────────────────────
+Metric                                  Value   
+────────────────────────────────────────────────
+Sample size                             100     
+Invoke errors                           0       
+Stored report accuracy (avg)            64.4%   
+Baseline accuracy (stored AI vs human)  96.0%   
+New accuracy (re-run vs human)          81.0%   
+Accuracy delta                          -15.0%  
+
+Classification Quality
+────────────────────────────────────────────────────────────
+Metric                           Value                                   
+─────────────────────────────────────────────────────────────────────────
+Investigate false-positive rate  0.0% (0/4 AI Investigate calls)         
+Bug detection recall             87.5% (35/40 human Potential bug rows)  
+
+Confusion Matrix (rows = human, cols = AI)
+────────────────────────────────────────────────────────────
+Human \ AI                 Total  Potential bug  Likely Flaky  Environment / Infra Issue  Expected Change  Investigate  
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Environment / Infra Issue  3      0              1             2                          0                0            
+Expected Change            3      3              0             0                          0                0            
+Investigate                12     0              0             0                          0                12           
+Likely Flaky               42     0              42            0                          0                0            
+Potential bug              40     40             0             0                          0                0            
+
+Confusion Matrix (rows = human, cols = AI)
+────────────────────────────────────────────────────────────
+Human \ AI                 Total  Potential bug  Likely Flaky  Environment / Infra Issue  Expected Change  Investigate  
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Environment / Infra Issue  3      0              1             2                          0                0            
+Expected Change            3      3              0             0                          0                0            
+Investigate                12     3              5             0                          0                4            
+Likely Flaky               42     2              40            0                          0                0            
+Potential bug              40     35             5             0                          0                0            
+
+Net Changes vs Baseline
+────────────────────────────────────────────────────────────
+Direction                            Count  
+────────────────────────────────────────────
+Improved (was wrong → now correct)   0      
+Regressed (was correct → now wrong)  15     
+Unchanged correct                    81     
+Unchanged wrong                      4      

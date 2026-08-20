@@ -307,9 +307,16 @@ export function useChecklist() {
           : null;
 
       if (!error && !legacyFallback) {
-        const results = (data?.results ?? []) as Array<{ failureId: number; analysis: AIAnalysisResult }>;
+        const results = (data?.results ?? []) as Array<{
+          failureId: number;
+          analysis: AIAnalysisResult;
+          rag_used?: boolean;
+        }>;
         const rawAnalysis = results[0]?.analysis;
-        if (rawAnalysis) return { ok: true, analysis: rawAnalysis };
+        if (rawAnalysis) {
+          const ragUsed = results[0]?.rag_used ?? rawAnalysis.rag_used ?? false;
+          return { ok: true, analysis: { ...rawAnalysis, rag_used: ragUsed } };
+        }
         return { ok: false, error: 'No analysis in response' };
       }
 

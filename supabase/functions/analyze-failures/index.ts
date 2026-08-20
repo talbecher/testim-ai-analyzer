@@ -20,9 +20,35 @@ function sanitizeErrorMessage(raw: unknown): string {
   );
   s = s.replace(/\b\d{10,16}\b/g, '<num>');
   s = s.replace(/https?:\/\/[^\s)]+/gi, '<url>');
+  s = normalizeAssertionNumbers(s);
   s = s.replace(/\s+/g, ' ').trim();
   const MAX = 8000;
   if (s.length > MAX) return `${s.slice(0, MAX)}…`;
+  return s;
+}
+
+/** Normalize dynamic numeric assertion text so similar failures match in RAG. */
+function normalizeAssertionNumbers(raw: string): string {
+  let s = raw;
+  s = s.replace(
+    /\bexpected\s+\d+\s+(.+?)\s+but\s+(?:got|received|found)\s+\d+/gi,
+    'Expected N $1 but got M',
+  );
+  s = s.replace(/\bexpected\s+\d+\s+but\s+got\s+\d+/gi, 'Expected N but got M');
+  s = s.replace(
+    /\bfound\s+\d+\s+(elements?|items?|rows?|records?|matches?|occurrences?|nodes?|children?|results?)/gi,
+    'found N $1',
+  );
+  s = s.replace(/\bexpected\s+\d+\s+to\s+/gi, 'Expected N to ');
+  s = s.replace(/\bto\s+(?:equal|be)\s+\d+/gi, 'to equal M');
+  s = s.replace(/\b(?:actual|received|got)\s*[:=]?\s*\d+/gi, (match) =>
+    match.replace(/\d+/, 'M'),
+  );
+  s = s.replace(/\b(?:expected|should\s+be)\s*[:=]?\s*\d+/gi, (match) =>
+    match.replace(/\d+/, 'N'),
+  );
+  s = s.replace(/\bcount\s+(?:of|is)\s+\d+/gi, 'count of N');
+  s = s.replace(/\b(\d+)\s+(?:of|\/)\s+(\d+)\b/g, 'N of M');
   return s;
 }
 
@@ -346,6 +372,39 @@ const GUARDRAILS = `
 ### INVESTIGATE CLASSIFICATION GUARDRAIL
 - "Investigate" MUST NEVER use suggestedAction "Open bug"
 - Only allowed actions for "Investigate": "Verify manually" or "Rerun only"
+- **Investigate confidence calibration:**
+  - Set **confidence ≤ 55** when classification is genuinely ambiguous (no historical pattern match, conflicting signals, weak evidence).
+  - Set **confidence ≥ 70** when a specific signal strongly warrants investigation (e.g. co-failure group, assertion with unclear product impact, first-seen with partial flaky hints).
+  - Do NOT use mid-high confidence (60–69) for "Investigate" unless you can cite a concrete signal in **priorityReason**.
+
+### LIKELY FLAKY CLASSIFICATION GUARDRAIL (STRICT)
+"Likely Flaky" requires EXPLICIT EVIDENCE — not just ambiguity or heuristic:
+
+REQUIRED (at least ONE must be true):
+  A) historyStats.priorUserOutcomes.passedLocallyCount >= 1
+  B) historyStats.priorUserOutcomes.dominantUserSignal === "flaky"
+  C) streakInfo.isIntermittent === true (2+ alternations, 4+ runs)
+  D) RAG historical similar failure shows human outcome = "Passed Locally"
+  E) Flaky KB match AND at least one of A/B/C/D also applies
+
+FORBIDDEN — these alone are NOT sufficient for Likely Flaky:
+  ❌ Heuristic only (Timeout, Element not found, visible) with no history
+  ❌ Test name keywords like "intermittent" or "flaky"
+  ❌ Low confidence in bug → do NOT default to Flaky
+  ❌ Ambiguity alone → use "Investigate" instead
+
+When none of A–E apply:
+  → Classify as "Investigate" (NOT Likely Flaky)
+  → Set confidence <= 55
+  → priorityReason: "No explicit flaky evidence (no passed_locally, no intermittent streak, no RAG match) — classified as Investigate"
+
+### SIGNALBREAKDOWN ↔ CLASSIFICATION CONSISTENCY (STRICT)
+- **signalBreakdown scores MUST align with the final classification label** — the winning score must match the chosen classification.
+- If **bugScore > 70**, classification MUST be **"Potential bug"** unless an explicit guardrail overrides it (§0 P0 safety, §1 Investigate fallback, §1b session/WebDriver infra, or a documented historical correction).
+- If **flakyScore > 70**, classification MUST be **"Likely Flaky"** unless overridden by §0, §1, or §1b.
+- If **environmentScore > 70**, classification MUST be **"Environment / Infra Issue"** unless overridden by §0 or §1.
+- If **investigateScore** is highest but classification is not "Investigate", either change classification to "Investigate" or lower **investigateScore** so it is not the dominant score.
+- Never output contradictory pairs (e.g. classification "Potential bug" with bugScore < 40 and flakyScore > 80).
 
 ### When Signals Conflict
 - Follow the strongest signal based on the decision order above
@@ -773,6 +832,186 @@ function applyStreakUserFeedbackOverride(
     reason;
 }
 
+/** Row shape for tiered historical failure retrieval (RAG few-shot). */
+interface SimilarHistoricalFailure {
+  id: string;
+  test_name_normalized: string;
+  error_pattern: string | null;
+  error_message: string | null;
+  ai_classification: string;
+  user_classification: string | null;
+  was_correct: boolean | null;
+  bug_category: string | null;
+  bug_link: string | null;
+  passed_locally: boolean | null;
+  passed_locally_reason: string | null;
+  required_manual_fix: boolean | null;
+  manual_fix_type: string | null;
+  manual_fix_notes: string | null;
+  user_notes: string | null;
+  report_id: string;
+}
+
+const RAG_SELECT_FIELDS =
+  'id, test_name_normalized, error_pattern, error_message, ai_classification, user_classification, was_correct, bug_category, bug_link, passed_locally, passed_locally_reason, required_manual_fix, manual_fix_type, manual_fix_notes, user_notes, report_id';
+
+const RAG_HUMAN_VERIFIED_FILTER =
+  'user_classification.not.is.null,passed_locally.eq.true,required_manual_fix.eq.true,was_correct.eq.true';
+
+function escapeIlikePattern(input: string): string {
+  return input.replace(/[%_\\]/g, (m) => `\\${m}`);
+}
+
+function buildIlikeSearchTerm(errorMessage: string | null | undefined): string | null {
+  const sanitized = sanitizeErrorMessage(errorMessage);
+  if (!sanitized || sanitized.length < 12) return null;
+  const chunk = sanitized.slice(0, 120).trim();
+  return chunk.length >= 12 ? chunk : null;
+}
+
+function describeHumanOutcome(row: SimilarHistoricalFailure): string {
+  if (row.passed_locally) {
+    const reason = row.passed_locally_reason ? ` (${row.passed_locally_reason})` : '';
+    const notes = row.passed_locally_notes ? ` — ${row.passed_locally_notes}` : '';
+    return `Passed Locally${reason}${notes}`;
+  }
+  if (row.required_manual_fix) {
+    const fixType = row.manual_fix_type ? ` (${row.manual_fix_type})` : '';
+    const notes = row.manual_fix_notes ? ` — ${row.manual_fix_notes}` : '';
+    return `Required Manual Fix${fixType}${notes}`;
+  }
+  if (row.user_classification) {
+    let outcome = row.user_classification;
+    if (row.bug_category) outcome += ` / ${row.bug_category}`;
+    if (row.bug_link) outcome += ` [${row.bug_link}]`;
+    return outcome;
+  }
+  if (row.was_correct === true) return `Confirmed AI classification "${row.ai_classification}"`;
+  return 'Human reviewed';
+}
+
+function formatHistoricalSimilarFailuresSection(rows: SimilarHistoricalFailure[]): string {
+  if (rows.length === 0) return '';
+
+  const examples = rows.map((row, i) => {
+    const humanOutcome = describeHumanOutcome(row);
+    const aiPart = `AI said "${row.ai_classification}"`;
+    const correctionPart =
+      row.was_correct === false && row.user_classification
+        ? ` → user corrected to "${row.user_classification}"`
+        : row.was_correct === true
+          ? ' → user confirmed'
+          : '';
+    const notesPart = row.user_notes ? ` | Notes: "${row.user_notes}"` : '';
+    const errorSnippet =
+      row.error_message && row.error_message.trim()
+        ? ` | Error: "${sanitizeErrorMessage(row.error_message).slice(0, 160)}"`
+        : '';
+    return `Example ${i + 1}: Test "${row.test_name_normalized}" | Pattern "${row.error_pattern || 'general'}" | ${aiPart}${correctionPart} | Human outcome: ${humanOutcome}${errorSnippet}${notesPart}`;
+  }).join('\n');
+
+  return `
+
+## Historical Similar Failures (Ground Truth):
+These are concrete past failures with human-verified outcomes. When the current failure matches test name, error pattern, or error text, prefer aligning with these decisions.
+Matches are tiered: same test in this bucket first, then same test globally, then error pattern, then similar error text (may span buckets):
+${examples}
+`;
+}
+
+function appendUniqueRagRows(
+  results: SimilarHistoricalFailure[],
+  seenIds: Set<string>,
+  rows: SimilarHistoricalFailure[] | null | undefined,
+  limit: number,
+): void {
+  if (!rows) return;
+  for (const row of rows) {
+    if (seenIds.has(row.id)) continue;
+    seenIds.add(row.id);
+    results.push(row);
+    if (results.length >= limit) return;
+  }
+}
+
+/**
+ * Tiered retrieval: exact test name (bucket first, then global) → error pattern → ILIKE error text.
+ */
+async function getSimilarHistoricalFailures(
+  supabase: ReturnType<typeof createClient>,
+  testNameNormalized: string,
+  errorPattern: string | null | undefined,
+  errorMessage: string | null | undefined,
+  reportIdsInBucket: string[] = [],
+  limit = 5,
+): Promise<SimilarHistoricalFailure[]> {
+  const results: SimilarHistoricalFailure[] = [];
+  const seenIds = new Set<string>();
+  const normalizedTestName = testNameNormalized?.trim();
+  if (!normalizedTestName) return results;
+
+  // Tier 1a: exact test name in current regression bucket
+  if (reportIdsInBucket.length > 0) {
+    const { data, error } = await supabase
+      .from('analysis_results')
+      .select(RAG_SELECT_FIELDS)
+      .eq('test_name_normalized', normalizedTestName)
+      .in('report_id', reportIdsInBucket)
+      .or(RAG_HUMAN_VERIFIED_FILTER)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    appendUniqueRagRows(results, seenIds, data as SimilarHistoricalFailure[] | null, limit);
+  }
+
+  // Tier 1b: exact test name globally
+  if (results.length < limit) {
+    const { data, error } = await supabase
+      .from('analysis_results')
+      .select(RAG_SELECT_FIELDS)
+      .eq('test_name_normalized', normalizedTestName)
+      .or(RAG_HUMAN_VERIFIED_FILTER)
+      .order('created_at', { ascending: false })
+      .limit(limit * 2);
+
+    if (error) throw error;
+    appendUniqueRagRows(results, seenIds, data as SimilarHistoricalFailure[] | null, limit);
+  }
+
+  // Tier 2: exact error pattern (cross-bucket)
+  const normalizedPattern = errorPattern?.trim();
+  if (normalizedPattern && results.length < limit) {
+    const { data, error } = await supabase
+      .from('analysis_results')
+      .select(RAG_SELECT_FIELDS)
+      .eq('error_pattern', normalizedPattern)
+      .or(RAG_HUMAN_VERIFIED_FILTER)
+      .order('created_at', { ascending: false })
+      .limit(limit * 2);
+
+    if (error) throw error;
+    appendUniqueRagRows(results, seenIds, data as SimilarHistoricalFailure[] | null, limit);
+  }
+
+  // Tier 3: ILIKE similarity on error message
+  const ilikeTerm = buildIlikeSearchTerm(errorMessage);
+  if (ilikeTerm && results.length < limit) {
+    const { data, error } = await supabase
+      .from('analysis_results')
+      .select(RAG_SELECT_FIELDS)
+      .ilike('error_message', `%${escapeIlikePattern(ilikeTerm)}%`)
+      .or(RAG_HUMAN_VERIFIED_FILTER)
+      .order('created_at', { ascending: false })
+      .limit(limit * 2);
+
+    if (error) throw error;
+    appendUniqueRagRows(results, seenIds, data as SimilarHistoricalFailure[] | null, limit);
+  }
+
+  return results;
+}
+
 /**
  * Implicit pass/fail series from last 30 uploads in **one** regression bucket only.
  * Mandatory filter: `regression_bucket === trimmedBucket`. No bucket → empty map (no history).
@@ -1102,6 +1341,18 @@ Available signal names:
 - priorityReason: Include bullet points explaining which signals were used. When \`historyStats\` is present on the failure row, copy its counts **verbatim** — do not recalculate or substitute different numbers. When citing aggregate learning-pattern frequencies from the CRITICAL/HIGH learning sections (e.g. "297×"), label them exactly as **"Global KB pattern matches (not test-specific)"** so readers know that count is **error-pattern-wide**, not this test's personal run history.
 - signalBreakdown: Must sum to ~100% across scores
 
+### Investigate Confidence Calibration (REQUIRED when classification = "Investigate"):
+- **confidence ≤ 55** — genuine ambiguity: no historical pattern match, conflicting signals, or weak/insufficient evidence.
+- **confidence ≥ 70** — a specific signal strongly suggests investigation is warranted (co-failure group, unclear assertion impact, first-seen with partial hints, etc.).
+- Avoid landing in 56–69 unless you cite a concrete signal in **priorityReason**; prefer the low band (≤55) when uncertain.
+
+### signalBreakdown ↔ classification alignment (STRICT — server may override contradictions):
+- Scores MUST reflect the same winner as **classification**.
+- **bugScore > 70** → classification MUST be **"Potential bug"** unless §0, §1, or §1b explicitly overrides.
+- **flakyScore > 70** → classification MUST be **"Likely Flaky"** unless §0, §1, or §1b overrides.
+- **environmentScore > 70** → classification MUST be **"Environment / Infra Issue"** unless §0 or §1 overrides.
+- Do not output mismatched pairs (e.g. "Investigate" with investigateScore < 50 and bugScore > 75).
+
 ### Output Rules:
 - Return ONLY a valid JSON array
 - Each item MUST include ALL required keys
@@ -1199,8 +1450,11 @@ serve(async (req) => {
     let learningPatternsPrompt = '';
     let globalFamiliarityInfo = '';
     let fewShotExamples = '';
+    let historicalSimilarFailures = '';
+    let ragRows: SimilarHistoricalFailure[] = [];
     const streakMap = new Map<string, StreakInfo>();
     let historyByTest = new Map<string, TestHistory>();
+    let reportIds: string[] = [];
     const testNames = failures.map((f: { testNameNormalized: string }) => f.testNameNormalized);
 
     try {
@@ -1212,7 +1466,7 @@ serve(async (req) => {
         .select('id, run_date')
         .eq('regression_bucket', regressionBucket);
 
-      const reportIds = regressionReports?.map((r: { id: string }) => r.id) || [];
+      reportIds = regressionReports?.map((r: { id: string }) => r.id) || [];
       const reportIdToDate = new Map<string, string>(
         (regressionReports || []).map((r: { id: string; run_date: string }) => [r.id, r.run_date])
       );
@@ -1530,6 +1784,45 @@ ${confirmedLearning.slice(0, 15).map((p: { error_pattern: string | null; ai_clas
       console.log("Could not fetch historical data, continuing without:", dbErr);
     }
 
+    try {
+      const ragSeenIds = new Set<string>();
+      ragRows = [];
+      const ragLimitPerFailure = 5;
+      const ragLimitTotal = 5;
+
+      for (const failure of failures as Array<{
+        testNameNormalized: string;
+        detectedErrorPattern?: string | null;
+        errorPattern?: string | null;
+        errorMessage?: string | null;
+      }>) {
+        const similar = await getSimilarHistoricalFailures(
+          supabase,
+          failure.testNameNormalized,
+          failure.detectedErrorPattern ?? failure.errorPattern ?? null,
+          failure.errorMessage ?? null,
+          reportIds,
+          ragLimitPerFailure,
+        );
+        for (const row of similar) {
+          if (ragSeenIds.has(row.id)) continue;
+          ragSeenIds.add(row.id);
+          ragRows.push(row);
+          if (ragRows.length >= ragLimitTotal) break;
+        }
+        if (ragRows.length >= ragLimitTotal) break;
+      }
+
+      historicalSimilarFailures = formatHistoricalSimilarFailuresSection(ragRows.slice(0, ragLimitTotal));
+      if (historicalSimilarFailures) {
+        console.log(`RAG: injected ${Math.min(ragRows.length, ragLimitTotal)} historical similar failure(s) into prompt`);
+      }
+    } catch (ragErr) {
+      console.log('getSimilarHistoricalFailures failed, continuing without RAG context:', ragErr);
+      historicalSimilarFailures = '';
+      ragRows = [];
+    }
+
     // Build regression context summary
     regressionContext = `
 ## REGRESSION CONTEXT: "${regressionBucket}"
@@ -1541,6 +1834,7 @@ ${historicalCorrections}
 ${confirmedPatterns}
 ${passedLocallyPatterns}
 ${learningPatternsPrompt}
+${historicalSimilarFailures}
 `;
 
     // Enrich failures with streakInfo (§9), bucket-scoped history (§7.5), and pre-calculated historyStats
@@ -1750,13 +2044,74 @@ Return ONLY valid JSON array, no markdown.`;
 
       return analysis;
     });
-    
+
+    // Strict Flaky Guardrail — downgrade heuristic-only Likely Flaky to Investigate
+    const ragUsedByIdx = new Map<number, boolean>();
+    for (let idx = 0; idx < failuresForPrompt.length; idx++) {
+      const norm = (failuresForPrompt[idx] as { testNameNormalized?: string }).testNameNormalized;
+      ragUsedByIdx.set(
+        idx,
+        Boolean(norm && ragRows.some((r) => r.test_name_normalized === norm)),
+      );
+    }
+
+    for (let idx = 0; idx < processedAnalyses.length; idx++) {
+      const analysis = processedAnalyses[idx] as Record<string, unknown>;
+      if (analysis.classification !== 'Likely Flaky') continue;
+
+      const fp = failuresForPrompt[idx] as {
+        testNameNormalized?: string;
+        testName?: string;
+        historyStats?: HistoryStatsForPrompt;
+        streakInfo?: StreakInfo;
+      };
+      const passedLocallyCount = fp?.historyStats?.priorUserOutcomes?.passedLocallyCount ?? 0;
+      const dominantSignal = fp?.historyStats?.priorUserOutcomes?.dominantUserSignal;
+      const isIntermittent = fp?.streakInfo?.isIntermittent === true;
+      const testNorm = fp?.testNameNormalized ?? '';
+      const hadRagFlakyEvidence = ragRows.some(
+        (r) => r.test_name_normalized === testNorm && r.passed_locally === true,
+      );
+      const flakyKBMatch = analysis.flakyKBMatch === true;
+      const testName = fp?.testName ?? testNorm ?? '(unknown)';
+      console.log('[STRICT_FLAKY_GUARDRAIL] Likely Flaky evidence check:', {
+        testName,
+        passedLocallyCount,
+        dominantSignal,
+        isIntermittent,
+        hadRagFlakyEvidence,
+        flakyKBMatch,
+      });
+      const hasExplicitFlakyEvidence =
+        passedLocallyCount >= 1 ||
+        dominantSignal === 'flaky' ||
+        isIntermittent ||
+        hadRagFlakyEvidence;
+
+      if (!hasExplicitFlakyEvidence) {
+        console.log(`[STRICT_FLAKY_GUARDRAIL] Downgrading Likely Flaky → Investigate for: ${testName}`);
+        analysis.classification = 'Investigate';
+        analysis.suggestedAction = 'Verify manually';
+        analysis.confidence = Math.min(Number(analysis.confidence) || 55, 55);
+        const guardrailNote =
+          '• Strict Flaky Guardrail: No explicit flaky evidence (no passed_locally, no intermittent streak, no RAG match) — classified as Investigate';
+        const pr = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
+        analysis.priorityReason = pr.trim() ? `${guardrailNote}\n${pr}` : guardrailNote;
+      }
+    }
+
     const results = processedAnalyses.map((analysis: any, idx: number) => {
       const norm = (failures[idx] as { testNameNormalized?: string })?.testNameNormalized;
       const hist = norm ? historyByTest.get(norm) : undefined;
+      const ragUsed = ragUsedByIdx.get(idx) ?? false;
       return {
         failureId: idx,
-        analysis: hist ? { ...analysis, history: hist } : analysis,
+        rag_used: ragUsed,
+        analysis: {
+          ...analysis,
+          rag_used: ragUsed,
+          ...(hist ? { history: hist } : {}),
+        },
       };
     });
 

@@ -129,6 +129,8 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
   const shouldInvestigate = aiRecommendedInvestigate({
     classification: failure.analysis?.classification,
     priority: failure.analysis?.priority,
+    confidence: failure.analysis?.confidence,
+    passedLocally: failure.feedback?.passedLocally ?? null,
   });
 
   return (

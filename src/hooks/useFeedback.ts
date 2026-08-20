@@ -15,10 +15,15 @@ import { convertPreClassifiedToFeedback } from '@/lib/testimClassificationMapper
 import { aiRecommendedInvestigate as aiRecommendsInvestigate } from '@/lib/aiInvestigateRecommendation';
 import { useSessionPersistence } from './useSessionPersistence';
 
-const aiRecommendedInvestigate = (analysis: AIAnalysisResult | undefined): boolean =>
+const aiRecommendedInvestigate = (
+  analysis: AIAnalysisResult | undefined,
+  passedLocally?: boolean | null,
+): boolean =>
   aiRecommendsInvestigate({
     classification: analysis?.classification,
     priority: analysis?.priority,
+    confidence: analysis?.confidence,
+    passedLocally: passedLocally ?? null,
   });
 
 // Did this actually require manual work? (based on human classification)
@@ -87,7 +92,7 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
         if (f.preClassified?.failureType) {
           const mapped = convertPreClassifiedToFeedback(f.preClassified);
           const autoFeedback: UserFeedback = {
-            wasCorrect: aiRecommendedInvestigate(f.analysis) === requiredManualWork(f.preClassified),
+            wasCorrect: aiRecommendedInvestigate(f.analysis, mapped.passedLocally ?? null) === requiredManualWork(f.preClassified),
             userClassification: mapped.classification || f.analysis?.classification,
             userPriority: mapped.priority || f.analysis?.priority,
             userAction: mapped.suggestedAction || f.analysis?.suggestedAction,
@@ -116,7 +121,7 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
             // Auto-fill feedback from pre-classification
             // wasCorrect is based on whether AI recommendation matched actual need for manual work
             const autoFeedback: UserFeedback = {
-              wasCorrect: aiRecommendedInvestigate(f.analysis) === requiredManualWork(f.preClassified),
+              wasCorrect: aiRecommendedInvestigate(f.analysis, mapped.passedLocally ?? null) === requiredManualWork(f.preClassified),
               userClassification: mapped.classification || f.analysis?.classification,
               userPriority: mapped.priority || f.analysis?.priority,
               userAction: mapped.suggestedAction || f.analysis?.suggestedAction,
@@ -275,7 +280,8 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
         passed_locally_notes: f.feedback?.passedLocallyNotes || null,
         required_manual_fix: f.feedback?.requiredManualFix || false,
         manual_fix_type: f.feedback?.manualFixType || null,
-        manual_fix_notes: f.feedback?.manualFixNotes || null
+        manual_fix_notes: f.feedback?.manualFixNotes || null,
+        rag_used: f.analysis?.rag_used ?? false,
       }));
 
       // Insert results

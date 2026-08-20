@@ -87,6 +87,7 @@ export interface ResultToSave {
   required_manual_fix: boolean;
   manual_fix_type: string | null;
   manual_fix_notes: string | null;
+  rag_used?: boolean | null;
 }
 
 // Historical correction for AI learning

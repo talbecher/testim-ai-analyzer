@@ -77,6 +77,8 @@ export function BulkActionPanel({
         wasCorrect: !aiRecommendedInvestigate({
           classification: f.analysis?.classification,
           priority: f.analysis?.priority,
+          confidence: f.analysis?.confidence,
+          passedLocally: f.feedback?.passedLocally ?? null,
         }),
         userClassification: f.analysis?.classification,
         userPriority: f.analysis?.priority,
@@ -91,6 +93,8 @@ export function BulkActionPanel({
         wasCorrect: aiRecommendedInvestigate({
           classification: f.analysis?.classification,
           priority: f.analysis?.priority,
+          confidence: f.analysis?.confidence,
+          passedLocally: f.feedback?.passedLocally ?? null,
         }),
         userClassification: f.analysis?.classification,
         userPriority: f.analysis?.priority,
@@ -105,6 +109,8 @@ export function BulkActionPanel({
         wasCorrect: aiRecommendedInvestigate({
           classification: f.analysis?.classification,
           priority: f.analysis?.priority,
+          confidence: f.analysis?.confidence,
+          passedLocally: f.feedback?.passedLocally ?? null,
         }),
         userClassification: f.analysis?.classification,
         userPriority: f.analysis?.priority,
