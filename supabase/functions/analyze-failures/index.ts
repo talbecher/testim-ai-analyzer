@@ -2037,6 +2037,83 @@ Return ONLY valid JSON array, no markdown.`;
           pr;
       }
 
+      // Rule: "Build has failed" → always Investigate
+      const errorMsg = (rawFailure?.errorMessage ?? '') as string;
+      if (/build has failed/i.test(errorMsg)) {
+        analysis.classification = 'Investigate';
+        analysis.suggestedAction = 'Verify manually';
+        analysis.confidence = Math.max(Number(analysis.confidence) || 0, 75);
+        analysis.priority = analysis.priority === 'P3' ? 'P2' : analysis.priority;
+        const pr = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
+        analysis.priorityReason =
+          '• Rule Override: "Build has failed" errors require manual investigation regardless of flaky history.\n' + pr;
+        console.log('[BUILD_FAILED_RULE] Forcing Investigate for:', (failures[idx] as any)?.testNameNormalized);
+      }
+
+      // Rule: Meaningful AssertionError → always Investigate
+      const rawFailure3 = failures[idx] as { errorMessage?: string; detectedErrorPattern?: string } | undefined;
+      const errMsg3 = sanitizeErrorMessage(rawFailure3?.errorMessage ?? '');
+      const errPat3 = ((rawFailure3 as any)?.detectedErrorPattern ?? analysis.errorPattern ?? '') as string;
+
+      const hasExpectedActual =
+        /expected:/i.test(errMsg3) && /actual:/i.test(errMsg3);
+
+      if (hasExpectedActual) {
+        const expectedMatch = errMsg3.match(/expected:\s*['"]?(.{0,200}?)['"]?\s*(?:\.|actual:|$)/i);
+        const actualMatch = errMsg3.match(/actual:\s*['"]?(.{0,200}?)['"]?\s*(?:\.|$)/i);
+
+        const expectedVal = expectedMatch?.[1]?.trim() ?? '';
+        const actualVal = actualMatch?.[1]?.trim() ?? '';
+
+        const normalize = (s: string) =>
+          s
+            .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '<id>')
+            .replace(/\/[a-zA-Z0-9_\-]{10,}(?=\/)/g, '/<path>')
+            .replace(/<ts>/g, '<ts>')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const normalizedExpected = normalize(expectedVal);
+        const normalizedActual = normalize(actualVal);
+
+        const isMeaningfullyDifferent = normalizedExpected !== normalizedActual;
+
+        if (isMeaningfullyDifferent && analysis.classification === 'Likely Flaky') {
+          analysis.classification = 'Investigate';
+          analysis.suggestedAction = 'Verify manually';
+          analysis.confidence = Math.max(Number(analysis.confidence) || 0, 75);
+          analysis.priority = 'P1';
+          analysis.forceInvestigate = true;
+          const pr = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
+          analysis.priorityReason =
+            '• Rule Override: Expected/Actual mismatch with meaningfully different values — requires investigation even with flaky history.\n' + pr;
+          console.log('[ASSERTION_MEANINGFUL_RULE] Forcing Investigate for:', (failures[idx] as any)?.testNameNormalized);
+        }
+      }
+
+      // Rule: AssertionError + was-passing-now-failing → always Investigate
+      const fp2 = failuresForPrompt[idx] as { history?: { pattern?: string }; historyStats?: any } | undefined;
+      const historyPattern = fp2?.history?.pattern;
+      const errPattern = (analysis.errorPattern as string) ?? '';
+      const isAssertionWithValues =
+        /assertionerror/i.test(errPattern) ||
+        (/expected:/i.test(errPattern) && /actual:/i.test(errPattern));
+
+      if (
+        isAssertionWithValues &&
+        historyPattern === 'was-passing-now-failing' &&
+        analysis.classification !== 'Potential bug'
+      ) {
+        analysis.classification = 'Investigate';
+        analysis.suggestedAction = 'Verify manually';
+        analysis.confidence = Math.max(Number(analysis.confidence) || 0, 70);
+        analysis.priority = analysis.priority === 'P3' ? 'P2' : analysis.priority;
+        const pr = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
+        analysis.priorityReason =
+          '• Rule Override: AssertionError with expected/actual mismatch on a previously passing test — regression smell, requires investigation.\n' + pr;
+        console.log('[ASSERTION_REGRESSION_RULE] Forcing Investigate for:', (failures[idx] as any)?.testNameNormalized);
+      }
+
       if (analysis.classification === 'Expected Change') {
         const tn = failMeta?.testName ?? failMeta?.testNameNormalized ?? '(unknown)';
         console.log('[LOW_ACCURACY_SIGNAL] Expected Change classification used for test:', tn);

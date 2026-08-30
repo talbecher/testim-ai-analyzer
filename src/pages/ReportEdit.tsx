@@ -146,6 +146,7 @@ export default function ReportEdit() {
     getInvestigateTriageRecommendation({
       classification: result.ai_classification,
       priority: result.ai_priority,
+      forceInvestigate: (result as ReportResult & { forceInvestigate?: boolean }).forceInvestigate ?? false,
     });
 
   // Helper: Calculate actual outcome based on user feedback

@@ -69,6 +69,7 @@ export function LearningModeCard({ failure }: LearningModeCardProps) {
     classification: failure.analysis?.classification,
     priority: failure.analysis?.priority,
     confidence: failure.analysis?.confidence,
+    forceInvestigate: failure.analysis?.forceInvestigate ?? false,
   });
 
   const neededManualWork = requiredManualWork(failure.preClassified);

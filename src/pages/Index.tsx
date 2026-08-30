@@ -265,6 +265,7 @@ const Index = () => {
         priority: f.analysis?.priority,
         confidence: f.analysis?.confidence,
         passedLocally: withFb?.feedback?.passedLocally ?? null,
+        forceInvestigate: f.analysis?.forceInvestigate ?? false,
       });
     });
     return {
@@ -315,6 +316,7 @@ const Index = () => {
         priority: f.analysis?.priority,
         confidence: f.analysis?.confidence,
         passedLocally: withFb.feedback?.passedLocally ?? null,
+        forceInvestigate: f.analysis?.forceInvestigate ?? false,
       });
       const matchesRecommendation =
         filterRecommendation === 'all' ||

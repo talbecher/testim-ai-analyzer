@@ -59,6 +59,7 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
     priority: failure.analysis?.priority,
     confidence: failure.analysis?.confidence,
     passedLocally: failure.feedback?.passedLocally ?? null,
+    forceInvestigate: failure.analysis?.forceInvestigate ?? false,
   });
 
   const handleConfirmBug = (category: string, bugLink?: string) => {

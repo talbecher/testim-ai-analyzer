@@ -131,6 +131,7 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
     priority: failure.analysis?.priority,
     confidence: failure.analysis?.confidence,
     passedLocally: failure.feedback?.passedLocally ?? null,
+    forceInvestigate: failure.analysis?.forceInvestigate ?? false,
   });
 
   return (

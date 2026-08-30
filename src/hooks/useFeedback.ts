@@ -24,6 +24,7 @@ const aiRecommendedInvestigate = (
     priority: analysis?.priority,
     confidence: analysis?.confidence,
     passedLocally: passedLocally ?? null,
+    forceInvestigate: analysis?.forceInvestigate ?? false,
   });
 
 // Did this actually require manual work? (based on human classification)

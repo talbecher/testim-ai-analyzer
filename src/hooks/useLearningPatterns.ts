@@ -33,7 +33,7 @@ export interface PatternExplanation {
 }
 
 function getAIRecommendation(classification: string | null): 'Investigate' | 'Skip' {
-  return aiRecommendedInvestigate({ classification, priority: null }) ? 'Investigate' : 'Skip';
+  return aiRecommendedInvestigate({ classification, priority: null, forceInvestigate: false }) ? 'Investigate' : 'Skip';
 }
 
 // Generate human-readable explanation for a pattern

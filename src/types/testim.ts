@@ -187,6 +187,8 @@ export interface AIAnalysisResult {
   history?: TestHistory;
   /** True when RAG historical similar-failures context was injected server-side. */
   rag_used?: boolean;
+  /** Server rule override: client must recommend Investigate regardless of priority/confidence. */
+  forceInvestigate?: boolean;
 }
 
 // Combined Failure with Analysis
