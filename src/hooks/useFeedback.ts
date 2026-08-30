@@ -292,6 +292,16 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
 
       if (resultsError) throw resultsError;
 
+      // Fire-and-forget: refresh learning patterns in background (same as "Boost Now")
+      void (async () => {
+        try {
+          await supabase.functions.invoke('aggregate-learning');
+          console.log('[AUTO_BOOST] Learning patterns refreshed after save');
+        } catch (err) {
+          console.error('[AUTO_BOOST] Background boost failed (non-blocking):', err);
+        }
+      })();
+
       return true;
     } catch (error) {
       console.error('Failed to save report:', error);
