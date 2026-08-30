@@ -10,6 +10,7 @@ import { Classification, Priority, SuggestedAction } from '@/types/testim';
 import { BugConfirmationFlow } from './BugConfirmationFlow';
 import { TestHistoryChip } from './TestHistoryChip';
 import { PriorityReasonToggle } from './PriorityReasonToggle';
+import { CopyMisclassificationButton } from './CopyMisclassificationButton';
 import { coercePriorityReasonText } from '@/lib/priorityReasonToggle';
 
 interface ProductionModeCardProps {
@@ -398,15 +399,18 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
 
             {/* Edit button for reviewed items */}
             {!isEditing && (
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="h-6 text-xs mt-1"
-                onClick={handleEditClick}
-              >
-                <Edit2 className="h-3 w-3 mr-1" />
-                Edit
-              </Button>
+              <div className="flex flex-wrap items-center gap-1">
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-6 text-xs"
+                  onClick={handleEditClick}
+                >
+                  <Edit2 className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+                <CopyMisclassificationButton failure={failure} />
+              </div>
             )}
           </div>
         )}

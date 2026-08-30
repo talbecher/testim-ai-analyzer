@@ -11,6 +11,7 @@ import { BugConfirmationFlow } from './BugConfirmationFlow';
 import { SignalBreakdownCompact } from './SignalBreakdownBar';
 import { TestHistoryChip } from './TestHistoryChip';
 import { PriorityReasonToggle } from './PriorityReasonToggle';
+import { CopyMisclassificationButton } from './CopyMisclassificationButton';
 import { coercePriorityReasonText } from '@/lib/priorityReasonToggle';
 
 interface FailureReviewCardProps {
@@ -358,15 +359,18 @@ export function FailureReviewCard({ failure, onFeedback, classColors, priorityCo
             )}
 
             {/* Edit button for reviewed items */}
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              className="h-6 text-xs mt-1"
-              onClick={() => setShowBugConfirmation(true)}
-            >
-              <Edit2 className="h-3 w-3 mr-1" />
-              Edit
-            </Button>
+            <div className="flex flex-wrap items-center gap-1">
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-6 text-xs"
+                onClick={() => setShowBugConfirmation(true)}
+              >
+                <Edit2 className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+              <CopyMisclassificationButton failure={failure} />
+            </div>
           </div>
         )}
       </CardContent>
