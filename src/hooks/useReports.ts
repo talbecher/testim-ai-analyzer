@@ -27,6 +27,7 @@ export interface ReportResult {
   ai_priority: string;
   ai_confidence: number;
   ai_action: string | null;
+  ai_priority_reason: string | null;
   flaky_kb_matched: boolean | null;
   user_classification: string | null;
   user_priority: string | null;

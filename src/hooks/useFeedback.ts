@@ -267,6 +267,7 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
         ai_priority: f.analysis?.priority || 'P3',
         ai_confidence: f.analysis?.confidence || 0,
         ai_action: f.analysis?.suggestedAction || null,
+        ai_priority_reason: f.analysis?.priorityReason || null,
         flaky_kb_matched: f.analysis?.flakyKBMatch || false,
         is_in_flaky_kb: f.analysis?.flakyKBMatch || false, // New field
         user_classification: f.feedback?.userClassification || null,

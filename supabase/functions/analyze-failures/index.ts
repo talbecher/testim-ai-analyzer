@@ -275,6 +275,7 @@ const DECISION_FRAMEWORK = `
 - AssertionError → usually Potential bug
 - Network / infra errors → Environment / Infra Issue
 - Null / Undefined errors → Potential bug unless strong flaky signals exist
+- Null/Undefined error with "reading 'click'" (e.g. "Cannot read properties of null (reading 'click')") → almost always Likely Flaky. This means the test tried to click an element that wasn't loaded yet (timing issue). Data shows 100% of these passed locally (8/8, zero real bugs). Lean Likely Flaky unless co-failure group, manual-fix history, or streak >= 5 suggests otherwise.
 
 ## 7.5. CROSS-RUN HISTORY (BUCKET-SCOPED HISTORY — HIGH WEIGHT)
 
@@ -742,6 +743,7 @@ function applyStreakUserFeedbackOverride(
   historyStats: HistoryStatsForPrompt | undefined,
   debugTestName?: string,
 ): void {
+  if ((analysis as { forceInvestigate?: boolean }).forceInvestigate === true) return;
   if (!historyStats) return;
 
   const o = historyStats.priorUserOutcomes;
@@ -2018,6 +2020,39 @@ Return ONLY valid JSON array, no markdown.`;
         failMeta?.testNameNormalized ?? failMeta?.testName ?? '(unknown)';
       applyStreakUserFeedbackOverride(analysis, fp?.historyStats, streakDebugTestName);
 
+      // Rule: Element not found + Flaky KB + clean history → force Skip (Flaky), with guards
+      const fpE = failuresForPrompt[idx] as {
+        historyStats?: HistoryStatsForPrompt;
+      } | undefined;
+      const rawFailureE = failures[idx] as { detectedErrorPattern?: string; coFailureInfo?: { groupSize?: number } } | undefined;
+      const errPatternE = (rawFailureE?.detectedErrorPattern ?? analysis.errorPattern ?? '') as string;
+      const manualFixHistory = fpE?.historyStats?.priorUserOutcomes?.requiredManualFixCount ?? 0;
+      const passedLocallyHistory = fpE?.historyStats?.priorUserOutcomes?.passedLocallyCount ?? 0;
+      const currentStreak = fpE?.historyStats?.consecutiveFailStreakIncludingCurrentRun ?? 0;
+      const coFailureGroupSize = rawFailureE?.coFailureInfo?.groupSize ?? 0;
+
+      // Safety guards — do NOT apply the flaky rule if these indicate a real systemic issue
+      const hasCoFailureGuard = coFailureGroupSize >= 3;
+      const hasLongStreakGuard = currentStreak >= 5;
+
+      if (
+        /element not found/i.test(errPatternE) &&
+        analysis.flakyKBMatch === true &&
+        manualFixHistory === 0 &&
+        passedLocallyHistory >= 2 &&
+        !hasCoFailureGuard &&
+        !hasLongStreakGuard &&
+        analysis.classification !== 'Likely Flaky'
+      ) {
+        analysis.classification = 'Likely Flaky';
+        analysis.suggestedAction = 'Skip';
+        analysis.priority = 'P3';
+        const pr = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
+        analysis.priorityReason =
+          `• Rule Override: "Element not found" + Flaky KB + clean history (${passedLocallyHistory}x passed locally, 0 manual fixes, no co-failure, streak<5) — strong flaky signal, skipping.\n` + pr;
+        console.log('[ELEMENT_NOT_FOUND_FLAKY_RULE] Forcing Skip for:', (failures[idx] as any)?.testNameNormalized);
+      }
+
       enforceSessionWebDriverInfraOverride(analysis, rawFailure?.errorMessage);
 
       // Override 1: Likely Flaky is always Skip (post-AI, before client)
@@ -2108,10 +2143,38 @@ Return ONLY valid JSON array, no markdown.`;
         analysis.suggestedAction = 'Verify manually';
         analysis.confidence = Math.max(Number(analysis.confidence) || 0, 70);
         analysis.priority = analysis.priority === 'P3' ? 'P2' : analysis.priority;
+        analysis.forceInvestigate = true;
         const pr = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
         analysis.priorityReason =
           '• Rule Override: AssertionError with expected/actual mismatch on a previously passing test — regression smell, requires investigation.\n' + pr;
         console.log('[ASSERTION_REGRESSION_RULE] Forcing Investigate for:', (failures[idx] as any)?.testNameNormalized);
+      }
+
+      // Rule 4 — First-seen assertion mismatch → force Investigate despite low confidence
+      const rawFailure4 = failures[idx] as { errorMessage?: string; detectedErrorPattern?: string } | undefined;
+      const errMsg4 = sanitizeErrorMessage(rawFailure4?.errorMessage ?? '');
+      const fp4 = failuresForPrompt[idx] as { history?: { pattern?: string; isFirstSeenGlobally?: boolean } } | undefined;
+      const isFirstSeen = fp4?.history?.pattern === 'first-seen' || fp4?.history === undefined;
+
+      const hasAssertionMismatch =
+        (/expected:/i.test(errMsg4) && /actual:/i.test(errMsg4)) ||
+        /expected .+ but got/i.test(errMsg4);
+
+      if (
+        hasAssertionMismatch &&
+        isFirstSeen &&
+        analysis.classification !== 'Potential bug' &&
+        analysis.classification !== 'Likely Flaky'
+      ) {
+        analysis.classification = 'Investigate';
+        analysis.suggestedAction = 'Verify manually';
+        analysis.confidence = Math.max(Number(analysis.confidence) || 0, 70);
+        analysis.priority = 'P1';
+        analysis.forceInvestigate = true;
+        const pr = typeof analysis.priorityReason === 'string' ? analysis.priorityReason : '';
+        analysis.priorityReason =
+          '• Rule Override: First-seen test with a clear assertion mismatch — no history to rely on, requires investigation.\n' + pr;
+        console.log('[FIRST_SEEN_ASSERTION_RULE] Forcing Investigate for:', (failures[idx] as any)?.testNameNormalized);
       }
 
       if (analysis.classification === 'Expected Change') {

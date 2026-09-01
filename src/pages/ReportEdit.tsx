@@ -1,8 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
+import { CopyMisclassificationButton } from '@/components/CopyMisclassificationButton';
 import { useReports, ReportResult } from '@/hooks/useReports';
 import { useBugCategories } from '@/hooks/useBugCategories';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +19,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { getInvestigateTriageRecommendation } from '@/lib/aiInvestigateRecommendation';
+import { mapReportResultToFailure } from '@/lib/mapReportResultToFailure';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
 
 const classifications: Classification[] = [
@@ -42,6 +45,7 @@ export default function ReportEdit() {
   const { reportId } = useParams<{ reportId: string }>();
   const navigate = useNavigate();
   const { categories } = useBugCategories();
+  const { isAdmin } = useAuth();
   const {
     currentReport,
     currentResults,
@@ -597,10 +601,15 @@ export default function ReportEdit() {
 
                     {/* Actions */}
                     {editingResultId !== result.id && (
-                      <Button variant="outline" size="sm" onClick={() => handleStartEditResult(result)}>
-                        <Edit3 className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Button variant="outline" size="sm" onClick={() => handleStartEditResult(result)}>
+                          <Edit3 className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        {isAdmin && result.was_correct === false && (
+                          <CopyMisclassificationButton failure={mapReportResultToFailure(result)} />
+                        )}
+                      </div>
                     )}
                   </div>
                 </CardContent>

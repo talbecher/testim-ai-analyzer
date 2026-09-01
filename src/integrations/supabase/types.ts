@@ -72,6 +72,7 @@ export type Database = {
           ai_confidence: number
           ai_priority: string
           ai_priority_original: string | null
+          ai_priority_reason: string | null
           bug_category: string | null
           bug_link: string | null
           created_at: string
@@ -103,6 +104,7 @@ export type Database = {
           ai_confidence: number
           ai_priority: string
           ai_priority_original?: string | null
+          ai_priority_reason?: string | null
           bug_category?: string | null
           bug_link?: string | null
           created_at?: string
@@ -134,6 +136,7 @@ export type Database = {
           ai_confidence?: number
           ai_priority?: string
           ai_priority_original?: string | null
+          ai_priority_reason?: string | null
           bug_category?: string | null
           bug_link?: string | null
           created_at?: string
