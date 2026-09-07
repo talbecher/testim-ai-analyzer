@@ -24,7 +24,7 @@ export function mapReportResultToFailure(
       errorPattern: (result.error_pattern ?? 'N/A') as ErrorPattern,
       priorityReason: result.ai_priority_reason ?? '',
       flakyKBMatch: result.flaky_kb_matched ?? false,
-      forceInvestigate: false,
+      forceInvestigate: result.force_investigate ?? false,
       suggestedAction: (result.ai_action ?? 'Ignore today / monitor') as SuggestedAction,
       requiresRerun: false,
       rerunReason: '',

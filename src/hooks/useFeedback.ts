@@ -283,6 +283,7 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
         manual_fix_type: f.feedback?.manualFixType || null,
         manual_fix_notes: f.feedback?.manualFixNotes || null,
         rag_used: f.analysis?.rag_used ?? false,
+        force_investigate: f.analysis?.forceInvestigate ?? false,
       }));
 
       // Insert results

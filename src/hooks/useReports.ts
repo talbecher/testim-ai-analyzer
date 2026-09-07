@@ -30,6 +30,7 @@ export interface ReportResult {
   ai_action: string | null;
   ai_priority_reason: string | null;
   flaky_kb_matched: boolean | null;
+  force_investigate: boolean | null;
   user_classification: string | null;
   user_priority: string | null;
   user_action: string | null;

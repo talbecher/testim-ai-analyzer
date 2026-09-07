@@ -18,7 +18,7 @@ import { AppLogo } from '@/components/AppLogo';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { getInvestigateTriageRecommendation } from '@/lib/aiInvestigateRecommendation';
+import { getInvestigateTriageRecommendation, aiOriginalRecommendation } from '@/lib/aiInvestigateRecommendation';
 import { mapReportResultToFailure } from '@/lib/mapReportResultToFailure';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
 
@@ -146,12 +146,18 @@ export default function ReportEdit() {
     }
   };
 
+  const getAIRecommendationInput = (result: ReportResult) => ({
+    classification: result.ai_classification,
+    priority: result.ai_priority,
+    confidence: result.ai_confidence,
+    forceInvestigate: result.force_investigate ?? false,
+  });
+
   const getAIRecommendation = (result: ReportResult) =>
-    getInvestigateTriageRecommendation({
-      classification: result.ai_classification,
-      priority: result.ai_priority,
-      forceInvestigate: (result as ReportResult & { forceInvestigate?: boolean }).forceInvestigate ?? false,
-    });
+    getInvestigateTriageRecommendation(getAIRecommendationInput(result));
+
+  const getOriginalAIRecommendation = (result: ReportResult) =>
+    aiOriginalRecommendation(getAIRecommendationInput(result));
 
   // Helper: Calculate actual outcome based on user feedback
   const getActualOutcome = (result: ReportResult) => {
@@ -168,8 +174,8 @@ export default function ReportEdit() {
       return { neededWork: true, description: result.user_classification };
     }
     // Default - AI was correct, check if investigation was needed
-    const aiRecommendedInvestigate = getAIRecommendation(result) === 'Investigate';
-    return { 
+    const aiRecommendedInvestigate = getOriginalAIRecommendation(result);
+    return {
       neededWork: aiRecommendedInvestigate,
       description: aiRecommendedInvestigate ? 'Investigated as recommended' : 'Skipped as recommended'
     };
@@ -177,7 +183,7 @@ export default function ReportEdit() {
 
   // Helper: Determine if AI recommendation was correct
   const wasAIRecommendationCorrect = (result: ReportResult) => {
-    const aiRecommendedInvestigate = getAIRecommendation(result) === 'Investigate';
+    const aiRecommendedInvestigate = getOriginalAIRecommendation(result);
     const outcome = getActualOutcome(result);
     
     // AI correct if: recommended Investigate AND needed work, OR recommended Skip AND didn't need work

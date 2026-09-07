@@ -82,6 +82,7 @@ export type Database = {
           error_message: string | null
           error_pattern: string | null
           flaky_kb_matched: boolean | null
+          force_investigate: boolean | null
           id: string
           is_in_flaky_kb: boolean | null
           manual_fix_notes: string | null
@@ -114,6 +115,7 @@ export type Database = {
           error_message?: string | null
           error_pattern?: string | null
           flaky_kb_matched?: boolean | null
+          force_investigate?: boolean | null
           id?: string
           is_in_flaky_kb?: boolean | null
           manual_fix_notes?: string | null
@@ -146,6 +148,7 @@ export type Database = {
           error_message?: string | null
           error_pattern?: string | null
           flaky_kb_matched?: boolean | null
+          force_investigate?: boolean | null
           id?: string
           is_in_flaky_kb?: boolean | null
           manual_fix_notes?: string | null
