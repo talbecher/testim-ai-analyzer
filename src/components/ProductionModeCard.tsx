@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Check, X, Edit2, Database, Clock, Bug, TestTube, ExternalLink, Search, CircleSlash, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
+import { aiRecommendedInvestigate, aiOriginalRecommendation } from '@/lib/aiInvestigateRecommendation';
 import { AnalyzedFailureWithFeedback, UserFeedback } from '@/types/feedback';
 import { Classification, Priority, SuggestedAction } from '@/types/testim';
 import { BugConfirmationFlow } from './BugConfirmationFlow';
@@ -54,6 +54,21 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
     }
   }, [failure.analysis, failure.isReviewed, isEditing]);
 
+  const shouldInvestigate = aiRecommendedInvestigate({
+    classification: failure.analysis?.classification,
+    priority: failure.analysis?.priority,
+    confidence: failure.analysis?.confidence,
+    passedLocally: failure.feedback?.passedLocally ?? null,
+    forceInvestigate: failure.analysis?.forceInvestigate ?? false,
+  });
+
+  const originalRecommendedInvestigate = aiOriginalRecommendation({
+    classification: failure.analysis?.classification,
+    priority: failure.analysis?.priority,
+    confidence: failure.analysis?.confidence,
+    forceInvestigate: failure.analysis?.forceInvestigate ?? false,
+  });
+
   const handleConfirmAI = () => {
     onFeedback(failure.id, {
       wasCorrect: true,
@@ -67,7 +82,7 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
   const handleConfirmBug = (category: string, bugLink?: string) => {
     // AI is correct if it recommended investigation (bug found = investigation was right)
     onFeedback(failure.id, {
-      wasCorrect: shouldInvestigate,
+      wasCorrect: originalRecommendedInvestigate,
       userClassification: failure.analysis?.classification,
       userPriority: failure.analysis?.priority,
       userAction: failure.analysis?.suggestedAction,
@@ -80,7 +95,7 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
   const handlePassedLocally = (reason: string, notes?: string) => {
     // AI is correct if it recommended to SKIP (no bug = skip was right)
     onFeedback(failure.id, {
-      wasCorrect: !shouldInvestigate,
+      wasCorrect: !originalRecommendedInvestigate,
       userClassification: failure.analysis?.classification,
       userPriority: failure.analysis?.priority,
       userAction: failure.analysis?.suggestedAction,
@@ -94,7 +109,7 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
   const handleRequiredManualFix = (fixType: string, notes?: string) => {
     // AI is correct if it recommended investigation (manual fix = work was needed)
     onFeedback(failure.id, {
-      wasCorrect: shouldInvestigate,
+      wasCorrect: originalRecommendedInvestigate,
       userClassification: failure.analysis?.classification,
       userPriority: failure.analysis?.priority,
       userAction: failure.analysis?.suggestedAction,
@@ -126,14 +141,6 @@ export function ProductionModeCard({ failure, onFeedback, classColors, priorityC
   };
 
   const isReviewed = failure.isReviewed;
-
-  const shouldInvestigate = aiRecommendedInvestigate({
-    classification: failure.analysis?.classification,
-    priority: failure.analysis?.priority,
-    confidence: failure.analysis?.confidence,
-    passedLocally: failure.feedback?.passedLocally ?? null,
-    forceInvestigate: failure.analysis?.forceInvestigate ?? false,
-  });
 
   return (
     <Card className={cn(

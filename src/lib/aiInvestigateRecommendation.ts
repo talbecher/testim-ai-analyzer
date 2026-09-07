@@ -32,6 +32,26 @@ export function aiRecommendedInvestigate(input: AIRecommendationInput): boolean 
   return c === 'Potential bug' || p === 'P0' || p === 'P1';
 }
 
+/** Measurement-only: the AI's ORIGINAL recommendation, ignoring the post-hoc passedLocally override. */
+export function aiOriginalRecommendation(input: {
+  classification?: string | null;
+  priority?: string | null;
+  confidence?: number | null;
+  forceInvestigate?: boolean | null;
+}): boolean {
+  if (input.forceInvestigate === true) return true;
+  const c = input.classification ?? undefined;
+  const p = input.priority ?? undefined;
+  const confidence = input.confidence;
+
+  if (c === 'Likely Flaky') return false;
+  if (c === 'Investigate') {
+    if (typeof confidence === 'number' && confidence < 60) return false;
+    return p === 'P0' || p === 'P1';
+  }
+  return c === 'Potential bug' || p === 'P0' || p === 'P1';
+}
+
 export function getInvestigateTriageRecommendation(input: AIRecommendationInput): 'Investigate' | 'Skip' {
   return aiRecommendedInvestigate(input) ? 'Investigate' : 'Skip';
 }
