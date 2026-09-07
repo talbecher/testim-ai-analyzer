@@ -40,7 +40,7 @@ const Dashboard = () => {
     const { data, error } = await supabase
       .from("analysis_reports")
       .select("*")
-      .order("run_date", { ascending: true });
+      .order("run_date", { ascending: false });
 
     if (!error && data) {
       const typedData = data.map((report) => ({
@@ -142,12 +142,16 @@ const Dashboard = () => {
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AccuracyTrendChart reports={reports} />
+              <AccuracyTrendChart
+                reports={[...reports].sort(
+                  (a, b) => new Date(a.run_date).getTime() - new Date(b.run_date).getTime(),
+                )}
+              />
               <MistakePatternChart mistakes={aggregatedMistakes.slice(0, 5)} />
             </div>
 
-            {/* Recent Reports Table */}
-            <RecentReportsTable reports={[...reports].reverse().slice(0, 10)} />
+            {/* Recent Reports Table — 5 most recent by run date */}
+            <RecentReportsTable reports={reports.slice(0, 5)} />
           </div>
         )}
       </div>
