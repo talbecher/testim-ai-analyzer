@@ -8,7 +8,7 @@ import { X, Bug, PlayCircle, Wrench } from 'lucide-react';
 import { UserFeedback } from '@/types/feedback';
 import { AnalyzedFailureWithFeedback } from '@/types/feedback';
 import { useBugCategories } from '@/hooks/useBugCategories';
-import { aiRecommendedInvestigate } from '@/lib/aiInvestigateRecommendation';
+import { aiOriginalRecommendation } from '@/lib/aiInvestigateRecommendation';
 
 type FlowType = 'bug' | 'passed-locally' | 'manual-fix';
 
@@ -68,19 +68,21 @@ export function BulkActionPanel({
 
   const currentCategories = flowType ? cachedCategories[getCategoryType(flowType)] || [] : [];
 
+  const originalRecommendedInvestigate = (f: AnalyzedFailureWithFeedback) =>
+    aiOriginalRecommendation({
+      classification: f.analysis?.classification,
+      priority: f.analysis?.priority,
+      confidence: f.analysis?.confidence,
+      forceInvestigate: f.analysis?.forceInvestigate ?? false,
+    });
+
   const handleConfirm = () => {
     const ids = selectedFailures.map(f => f.id);
 
     if (flowType === 'passed-locally') {
       // AI was correct if it recommended SKIP (passed locally = no investigation needed)
       onBulkFeedback(ids, (f) => ({
-        wasCorrect: !aiRecommendedInvestigate({
-          classification: f.analysis?.classification,
-          priority: f.analysis?.priority,
-          confidence: f.analysis?.confidence,
-          passedLocally: f.feedback?.passedLocally ?? null,
-          forceInvestigate: f.analysis?.forceInvestigate ?? false,
-        }),
+        wasCorrect: !originalRecommendedInvestigate(f),
         userClassification: f.analysis?.classification,
         userPriority: f.analysis?.priority,
         userAction: f.analysis?.suggestedAction,
@@ -91,13 +93,7 @@ export function BulkActionPanel({
     } else if (flowType === 'bug') {
       // AI was correct if it recommended INVESTIGATE (real bug = investigation was right)
       onBulkFeedback(ids, (f) => ({
-        wasCorrect: aiRecommendedInvestigate({
-          classification: f.analysis?.classification,
-          priority: f.analysis?.priority,
-          confidence: f.analysis?.confidence,
-          passedLocally: f.feedback?.passedLocally ?? null,
-          forceInvestigate: f.analysis?.forceInvestigate ?? false,
-        }),
+        wasCorrect: originalRecommendedInvestigate(f),
         userClassification: f.analysis?.classification,
         userPriority: f.analysis?.priority,
         userAction: f.analysis?.suggestedAction,
@@ -108,13 +104,7 @@ export function BulkActionPanel({
     } else if (flowType === 'manual-fix') {
       // AI was correct if it recommended INVESTIGATE (manual fix needed = work was needed)
       onBulkFeedback(ids, (f) => ({
-        wasCorrect: aiRecommendedInvestigate({
-          classification: f.analysis?.classification,
-          priority: f.analysis?.priority,
-          confidence: f.analysis?.confidence,
-          passedLocally: f.feedback?.passedLocally ?? null,
-          forceInvestigate: f.analysis?.forceInvestigate ?? false,
-        }),
+        wasCorrect: originalRecommendedInvestigate(f),
         userClassification: f.analysis?.classification,
         userPriority: f.analysis?.priority,
         userAction: f.analysis?.suggestedAction,

@@ -12,18 +12,14 @@ import {
 } from '@/types/feedback';
 import { format } from 'date-fns';
 import { convertPreClassifiedToFeedback } from '@/lib/testimClassificationMapper';
-import { aiRecommendedInvestigate as aiRecommendsInvestigate } from '@/lib/aiInvestigateRecommendation';
+import { aiOriginalRecommendation } from '@/lib/aiInvestigateRecommendation';
 import { useSessionPersistence } from './useSessionPersistence';
 
-const aiRecommendedInvestigate = (
-  analysis: AIAnalysisResult | undefined,
-  passedLocally?: boolean | null,
-): boolean =>
-  aiRecommendsInvestigate({
+const originalRecommendedInvestigate = (analysis: AIAnalysisResult | undefined): boolean =>
+  aiOriginalRecommendation({
     classification: analysis?.classification,
     priority: analysis?.priority,
     confidence: analysis?.confidence,
-    passedLocally: passedLocally ?? null,
     forceInvestigate: analysis?.forceInvestigate ?? false,
   });
 
@@ -93,7 +89,7 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
         if (f.preClassified?.failureType) {
           const mapped = convertPreClassifiedToFeedback(f.preClassified);
           const autoFeedback: UserFeedback = {
-            wasCorrect: aiRecommendedInvestigate(f.analysis, mapped.passedLocally ?? null) === requiredManualWork(f.preClassified),
+            wasCorrect: originalRecommendedInvestigate(f.analysis) === requiredManualWork(f.preClassified),
             userClassification: mapped.classification || f.analysis?.classification,
             userPriority: mapped.priority || f.analysis?.priority,
             userAction: mapped.suggestedAction || f.analysis?.suggestedAction,
@@ -122,7 +118,7 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
             // Auto-fill feedback from pre-classification
             // wasCorrect is based on whether AI recommendation matched actual need for manual work
             const autoFeedback: UserFeedback = {
-              wasCorrect: aiRecommendedInvestigate(f.analysis, mapped.passedLocally ?? null) === requiredManualWork(f.preClassified),
+              wasCorrect: originalRecommendedInvestigate(f.analysis) === requiredManualWork(f.preClassified),
               userClassification: mapped.classification || f.analysis?.classification,
               userPriority: mapped.priority || f.analysis?.priority,
               userAction: mapped.suggestedAction || f.analysis?.suggestedAction,
