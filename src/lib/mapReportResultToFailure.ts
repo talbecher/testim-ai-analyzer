@@ -7,7 +7,10 @@ import {
   SuggestedAction,
 } from '@/types/testim';
 
-export function mapReportResultToFailure(result: ReportResult): AnalyzedFailureWithFeedback {
+export function mapReportResultToFailure(
+  result: ReportResult,
+  wasCorrect?: boolean,
+): AnalyzedFailureWithFeedback {
   return {
     id: result.id,
     originalIndex: 0,
@@ -27,7 +30,7 @@ export function mapReportResultToFailure(result: ReportResult): AnalyzedFailureW
       rerunReason: '',
     },
     feedback: {
-      wasCorrect: result.was_correct ?? true,
+      wasCorrect: wasCorrect ?? result.was_correct ?? true,
       userClassification: (result.user_classification ?? undefined) as Classification | undefined,
       passedLocally: result.passed_locally ?? false,
       requiredManualFix: result.required_manual_fix ?? false,

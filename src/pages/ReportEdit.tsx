@@ -606,8 +606,8 @@ export default function ReportEdit() {
                           <Edit3 className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
-                        {isAdmin && result.was_correct === false && (
-                          <CopyMisclassificationButton failure={mapReportResultToFailure(result)} />
+                        {isAdmin && !isCorrect && (
+                          <CopyMisclassificationButton failure={mapReportResultToFailure(result, isCorrect)} />
                         )}
                       </div>
                     )}
