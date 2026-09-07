@@ -13,6 +13,7 @@ export interface ReportData {
   common_mistakes: any[];
   created_at: string;
   updated_at: string | null;
+  created_by: string | null;
   is_feature_rollout?: boolean;
 }
 

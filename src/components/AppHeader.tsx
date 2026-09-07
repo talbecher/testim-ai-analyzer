@@ -35,6 +35,7 @@ type NavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
+  superAdminOnly?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -43,7 +44,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { to: '/ai-learning', label: 'AI Learning', icon: Brain },
   { to: '/settings', label: 'Settings', icon: SettingsIcon, adminOnly: true },
-  { to: '/admin/users', label: 'Users', icon: Users, adminOnly: true },
+  { to: '/admin/users', label: 'Users', icon: Users, superAdminOnly: true },
 ];
 
 function isActivePath(pathname: string, to: string) {
@@ -60,11 +61,15 @@ export function AppHeader({
   className,
   leftContent,
 }: AppHeaderProps) {
-  const { user, role, isAdmin, signOut } = useAuth();
+  const { user, role, isAdmin, isSuperAdmin, signOut } = useAuth();
   const { pathname } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const visibleNav = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const visibleNav = NAV_ITEMS.filter((item) => {
+    if (item.superAdminOnly) return isSuperAdmin;
+    if (item.adminOnly) return isAdmin;
+    return true;
+  });
 
   const navLinkClass = (active: boolean) =>
     cn(
@@ -156,8 +161,8 @@ export function AppHeader({
               {user && (
                 <div className="mt-6 pt-4 border-t border-border space-y-2">
                   <p className="text-xs text-muted-foreground break-all">{user.email}</p>
-                  <Badge variant={role === 'admin' ? 'destructive' : 'secondary'} className="text-xs capitalize">
-                    {role}
+                  <Badge variant={isAdmin ? 'destructive' : 'secondary'} className="text-xs capitalize">
+                    {role.replace('_', ' ')}
                   </Badge>
                 </div>
               )}
@@ -167,8 +172,8 @@ export function AppHeader({
           {user && (
             <div className="hidden sm:flex items-center gap-2 max-w-[200px]">
               <span className="text-xs text-muted-foreground truncate">{user.email}</span>
-              <Badge variant={role === 'admin' ? 'destructive' : 'secondary'} className="text-xs capitalize shrink-0">
-                {role}
+              <Badge variant={isAdmin ? 'destructive' : 'secondary'} className="text-xs capitalize shrink-0">
+                {role.replace('_', ' ')}
               </Badge>
             </div>
           )}

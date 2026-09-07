@@ -5,10 +5,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   adminOnly?: boolean;
+  superAdminOnly?: boolean;
 }
 
-export default function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
-  const { user, isAdmin, loading } = useAuth();
+export default function ProtectedRoute({
+  children,
+  adminOnly = false,
+  superAdminOnly = false,
+}: ProtectedRouteProps) {
+  const { user, isAdmin, isSuperAdmin, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -25,6 +30,10 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  if (superAdminOnly && !isSuperAdmin) {
+    return <Navigate to="/" replace />;
   }
 
   if (adminOnly && !isAdmin) {

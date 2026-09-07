@@ -229,6 +229,8 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
     setSaveError(null);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+
       // Prepare report data with mode, feature rollout flag, and regression bucket
       const reportData = {
         run_name: runDetails.name || 'Unnamed Run',
@@ -240,7 +242,8 @@ export function useFeedback(failures: AnalyzedFailure[], reportMode: ReportMode 
         common_mistakes: JSON.parse(JSON.stringify(summary.commonMistakes)),
         mode: reportMode, // Save mode to database
         is_feature_rollout: runDetails.isFeatureRollout || false, // Exclude from AI learning
-        regression_bucket: runDetails.name || null // Save regression bucket for isolated learning
+        regression_bucket: runDetails.name || null, // Save regression bucket for isolated learning
+        created_by: user?.id ?? null,
       };
 
       // Insert report

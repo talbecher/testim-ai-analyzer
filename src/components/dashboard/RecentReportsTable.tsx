@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { formatReportCreator } from "@/hooks/useUserEmailMap";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,13 +14,20 @@ interface ReportData {
   correct_count: number;
   accuracy_percentage: number | null;
   created_at: string;
+  created_by: string | null;
 }
 
 interface RecentReportsTableProps {
   reports: ReportData[];
+  showCreator?: boolean;
+  emailByUserId?: Map<string, string>;
 }
 
-export const RecentReportsTable = ({ reports }: RecentReportsTableProps) => {
+export const RecentReportsTable = ({
+  reports,
+  showCreator = false,
+  emailByUserId = new Map(),
+}: RecentReportsTableProps) => {
   const navigate = useNavigate();
 
   const getAccuracyBadge = (accuracy: number | null) => {
@@ -56,7 +64,14 @@ export const RecentReportsTable = ({ reports }: RecentReportsTableProps) => {
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => navigate(`/reports/${report.id}`)}
               >
-                <TableCell className="font-medium">{report.run_name}</TableCell>
+                <TableCell className="font-medium">
+                  <div>{report.run_name}</div>
+                  {showCreator && (
+                    <div className="text-xs text-muted-foreground font-normal">
+                      by {formatReportCreator(report.created_by, emailByUserId)}
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell>{format(new Date(report.run_date), "MMM d, yyyy")}</TableCell>
                 <TableCell className="text-center">{report.total_analyzed}</TableCell>
                 <TableCell className="text-center">{report.correct_count}</TableCell>

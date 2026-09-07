@@ -10,13 +10,14 @@ import {
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-export type AppRole = 'admin' | 'member';
+export type AppRole = 'super_admin' | 'admin' | 'member';
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
   role: AppRole;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isMember: boolean;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -129,7 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       session,
       role,
-      isAdmin: role === 'admin',
+      isAdmin: role === 'admin' || role === 'super_admin',
+      isSuperAdmin: role === 'super_admin',
       isMember: role === 'member',
       loading,
       signInWithEmail,

@@ -58,14 +58,21 @@ serve(async (req) => {
       .eq('id', authResult.id)
       .maybeSingle();
 
-    if (roleError || callerRole?.role !== 'admin') {
+    if (roleError) {
       return jsonResponse({ error: 'Forbidden' }, 403);
     }
+
+    const callerRoleName = callerRole?.role;
+    const isSuperAdmin = callerRoleName === 'super_admin';
+    const isAdminOrSuper = callerRoleName === 'admin' || isSuperAdmin;
 
     const body = await req.json();
     const { action } = body;
 
     if (action === 'list') {
+      if (!isAdminOrSuper) {
+        return jsonResponse({ error: 'Forbidden' }, 403);
+      }
       const { data: authData, error: listError } = await adminClient.auth.admin.listUsers({
         page: 1,
         perPage: 1000,
@@ -92,8 +99,12 @@ serve(async (req) => {
     }
 
     if (action === 'updateRole') {
+      if (!isSuperAdmin) {
+        return jsonResponse({ error: 'Forbidden' }, 403);
+      }
+
       const { userId, role } = body;
-      if (!userId || !['admin', 'member'].includes(role)) {
+      if (!userId || !['super_admin', 'admin', 'member'].includes(role)) {
         return jsonResponse({ error: 'Invalid userId or role' }, 400);
       }
 
@@ -106,6 +117,10 @@ serve(async (req) => {
     }
 
     if (action === 'delete') {
+      if (!isSuperAdmin) {
+        return jsonResponse({ error: 'Forbidden' }, 403);
+      }
+
       const { userId } = body;
       if (!userId) return jsonResponse({ error: 'userId required' }, 400);
       if (userId === authResult.id) {

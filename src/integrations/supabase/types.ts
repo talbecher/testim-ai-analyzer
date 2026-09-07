@@ -21,6 +21,7 @@ export type Database = {
           common_mistakes: Json | null
           correct_count: number
           created_at: string
+          created_by: string | null
           id: string
           is_feature_rollout: boolean | null
           mode: string
@@ -37,6 +38,7 @@ export type Database = {
           common_mistakes?: Json | null
           correct_count?: number
           created_at?: string
+          created_by?: string | null
           id?: string
           is_feature_rollout?: boolean | null
           mode?: string
@@ -53,6 +55,7 @@ export type Database = {
           common_mistakes?: Json | null
           correct_count?: number
           created_at?: string
+          created_by?: string | null
           id?: string
           is_feature_rollout?: boolean | null
           mode?: string

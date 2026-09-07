@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AppHeader } from '@/components/AppHeader';
 import { useReports, ReportData } from '@/hooks/useReports';
+import { useAuth } from '@/contexts/AuthContext';
+import { formatReportCreator, useUserEmailMap } from '@/hooks/useUserEmailMap';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,6 +33,8 @@ import { format } from 'date-fns';
 
 export default function Reports() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
+  const emailByUserId = useUserEmailMap(isAdmin);
   const { reports, isLoading, fetchReports, deleteReport, getLearningStats } = useReports();
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -168,6 +172,11 @@ export default function Reports() {
                         {report.notes && (
                           <p className="text-xs text-muted-foreground truncate max-w-[200px]">
                             {report.notes}
+                          </p>
+                        )}
+                        {isAdmin && (
+                          <p className="text-xs text-muted-foreground">
+                            by {formatReportCreator(report.created_by, emailByUserId)}
                           </p>
                         )}
                       </TableCell>

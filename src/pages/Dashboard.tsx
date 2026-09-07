@@ -11,6 +11,8 @@ import { MistakePatternChart } from "@/components/dashboard/MistakePatternChart"
 import { RecentReportsTable } from "@/components/dashboard/RecentReportsTable";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUserEmailMap } from "@/hooks/useUserEmailMap";
 
 interface ReportData {
   id: string;
@@ -21,6 +23,7 @@ interface ReportData {
   accuracy_percentage: number | null;
   common_mistakes: Array<{ from: string; to: string; count: number }>;
   created_at: string;
+  created_by: string | null;
 }
 
 interface AggregatedMistake {
@@ -29,6 +32,8 @@ interface AggregatedMistake {
 }
 
 const Dashboard = () => {
+  const { isAdmin } = useAuth();
+  const emailByUserId = useUserEmailMap(isAdmin);
   const [reports, setReports] = useState<ReportData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -151,7 +156,11 @@ const Dashboard = () => {
             </div>
 
             {/* Recent Reports Table — 5 most recent by run date */}
-            <RecentReportsTable reports={reports.slice(0, 5)} />
+            <RecentReportsTable
+              reports={reports.slice(0, 5)}
+              showCreator={isAdmin}
+              emailByUserId={emailByUserId}
+            />
           </div>
         )}
       </div>

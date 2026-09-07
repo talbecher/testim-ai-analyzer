@@ -148,10 +148,11 @@ export default function AdminUsers() {
                           onValueChange={(value) => void handleRoleChange(u.id, value as AppRole)}
                           disabled={busyId === u.id || u.id === currentUser?.id}
                         >
-                          <SelectTrigger className="w-28">
+                          <SelectTrigger className="w-36">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="super_admin">Super Admin</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="member">Member</SelectItem>
                           </SelectContent>
