@@ -67,7 +67,7 @@ export function useReports() {
       const { data, error: fetchError } = await supabase
         .from('analysis_reports')
         .select('*')
-        .order('updated_at', { ascending: false });
+        .order('run_date', { ascending: false });
 
       if (fetchError) throw fetchError;
       setReports((data || []) as ReportData[]);
